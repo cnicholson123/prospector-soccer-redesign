@@ -24,20 +24,21 @@
   <section class="season" data-season aria-labelledby="season-title" data-reveal>
     <div class="season__head">
       <h2 id="season-title">The PSC year</h2>
-      <p>Right now: <span class="season__now" data-season-label>Fall season — games every weekend</span></p>
+      <p>Right now: <span class="season__now" data-season-label>Fall season is underway</span></p>
     </div>
-    <div class="season__scroller">
+    <div class="season__scroller" tabindex="0" role="region" aria-label="Club year timeline">
       <div class="season__track">
         <div class="season__marks" aria-hidden="true">
           <span class="season__mark" style="left: 8.33%">Comp tryouts</span>
-          <span class="season__mark" style="left: 33.4%">Rec registration opens</span>
+          <span class="season__mark" style="left: 25%">Rec registration</span>
+          <span class="season__mark" style="left: 37.5%">May tryouts</span>
           <span class="season__mark" style="left: 54%">Rec practices</span>
           <span class="season__mark" style="left: 64%">Fall games</span>
           <span class="season__mark" style="left: 87.5%">All-stars</span>
         </div>
         <div class="season__bar" aria-hidden="true">
           <span class="season__band season__band--comp" style="left: 25%; right: 0"></span>
-          <span class="season__band season__band--rec" style="left: 54%; right: 9%"></span>
+          <span class="season__band season__band--rec" style="left: 54%; right: 12%"></span>
         </div>
         <div class="season__today" data-season-today style="left: 85.5%"><span>Today</span><i></i></div>
         <div class="season__months" aria-hidden="true">
@@ -45,8 +46,9 @@
         </div>
       </div>
     </div>
+    <p class="season__hint" aria-hidden="true">Swipe to see the whole year →</p>
     <div class="season__legend">
-      <span><i style="background: var(--blue-600)"></i>Recreational season (Jul – Nov)</span>
+      <span><i style="background: var(--blue-600)"></i>Recreational season (from mid-July)</span>
       <span><i style="background: rgb(11 42 91 / .2)"></i>Competitive season (Apr – Dec)</span>
       <span><i style="background: var(--gold-500)"></i>Today</span>
     </div>
@@ -115,7 +117,7 @@
       </li>
       <li class="ticket" data-date="2026-12-10" data-time="17:30" data-title="Annual General Meeting (AGM)" data-where="Los Pinos">
         <div class="ticket__stub"><span class="ticket__month">DEC</span><span class="ticket__day">10</span><span class="ticket__dow">Thu</span></div>
-        <div class="ticket__body"><span class="ticket__type">Everyone welcome</span><h3 class="ticket__title">Annual General Meeting</h3>
+        <div class="ticket__body"><span class="ticket__type">Annual meeting</span><h3 class="ticket__title">Annual General Meeting</h3>
           <div class="ticket__meta"><span><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>5:30 pm</span><span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21Z"/><circle cx="12" cy="9.5" r="2.5"/></svg>Los Pinos</span></div>
           <button class="ticket__add" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Add to calendar</button></div>
       </li>
@@ -134,19 +136,19 @@
       <div>
         <span class="eyebrow">Find your season</span>
         <h2 id="programs-title">Two ways to play</h2>
-        <p class="lead">Whether it’s a first touch on the ball or a shot at a tournament title, there’s a team at PSC for your player.</p>
+        <p class="lead">From first touches to tournament play — compare PSC’s recreational and competitive programs.</p>
       </div>
     </div>
     <div class="programs">
       <article class="program" data-reveal>
         <div class="program__media">
           <img src="assets/img/rec.webp" alt="Young players dribbling between orange cones while a volunteer coach cheers them on" width="1400" height="933" loading="lazy">
-          <span class="pill pill--gold program__badge">Most families start here</span>
+          <span class="pill pill--gold program__badge">Practices from mid-July</span>
         </div>
         <div class="program__body">
           <span class="eyebrow">Recreational · U6–U19</span>
           <h3>Rec soccer</h3>
-          <p>Fun-first, local soccer with volunteer coaches. Players are placed on teams, practice once or twice a week, and play on Saturdays close to home.</p>
+          <p>Fun-first, local soccer with volunteer coaches. Teams practice once or twice a week and play their games on Saturdays.</p>
           <dl class="facts">
             <div><dt>Practices</dt><dd>Mid-July<small>1–2× a week, set by your coach</small></dd></div>
             <div><dt>Games</dt><dd>8–10 games<small>Saturdays from mid-August</small></dd></div>
@@ -189,7 +191,7 @@
   <div class="container">
     <span class="eyebrow eyebrow--light">Built by neighbors</span>
     <h2 id="band-title">Run by volunteers.<br>Powered by Gold Country.</h2>
-    <p class="lead">Every coach, board member and field-liner at PSC is a volunteer. The result is a club that belongs to the families who play in it.</p>
+    <p class="lead">PSC is a non-profit, volunteer-run club — from the board members who run it to the volunteer head coaches on the sideline.</p>
     <div class="stats">
       <div class="stat" data-reveal><span class="stat__num">100%</span><span class="stat__label">volunteer-run, non-profit club</span></div>
       <div class="stat" data-reveal style="--d: 80ms"><span class="stat__num">U6–U19</span><span class="stat__label">every age, from first kicks to seniors</span></div>
@@ -256,7 +258,7 @@
       <div>
         <span class="eyebrow">Thank you</span>
         <h2 id="sponsors-title">Our sponsors</h2>
-        <p class="lead">Local businesses that keep fees low, fields lined and kids playing.</p>
+        <p class="lead">Thank you to the local businesses that support Prospector Soccer Club.</p>
       </div>
       <a class="link-arrow" href="sponsors.html">Become a sponsor <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
     </div>

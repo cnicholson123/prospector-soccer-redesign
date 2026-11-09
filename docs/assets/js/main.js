@@ -89,7 +89,7 @@
         [2, 2, "Spring season options for comp teams"],
         [3, 5, "Rec registration is open (Apr 1 – Jun 15)"],
         [6, 6, "Rec practices kick off mid-July"],
-        [7, 10, "Fall season — games every weekend"],
+        [7, 10, "Fall season is underway"],
         [11, 11, "Annual General Meeting & season wrap"],
       ];
       const m = today.getMonth();
@@ -146,8 +146,7 @@
       let dt;
       if (t.dataset.time) {
         const [h, mi] = t.dataset.time.split(":").map(Number);
-        const end = new Date(d); end.setHours(h + 1, mi + 30);
-        dt = `DTSTART;TZID=America/Los_Angeles:${fmt(d)}T${pad(h)}${pad(mi)}00\r\nDTEND;TZID=America/Los_Angeles:${fmt(end)}T${pad(end.getHours())}${pad(end.getMinutes())}00`;
+        dt = `DTSTART;TZID=America/Los_Angeles:${fmt(d)}T${pad(h)}${pad(mi)}00`; // no end time published
       } else {
         const next = new Date(d); next.setDate(d.getDate() + 1);
         dt = `DTSTART;VALUE=DATE:${fmt(d)}\r\nDTEND;VALUE=DATE:${fmt(next)}`;
@@ -224,11 +223,25 @@
         if (en.isIntersecting) {
           subLinks.forEach((a) => a.classList.remove("is-active"));
           const a = map.get(en.target.id);
-          if (a) { a.classList.add("is-active"); a.scrollIntoView({ block: "nearest", inline: "center", behavior: reduceMotion ? "auto" : "smooth" }); }
+          if (a) {
+            a.classList.add("is-active");
+            // scroll only the chip strip horizontally — never the document
+            const ul = a.closest("ul");
+            const left = a.offsetLeft - (ul.clientWidth - a.offsetWidth) / 2;
+            ul.scrollTo({ left: Math.max(0, left), behavior: reduceMotion ? "auto" : "smooth" });
+          }
         }
       });
     }, { rootMargin: "-35% 0px -60% 0px" });
     targets.forEach((t) => so.observe(t));
+    // Above the first section nothing is "current"
+    const clearAtTop = () => {
+      if (targets[0] && targets[0].getBoundingClientRect().top > window.innerHeight * 0.4) {
+        subLinks.forEach((a) => a.classList.remove("is-active"));
+      }
+    };
+    window.addEventListener("scroll", clearAtTop, { passive: true });
+    clearAtTop();
   }
 
   /* ---------- Mobile action bar hides over footer ---------- */

@@ -910,3 +910,88 @@ body.menu-open { overflow: hidden; }
 /* page additions */
 .page-actions { margin-top: 20px; }
 .page-actions .btn { max-width: 100%; white-space: normal; text-align: center; }
+
+/* ==========================================================================
+   Review fixes (Fable + Astra design review, 2026-11-08)
+   ========================================================================== */
+h3 { text-transform: uppercase; }
+
+/* Inner heroes: taller, keep heads in frame */
+.page-hero { min-height: min(62vh, 600px); }
+.page-hero__media img { object-position: 50% 28%; }
+.page-referees .page-hero__media img { object-position: 50% 18%; }
+
+/* Pills / badges should hug their content */
+.sponsor-card > .pill { align-self: flex-start; }
+.team .level { justify-self: start; font-size: .72rem; }
+
+/* Callout on phones: hide icon, keep arrow on the same row */
+@media (max-width: 560px) {
+  .callout .callout__icon { display: none; }
+  .callout { grid-template-columns: minmax(0, 1fr) auto; }
+}
+
+/* Glance card when not sticky: keep its top stripe inside the card */
+@media (max-width: 1024px) { .with-aside .glance { position: relative; top: auto; } }
+
+/* Season dial: fade edges + hint when scrollable */
+.season__hint { display: none; margin: 10px 0 0; font-size: var(--fs-xs); font-weight: 700; color: var(--slate); }
+@media (max-width: 900px) {
+  .season__scroller {
+    -webkit-mask: linear-gradient(90deg, transparent, #000 20px, #000 calc(100% - 20px), transparent);
+            mask: linear-gradient(90deg, transparent, #000 20px, #000 calc(100% - 20px), transparent);
+    scroll-padding-inline: 24px;
+  }
+  .season__hint { display: block; }
+}
+
+/* Hero cut reads as a glitch beside the overlapping card on smaller screens */
+@media (max-width: 860px) { .hero { clip-path: none; } }
+
+/* Results: weightier, no lonely single column on iPad */
+.results { grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); }
+.medal { width: 76px; height: 76px; font-size: 1.85rem; }
+.result { padding: 26px; }
+.result__team { font-size: 1.85rem; }
+
+/* Board: keep email addresses whole, fill the grid evenly */
+.person__mail { overflow-wrap: normal; word-break: normal; }
+.person--lead { grid-column: auto; }
+@media (min-width: 1100px) { .person--lead { grid-column: span 2; } }
+@media (max-width: 1099px) { .person--lead { grid-template-columns: auto 1fr; padding: 22px; } .person--lead .person__name { font-size: 1.7rem; } .person--lead .person__avatar { width: 64px; height: 72px; font-size: 1.6rem; } }
+
+/* iPad: avoid 3+1 orphans */
+@media (min-width: 640px) and (max-width: 1024px) {
+  .info-grid, .cost-stack__legend { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+.equip-grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 140px), 1fr)); }
+
+/* Reduced-motion sponsor list: allow long names to wrap */
+@media (prefers-reduced-motion: reduce) { .marquee__track li { white-space: normal; max-width: 100%; } }
+
+/* Sub-nav: edge fade when scrollable */
+@media (max-width: 1024px) {
+  .subnav ul {
+    -webkit-mask: linear-gradient(90deg, transparent, #000 16px, #000 calc(100% - 16px), transparent);
+            mask: linear-gradient(90deg, transparent, #000 16px, #000 calc(100% - 16px), transparent);
+    scroll-padding-inline: 16px; padding-inline: 4px;
+  }
+}
+
+/* Stats band: stronger scrim on small screens */
+@media (max-width: 760px) { .band::before { background: linear-gradient(180deg, rgb(6 24 51 / .8), rgb(6 24 51 / .93)); } }
+
+/* Room for the floating mobile action bar */
+@media (max-width: 760px) { body:has(.action-bar) { padding-bottom: 84px; } }
+
+/* Type tune-ups */
+@media (max-width: 420px) { .eyebrow { letter-spacing: .1em; font-size: .85rem; } }
+.steps li::before { color: var(--oak); }
+
+/* CTA band + stacked media on tablets */
+@media (max-width: 1000px) { .cta-band { grid-template-columns: 1fr; } }
+@media (min-width: 561px) and (max-width: 860px) {
+  .split .media-frame { aspect-ratio: 16 / 9; max-height: 380px; }
+  .program__media { aspect-ratio: 16 / 9; max-height: 380px; }
+}
+.subnav ul { position: relative; }
