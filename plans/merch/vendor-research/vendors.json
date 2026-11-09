@@ -1,0 +1,1997 @@
+{
+  "schema_version": "1.0",
+  "research_date": "2026-11-09",
+  "timezone": "America/Los_Angeles",
+  "currency": "USD",
+  "method": {
+    "public_web_only": true,
+    "businesses_contacted": false,
+    "forms_submitted": false,
+    "accounts_created": false,
+    "orders_placed": false,
+    "operating_status_basis": "Live public sites and attributed public activity; no direct confirmation",
+    "price_classes": {
+      "a": "published price/rate or public-calculator input",
+      "b": "published starting-at price",
+      "c": "not publicly dollar-priced"
+    },
+    "quantity_semantics": {
+      "7": "complete four-pin sets",
+      "10": "decal-plus-magnet pairs"
+    }
+  },
+  "products": [
+    {
+      "id": 1,
+      "description": "Navy heavyweight pullover, 4-color crest + small embroidered sleeve pickaxe"
+    },
+    {
+      "id": 2,
+      "description": "Royal blue cotton tee, 2-color front"
+    },
+    {
+      "id": 3,
+      "description": "Custom jacquard-knit supporter scarf"
+    },
+    {
+      "id": 4,
+      "description": "Trucker cap with woven/embroidered crest patch"
+    },
+    {
+      "id": 5,
+      "description": "Cuffed pom beanie with woven label or embroidered crest"
+    },
+    {
+      "id": 6,
+      "description": "32 oz insulated stainless bottle, laser-engraved crest"
+    },
+    {
+      "id": 7,
+      "description": "Four-design hard-enamel pin set, approximately 1–1.5 inches each"
+    },
+    {
+      "id": 8,
+      "description": "Sherpa/fleece stadium blanket, embroidered crest"
+    },
+    {
+      "id": 9,
+      "description": "Youth soccer backpack with separate cleat compartment, embroidered crest"
+    },
+    {
+      "id": 10,
+      "description": "One approximately 5-inch die-cut vinyl decal + one approximately 6×4-inch oval car magnet"
+    }
+  ],
+  "providers": [
+    {
+      "id": "rcd",
+      "name": "Robinson Custom Designs Inc. (RCD)",
+      "city": "Placerville",
+      "county": "El Dorado",
+      "street_address": "3927 Missouri Flat Rd, Placerville, CA 95667",
+      "phone": "530-919-8531",
+      "website": "https://rcdincprintco.com/",
+      "services": [
+        "screen printing",
+        "embroidery",
+        "DTF",
+        "banners",
+        "online stores"
+      ],
+      "plausible_product_ids": [
+        1,
+        2,
+        4,
+        5,
+        8,
+        9
+      ],
+      "conditional_product_ids": [],
+      "pricing_status": [
+        "a",
+        "b"
+      ],
+      "notes": "In-house production. Estimator minimum 12. Trucker patch sample is shown, but patch construction and pom/cleat-specific blanks need confirmation. Pricing is provisional.",
+      "reputation": "Loc8NearMe displays a December 2025 review and older reviews; no reliable aggregate rating/count captured. Primary address used over older directory address 3925.",
+      "source_ids": [
+        "rcd",
+        "rcd_js",
+        "rcd_rep"
+      ],
+      "operating_status": "Public operating signals observed; not independently confirmed by contact",
+      "verified_date": "2026-11-09"
+    },
+    {
+      "id": "sierra",
+      "name": "Sierra Stitch Factory",
+      "city": "Shingle Springs",
+      "county": "El Dorado",
+      "street_address": "4590 Ridge Dr, Shingle Springs, CA 95682",
+      "phone": "530-672-9134",
+      "website": "https://sierrastitchfactory.com/",
+      "services": [
+        "embroidery",
+        "screen printing",
+        "artwork"
+      ],
+      "plausible_product_ids": [
+        1,
+        2,
+        4,
+        5,
+        8,
+        9
+      ],
+      "conditional_product_ids": [],
+      "pricing_status": [
+        "c"
+      ],
+      "notes": "Appointment requested on website. Weekday hours posted. All embroidery and art described as in-shop. Patch, pom and cleat-compartment sourcing unverified.",
+      "reputation": "Business states locally owned since 1999. No numeric aggregate review rating captured.",
+      "source_ids": [
+        "sierra",
+        "sierra_about"
+      ],
+      "operating_status": "Public operating signals observed; not independently confirmed by contact",
+      "verified_date": "2026-11-09"
+    },
+    {
+      "id": "bougie",
+      "name": "Bougie Print / Backyard Bougie, Inc.",
+      "city": "Placerville",
+      "county": "El Dorado",
+      "street_address": null,
+      "phone": "916-232-7711",
+      "website": "https://bougieprint.com/",
+      "services": [
+        "DTF",
+        "partner-produced embroidery",
+        "online team stores",
+        "fulfillment"
+      ],
+      "plausible_product_ids": [
+        1,
+        2,
+        4,
+        5,
+        8,
+        9
+      ],
+      "conditional_product_ids": [],
+      "pricing_status": [
+        "a",
+        "b"
+      ],
+      "notes": "Team stores collect family orders and support fundraising. Free Placerville pickup; by appointment. Embroidery is partner-produced. DTF replaces screen printing in its published tee rates.",
+      "reputation": "Business states established 2021; team/school store program visible. No numeric aggregate rating captured.",
+      "source_ids": [
+        "bougie",
+        "bougie_price",
+        "bougie_catalog"
+      ],
+      "operating_status": "Public operating signals observed; not independently confirmed by contact",
+      "verified_date": "2026-11-09"
+    },
+    {
+      "id": "branded",
+      "name": "Branded Graphics & Apparel",
+      "city": "El Dorado Hills",
+      "county": "El Dorado",
+      "street_address": "985 Governor Dr, El Dorado Hills, CA 95762",
+      "phone": "916-313-6621",
+      "website": "https://branded-graphics.com/",
+      "services": [
+        "screen printing",
+        "embroidery",
+        "laser etching",
+        "signs",
+        "banners"
+      ],
+      "plausible_product_ids": [
+        1,
+        2,
+        4,
+        5,
+        8,
+        9
+      ],
+      "conditional_product_ids": [
+        6,
+        10
+      ],
+      "pricing_status": [
+        "c"
+      ],
+      "notes": "Small and large orders advertised. Site posts Mon–Thu hours and Fri–Sun by appointment. Bottle metal compatibility and car decal/magnet production require confirmation. Address sourced to Nextdoor.",
+      "reputation": "Nextdoor lists Neighborhood Favorite awards 2020–2024. Business states 30+ years of graphics experience. No numeric aggregate rating captured.",
+      "source_ids": [
+        "branded",
+        "branded_rep"
+      ],
+      "operating_status": "Public operating signals observed; not independently confirmed by contact",
+      "verified_date": "2026-11-09"
+    },
+    {
+      "id": "peak",
+      "name": "Peak Printz",
+      "city": "Placerville",
+      "county": "El Dorado",
+      "street_address": null,
+      "phone": null,
+      "website": "https://peakprintz.com/",
+      "services": [
+        "die-cut stickers",
+        "kiss-cut stickers",
+        "vinyl labels",
+        "custom shapes"
+      ],
+      "plausible_product_ids": [
+        10
+      ],
+      "conditional_product_ids": [],
+      "pricing_status": [
+        "a",
+        "c"
+      ],
+      "notes": "Product 10 decal component only. Website says minimum 25, proofs about 24 hours, most orders print/ship in 3–5 business days; regional delivery advertised. Exact 5-inch price unavailable.",
+      "reputation": "Public sticker portfolio and ordering page visible. No numeric aggregate rating captured.",
+      "source_ids": [
+        "peak"
+      ],
+      "operating_status": "Public operating signals observed; not independently confirmed by contact",
+      "verified_date": "2026-11-09"
+    },
+    {
+      "id": "tree",
+      "name": "TreeCity Print & Embroidery LLC",
+      "city": "Sacramento",
+      "county": "Sacramento",
+      "street_address": "6512 Franklin Blvd, Sacramento, CA 95823",
+      "phone": "916-822-1080",
+      "website": "https://treecityprint.com/",
+      "services": [
+        "screen printing",
+        "embroidery",
+        "DTF",
+        "digitizing"
+      ],
+      "plausible_product_ids": [
+        1,
+        2,
+        4,
+        5,
+        8,
+        9
+      ],
+      "conditional_product_ids": [],
+      "pricing_status": [
+        "a"
+      ],
+      "notes": "Screen minimum 24. Screen turnaround 10–14 business days; DTF 5–7. Heavy garment and hat embroidery can increase the base rate. Patch, pom, blanket and soccer bag sourcing require confirmation.",
+      "reputation": "Live primary contact page and detailed rate cards. No numeric aggregate rating captured.",
+      "source_ids": [
+        "tree",
+        "tree_home",
+        "tree_screen",
+        "tree_emb",
+        "tree_dtf"
+      ],
+      "operating_status": "Public operating signals observed; not independently confirmed by contact",
+      "verified_date": "2026-11-09"
+    },
+    {
+      "id": "conquer",
+      "name": "Conquer Printing",
+      "city": "North Highlands",
+      "county": "Sacramento",
+      "street_address": "4554 Roseville Road, Suite B, North Highlands, CA 95660",
+      "phone": "916-469-5410",
+      "website": "https://conquerprinting.com/",
+      "services": [
+        "screen printing",
+        "embroidery",
+        "DTF",
+        "DTG",
+        "promotional products",
+        "decals",
+        "online stores"
+      ],
+      "plausible_product_ids": [
+        1,
+        2,
+        4,
+        5,
+        8,
+        9,
+        10
+      ],
+      "conditional_product_ids": [
+        3,
+        6,
+        7
+      ],
+      "pricing_status": [
+        "a",
+        "c"
+      ],
+      "notes": "Local pickup and delivery. Standard 7–10 business days. No hard minimum; under-24 surcharge. Scarf, bottle and hard-enamel sourcing are only plausible through its general promotional-products service; exact SKUs unverified.",
+      "reputation": "Live primary location and published July 2026 price list. No numeric aggregate rating captured.",
+      "source_ids": [
+        "conquer",
+        "conquer_home",
+        "conquer_price"
+      ],
+      "operating_status": "Public operating signals observed; not independently confirmed by contact",
+      "verified_date": "2026-11-09"
+    },
+    {
+      "id": "ray",
+      "name": "RayLay Enterprises",
+      "city": "Sacramento",
+      "county": "Sacramento",
+      "street_address": "3320 Marysville Blvd, Suite A1, Sacramento, CA 95838",
+      "phone": "916-616-8724",
+      "website": "https://www.ray-lay.com/",
+      "services": [
+        "screen printing",
+        "embroidery",
+        "DTF"
+      ],
+      "plausible_product_ids": [
+        1,
+        2,
+        4,
+        5,
+        8,
+        9
+      ],
+      "conditional_product_ids": [],
+      "pricing_status": [
+        "a",
+        "c"
+      ],
+      "notes": "Explicit schools, leagues and team programs. Screen minimum 12; normal 7–10 business days below 500 pieces. Separate heavy-apparel rate card; dark underbase counts as another color.",
+      "reputation": "Public in-house production claims and specific pricing. No numeric aggregate rating captured.",
+      "source_ids": [
+        "ray"
+      ],
+      "operating_status": "Public operating signals observed; not independently confirmed by contact",
+      "verified_date": "2026-11-09"
+    },
+    {
+      "id": "hard",
+      "name": "Hard Eight Screen Printing & Embroidery",
+      "city": "Sacramento",
+      "county": "Sacramento",
+      "street_address": "200 N 16th St, Suite 340, Sacramento, CA 95811",
+      "phone": "916-304-6926",
+      "website": "https://hardeightscreenprinting.com/",
+      "services": [
+        "screen printing",
+        "embroidery",
+        "simulated-process full color"
+      ],
+      "plausible_product_ids": [
+        1,
+        2,
+        4,
+        5,
+        8,
+        9
+      ],
+      "conditional_product_ids": [],
+      "pricing_status": [
+        "b",
+        "c"
+      ],
+      "notes": "Minimum 24. No art-prep charge advertised. Customer-supplied apparel accepted with a handling surcharge whose amount was not verified. Detailed crest and patch/pom sourcing require review.",
+      "reputation": "Own website displays 5.0 from 39 Google reviews with a Google link. This is a business-embedded widget, not an independent live Google verification.",
+      "source_ids": [
+        "hard",
+        "hard_faq"
+      ],
+      "operating_status": "Public operating signals observed; not independently confirmed by contact",
+      "verified_date": "2026-11-09"
+    },
+    {
+      "id": "fnd",
+      "name": "FnD Embroidery",
+      "city": "Sacramento",
+      "county": "Sacramento",
+      "street_address": "4608 Auburn Blvd #1, Sacramento, CA 95841",
+      "phone": "916-978-0100",
+      "website": "https://www.fndembroidery.net/",
+      "services": [
+        "embroidery",
+        "screen printing"
+      ],
+      "plausible_product_ids": [
+        1,
+        2,
+        4,
+        5,
+        8,
+        9
+      ],
+      "conditional_product_ids": [],
+      "pricing_status": [
+        "c"
+      ],
+      "notes": "Posted minimum 12 for screen printing and embroidery. Customer-supplied goods accepted. Sports/tournament fundraising work advertised. Weekday hours posted; rush available with unpriced premium.",
+      "reputation": "Business states founded 2014; work samples visible. No numeric aggregate rating captured.",
+      "source_ids": [
+        "fnd"
+      ],
+      "operating_status": "Public operating signals observed; not independently confirmed by contact",
+      "verified_date": "2026-11-09"
+    },
+    {
+      "id": "pins",
+      "name": "Great Lapel Pins / Christopher Pierce Enterprises",
+      "city": "Sacramento",
+      "county": "Sacramento",
+      "street_address": "928 2nd Street #201, Sacramento, CA 95814 (site also appends conflicting CA 94158)",
+      "phone": "916-896-5644",
+      "website": "https://www.greatlapelpins.com/",
+      "services": [
+        "hard enamel / cloisonne pins",
+        "soft enamel pins",
+        "coins",
+        "medals",
+        "factory-direct sourcing"
+      ],
+      "plausible_product_ids": [
+        7
+      ],
+      "conditional_product_ids": [],
+      "pricing_status": [
+        "c"
+      ],
+      "notes": "Dedicated pin specialist. Confirm four separate designs, size, tooling and where production occurs. Public footer has a conflicting second ZIP, so verify pickup/location before travel.",
+      "reputation": "Claims almost 30 years of industry experience; portfolio visible. Footer copyright is 2019. Live website alone provides weaker evidence of current operation than dated third-party activity. No numeric review score captured.",
+      "source_ids": [
+        "pins"
+      ],
+      "operating_status": "Public operating signals observed; not independently confirmed by contact",
+      "verified_date": "2026-11-09"
+    },
+    {
+      "id": "r5",
+      "name": "R5 Stitch + Print",
+      "city": "Sacramento",
+      "county": "Sacramento",
+      "street_address": "4250 Power Inn Rd, Unit B, Sacramento, CA 95826",
+      "phone": "916-454-3773",
+      "website": "https://www.r5print.com/",
+      "services": [
+        "screen printing",
+        "embroidery",
+        "laser engraving",
+        "DTF",
+        "UV transfers",
+        "vinyl cutting",
+        "promotional products"
+      ],
+      "plausible_product_ids": [
+        1,
+        2,
+        4,
+        5,
+        6,
+        8,
+        9,
+        10
+      ],
+      "conditional_product_ids": [
+        3,
+        7
+      ],
+      "pricing_status": [
+        "c"
+      ],
+      "notes": "Published portfolio shows bottles, patch caps and school/team work. Laser page explicitly includes metal tumblers. Leather patch examples do not verify woven/embroidered patch pricing.",
+      "reputation": "SewingLocal displays 4.9 from 67 reviews; third-party aggregation not independently verified. Primary site shows school/sports portfolios and Google-review screenshots.",
+      "source_ids": [
+        "r5",
+        "r5_home",
+        "r5_rep"
+      ],
+      "operating_status": "Public operating signals observed; not independently confirmed by contact",
+      "verified_date": "2026-11-09"
+    },
+    {
+      "id": "costello",
+      "name": "Costello Print Shop",
+      "city": "Sacramento",
+      "county": "Sacramento",
+      "street_address": "4740 Myrtle Ave, Suite A, Sacramento, CA 95841",
+      "phone": "916-277-9042",
+      "website": "https://costelloprintshop.com/",
+      "services": [
+        "print/sign shop",
+        "adhesive graphics",
+        "car magnets",
+        "custom apparel",
+        "DTF",
+        "promotional goods"
+      ],
+      "plausible_product_ids": [
+        2,
+        10
+      ],
+      "conditional_product_ids": [
+        1,
+        4,
+        5,
+        6,
+        8,
+        9
+      ],
+      "pricing_status": [
+        "a",
+        "b",
+        "c"
+      ],
+      "notes": "Public pickup promotions. Exact 5-inch decal and 6×4 oval magnet prices not captured. Promotional apparel/headwear exists, but embroidery/laser and specific constructions unverified.",
+      "reputation": "Live primary site with pickup offers. Numeric rating not used because directory formatting and conflicting phone entries were ambiguous.",
+      "source_ids": [
+        "costello",
+        "costello_mag"
+      ],
+      "operating_status": "Public operating signals observed; not independently confirmed by contact",
+      "verified_date": "2026-11-09"
+    },
+    {
+      "id": "stencil",
+      "name": "Stencil Stop",
+      "city": "Sacramento",
+      "county": "Sacramento",
+      "street_address": "208 15th Street, Sacramento, CA 95814 (public return address)",
+      "phone": "888-470-8894",
+      "website": "https://stencilstop.com/",
+      "services": [
+        "laser engraving",
+        "laser cutting",
+        "custom stencils"
+      ],
+      "plausible_product_ids": [],
+      "conditional_product_ids": [
+        6
+      ],
+      "pricing_status": [
+        "a",
+        "c"
+      ],
+      "notes": "Specialist laser option, but service page only confirms acrylic and wood. Stainless-bottle capability unverified. Sacramento drop-off and pickup advertised; posted address is for returns and may differ from job drop-off.",
+      "reputation": "Active support and public laser rate page. No numeric aggregate rating captured.",
+      "source_ids": [
+        "stencil",
+        "stencil_contact",
+        "stencil_address"
+      ],
+      "operating_status": "Public operating signals observed; not independently confirmed by contact",
+      "verified_date": "2026-11-09"
+    }
+  ],
+  "price_evidence": [
+    {
+      "id": "RCD-B",
+      "provider_id": "rcd",
+      "classification": "b",
+      "description": "Published estimating blanks, per item",
+      "values": {
+        "PC340_basic_tee": 6.84,
+        "DT6100_pullover": 24.82,
+        "C920_trucker": 11.98,
+        "SP02_beanie": 6.98
+      },
+      "source_ids": [
+        "rcd"
+      ],
+      "caveat": "Starting estimates. DT6100 is 8.3 oz; it does not establish the requested heavyweight. SP02 has no verified pom. C920 price does not include a patch."
+    },
+    {
+      "id": "RCD-C",
+      "provider_id": "rcd",
+      "classification": "a",
+      "description": "Public calculator logic, reconstructed without submitting a form",
+      "values": {
+        "quantity": [
+          24,
+          48,
+          100
+        ],
+        "dark_tee_two_color": [
+          7.75,
+          5.1,
+          4.2
+        ],
+        "dark_four_color": [
+          10.75,
+          7.1,
+          5.8
+        ],
+        "headwear_embroidery_per_location": 5,
+        "screen_setup": 0,
+        "minimum": 12
+      },
+      "source_ids": [
+        "rcd",
+        "rcd_js"
+      ],
+      "caveat": "Royal is absent from the estimator color menu. Dark-class pricing is a proxy. The dark table shifts one color versus the light table; treat its surcharge as embedded, without adding it twice. New-logo digitizing is possible but unpriced for headwear."
+    },
+    {
+      "id": "BOUGIE",
+      "provider_id": "bougie",
+      "classification": "a",
+      "description": "DTF and embroidery decoration rates",
+      "values": {
+        "quantity": [
+          24,
+          48,
+          100
+        ],
+        "full_front_DTF_up_to_10_in": [
+          7.75,
+          7.75,
+          6.0
+        ],
+        "embroidery_8000_stitches": [
+          7.75,
+          7.75,
+          6.5
+        ],
+        "cap_surcharge": 2,
+        "digitizing_per_new_logo": 50,
+        "DTF_setup": 0,
+        "rush_under_7_business_days_percent": 25
+      },
+      "source_ids": [
+        "bougie_price"
+      ],
+      "caveat": "DTF includes pressing and unlimited colors. Garments extra. No order minimum. Other placements priced separately."
+    },
+    {
+      "id": "BOUGIE-B",
+      "provider_id": "bougie",
+      "classification": "b",
+      "description": "Starting blanks in published examples",
+      "values": {
+        "basic_tee_from": 3.3,
+        "cap_from": 2.86
+      },
+      "source_ids": [
+        "bougie_price"
+      ],
+      "caveat": "Least-expensive categories, not a verified royal cotton tee or patch trucker cap."
+    },
+    {
+      "id": "TREE-SP",
+      "provider_id": "tree",
+      "classification": "a",
+      "description": "Screen decoration per location, garments extra",
+      "values": {
+        "quantity": [
+          24,
+          48,
+          100
+        ],
+        "two_color": [
+          5.5,
+          5.0,
+          4.5
+        ],
+        "four_color": [
+          7.5,
+          7.0,
+          6.5
+        ],
+        "minimum": 24,
+        "rush_7_days_percent": 25,
+        "rush_5_days_percent": 50,
+        "rush_3_days_percent": 75
+      },
+      "source_ids": [
+        "tree_screen"
+      ],
+      "caveat": "Screen/setup fee inclusion is not expressly established. Do not assume zero."
+    },
+    {
+      "id": "TREE-EM",
+      "provider_id": "tree",
+      "classification": "a",
+      "description": "Embroidery to 10,000 stitches, garment extra",
+      "values": {
+        "quantity": [
+          24,
+          48,
+          100
+        ],
+        "embroidery": [
+          18,
+          15,
+          null
+        ],
+        "small_digitizing": 30,
+        "complex_digitizing_extra_range": [
+          10,
+          25
+        ],
+        "additional_1000_stitches": 1,
+        "extra_location_range": [
+          7,
+          12
+        ],
+        "rush_under_72_hours_percent": 25
+      },
+      "source_ids": [
+        "tree_emb"
+      ],
+      "caveat": "Base says setup included, but a separate digitizing table is also posted. 100+ requires custom quote. Hats/heavy garments may cost more."
+    },
+    {
+      "id": "TREE-DTF",
+      "provider_id": "tree",
+      "classification": "a",
+      "description": "DTF transfer plus pressing up to 11×12 inches",
+      "values": {
+        "quantity": [
+          24,
+          48,
+          100
+        ],
+        "unit": [
+          15,
+          15,
+          10
+        ],
+        "additional_location": 5,
+        "rush_under_5_business_days_percent": 25
+      },
+      "source_ids": [
+        "tree_dtf"
+      ],
+      "caveat": "Garment extra."
+    },
+    {
+      "id": "CONQ",
+      "provider_id": "conquer",
+      "classification": "a",
+      "description": "Screen/embroidery rate inputs, garments extra",
+      "values": {
+        "quantity": [
+          24,
+          48,
+          100
+        ],
+        "screen_two_color": [
+          5.19,
+          4.55,
+          4.1
+        ],
+        "screen_four_color": [
+          7.35,
+          6.83,
+          6.18
+        ],
+        "screen_five_color": [
+          8.52,
+          7.74,
+          7.09
+        ],
+        "embroidery_4000_stitches": [
+          6.1,
+          5.4,
+          4.75
+        ],
+        "embroidery_8000_stitches": [
+          6.85,
+          6.55,
+          6.0
+        ],
+        "new_screen": 30,
+        "reorder_screen": 20,
+        "digitizing_per_1000_stitches": 3,
+        "hat_front_surcharge": 0.35,
+        "ski_hat_surcharge": 0.45,
+        "bag_surcharge": 0.75,
+        "small_run_below_24": 50,
+        "rush_percent_by_days": {
+          "4-6": 20,
+          "3-5": 30,
+          "1-2": 50
+        }
+      },
+      "source_ids": [
+        "conquer_price"
+      ],
+      "caveat": "Rush windows overlap on the page. Screen fee assumed per color/screen for arithmetic. Unpriced sleeve access/heavyweight/customer-goods charges remain possible."
+    },
+    {
+      "id": "RAY",
+      "provider_id": "ray",
+      "classification": "a",
+      "description": "Print-only price guide",
+      "values": {
+        "quantity": [
+          24,
+          48,
+          100
+        ],
+        "tee_two_color": [
+          7,
+          5,
+          3.5
+        ],
+        "heavy_hoodie_four_color": [
+          12.75,
+          9.25,
+          6
+        ],
+        "heavy_hoodie_five_color": [
+          14.75,
+          10.75,
+          6.75
+        ],
+        "PMS_mix_per_color": 20,
+        "screen_minimum": 12,
+        "rush_5_days_percent": 50,
+        "rush_3_days_percent": 75,
+        "rush_next_day_percent": 100
+      },
+      "source_ids": [
+        "ray"
+      ],
+      "caveat": "Dark underbase counts as extra color. Garment and embroidery extra. Screen/setup fee not established."
+    },
+    {
+      "id": "HARD",
+      "provider_id": "hard",
+      "classification": "b",
+      "description": "Single-color finished tee starting price",
+      "values": {
+        "tee_from": 10.47,
+        "minimum": 24
+      },
+      "source_ids": [
+        "hard"
+      ],
+      "caveat": "Quantity/style behind headline not established. Not a two-color tee price. No art-prep fee advertised."
+    },
+    {
+      "id": "FND",
+      "provider_id": "fnd",
+      "classification": "c",
+      "description": "Minimums only, no dollar rates found",
+      "values": {
+        "screen_minimum": 12,
+        "embroidery_minimum": 12
+      },
+      "source_ids": [
+        "fnd"
+      ],
+      "caveat": ""
+    },
+    {
+      "id": "PEAK",
+      "provider_id": "peak",
+      "classification": "a",
+      "description": "Displayed custom-shape sticker widget amount",
+      "values": {
+        "widget_total": 29.25,
+        "minimum_stickers": 25
+      },
+      "source_ids": [
+        "peak"
+      ],
+      "caveat": "Widget shows quantities 25/50/100/500/1000 and sizes 2/3/4 inches, but active selection is not established. Cannot compute a 5-inch quote."
+    },
+    {
+      "id": "COST",
+      "provider_id": "costello",
+      "classification": "a",
+      "description": "Published local pickup and vehicle-print promotions",
+      "values": {
+        "ten_one_color_shirts_total": 100,
+        "two_24x12_magnets_total": 35
+      },
+      "source_ids": [
+        "costello",
+        "costello_mag"
+      ],
+      "caveat": "Shirt blank and limits need confirmation. Magnets are much larger than requested and are not a 6×4 oval quote. Vehicle page evidence is search-index text."
+    },
+    {
+      "id": "COST-B",
+      "provider_id": "costello",
+      "classification": "b",
+      "description": "Headwear category starting price",
+      "values": {
+        "caps_from": 5.25
+      },
+      "source_ids": [
+        "costello"
+      ],
+      "caveat": "Decoration construction and setup not established."
+    },
+    {
+      "id": "STENCIL",
+      "provider_id": "stencil",
+      "classification": "a",
+      "description": "Laser work on acrylic/wood",
+      "values": {
+        "setup": 100,
+        "hourly_machine": 60,
+        "minimum_hours": 1,
+        "optional_material_sourcing_markup_percent": 10
+      },
+      "source_ids": [
+        "stencil"
+      ],
+      "caveat": "Minimum machine-plus-setup $160 before materials. This does not price stainless bottles."
+    }
+  ],
+  "quotes": [
+    {
+      "product_id": 1,
+      "scope": "local_partial",
+      "label": "Conquer decoration subtotal; heavyweight blank unpriced",
+      "source_ids": [
+        "conquer_price"
+      ],
+      "rows": [
+        {
+          "requested_quantity": 24,
+          "ordered_quantity": 24,
+          "estimated_unit_usd": 18.95,
+          "estimated_total_usd": 454.8,
+          "arithmetic": "B + 7.35 + 6.10 + (4×30 + 4×3)/24; known decoration total = 24×(7.35+6.10)+132",
+          "qualifications": "B = unknown local heavyweight blank per item. Displayed numeric amounts cover decoration only."
+        },
+        {
+          "requested_quantity": 48,
+          "ordered_quantity": 48,
+          "estimated_unit_usd": 14.98,
+          "estimated_total_usd": 719.04,
+          "arithmetic": "B + 6.83 + 5.40 + (4×30 + 4×3)/48; known decoration total = 48×(6.83+5.40)+132",
+          "qualifications": "B = unknown local heavyweight blank per item. Displayed numeric amounts cover decoration only."
+        },
+        {
+          "requested_quantity": 100,
+          "ordered_quantity": 100,
+          "estimated_unit_usd": 12.25,
+          "estimated_total_usd": 1225.0,
+          "arithmetic": "B + 6.18 + 4.75 + (4×30 + 4×3)/100; known decoration total = 100×(6.18+4.75)+132",
+          "qualifications": "B = unknown local heavyweight blank per item. Displayed numeric amounts cover decoration only."
+        }
+      ],
+      "notes": "Assume sleeve pickaxe ≤4,000 stitches, four total production screens and $12 digitizing. Sleeve positioning and customer-supplied/heavy-garment fees unpriced. A fifth underbase screen raises the subtotal; see sensitivity table."
+    },
+    {
+      "product_id": 1,
+      "scope": "hybrid_benchmark",
+      "label": "National heavyweight blank plus local Conquer decoration",
+      "source_ids": [
+        "hood_blank",
+        "conquer_price"
+      ],
+      "rows": [
+        {
+          "requested_quantity": 24,
+          "ordered_quantity": 24,
+          "estimated_unit_usd": 53.95,
+          "estimated_total_usd": 1294.8,
+          "arithmetic": "35.00 + 7.35 print + 6.10 embroidery + 132/24",
+          "qualifications": ""
+        },
+        {
+          "requested_quantity": 48,
+          "ordered_quantity": 48,
+          "estimated_unit_usd": 49.98,
+          "estimated_total_usd": 2399.04,
+          "arithmetic": "35.00 + 6.83 print + 5.40 embroidery + 132/48",
+          "qualifications": ""
+        },
+        {
+          "requested_quantity": 100,
+          "ordered_quantity": 100,
+          "estimated_unit_usd": 47.25,
+          "estimated_total_usd": 4725.0,
+          "arithmetic": "35.00 + 6.18 print + 4.75 embroidery + 132/100",
+          "qualifications": ""
+        }
+      ],
+      "notes": "3Dot Tees $35 IND4000 navy-capable 10-oz blank, not a local blank price. Mixed-supplier budgeting scenario. Four total screens assumed. Not a supplier-issued combined quote; freight/handling and blank acceptance unverified."
+    },
+    {
+      "product_id": 2,
+      "scope": "local_proxy",
+      "label": "RCD dark-cotton-tee estimator proxy for royal",
+      "source_ids": [
+        "rcd",
+        "rcd_js"
+      ],
+      "rows": [
+        {
+          "requested_quantity": 24,
+          "ordered_quantity": 24,
+          "estimated_unit_usd": 14.59,
+          "estimated_total_usd": 350.16,
+          "arithmetic": "6.84 blank + 7.75 dark-table 2-color print + 0/24 screen setup",
+          "qualifications": ""
+        },
+        {
+          "requested_quantity": 48,
+          "ordered_quantity": 48,
+          "estimated_unit_usd": 11.94,
+          "estimated_total_usd": 573.12,
+          "arithmetic": "6.84 blank + 5.10 dark-table 2-color print + 0/48 screen setup",
+          "qualifications": ""
+        },
+        {
+          "requested_quantity": 100,
+          "ordered_quantity": 100,
+          "estimated_unit_usd": 11.04,
+          "estimated_total_usd": 1104.0,
+          "arithmetic": "6.84 blank + 4.20 dark-table 2-color print + 0/100 screen setup",
+          "qualifications": ""
+        }
+      ],
+      "notes": "Royal is not selectable in the public quick estimator. Uses its dark garment table, adult standard sizes and PC340 starting blank. Exact royal SKU, cotton composition and availability remain unverified; these are reconstructed calculator estimates."
+    },
+    {
+      "product_id": 3,
+      "scope": "local_unpriced",
+      "label": "No local public pricing found",
+      "source_ids": [],
+      "rows": [
+        {
+          "requested_quantity": 24,
+          "ordered_quantity": 24,
+          "estimated_unit_usd": null,
+          "estimated_total_usd": null,
+          "arithmetic": "No local public pricing found",
+          "qualifications": ""
+        },
+        {
+          "requested_quantity": 48,
+          "ordered_quantity": 48,
+          "estimated_unit_usd": null,
+          "estimated_total_usd": null,
+          "arithmetic": "No local public pricing found",
+          "qualifications": ""
+        },
+        {
+          "requested_quantity": 100,
+          "ordered_quantity": 100,
+          "estimated_unit_usd": null,
+          "estimated_total_usd": null,
+          "arithmetic": "No local public pricing found",
+          "qualifications": ""
+        }
+      ],
+      "notes": "General promo sourcing is plausible; a locally priced custom-knit SKU was not verified."
+    },
+    {
+      "product_id": 4,
+      "scope": "local_partial",
+      "label": "Conquer direct embroidery only; requested patch construction unpriced",
+      "source_ids": [
+        "conquer_price"
+      ],
+      "rows": [
+        {
+          "requested_quantity": 24,
+          "ordered_quantity": 24,
+          "estimated_unit_usd": 8.2,
+          "estimated_total_usd": 196.8,
+          "arithmetic": "C + P + A; direct-embroidery comparison only = 6.85 + 0.35 + 24/24",
+          "qualifications": "C = cap, P = patch manufacture, A = attachment. Numeric subtotal is direct embroidery and does not substitute for a patch."
+        },
+        {
+          "requested_quantity": 48,
+          "ordered_quantity": 48,
+          "estimated_unit_usd": 7.4,
+          "estimated_total_usd": 355.2,
+          "arithmetic": "C + P + A; direct-embroidery comparison only = 6.55 + 0.35 + 24/48",
+          "qualifications": "C = cap, P = patch manufacture, A = attachment. Numeric subtotal is direct embroidery and does not substitute for a patch."
+        },
+        {
+          "requested_quantity": 100,
+          "ordered_quantity": 100,
+          "estimated_unit_usd": 6.59,
+          "estimated_total_usd": 659.0,
+          "arithmetic": "C + P + A; direct-embroidery comparison only = 6.00 + 0.35 + 24/100",
+          "qualifications": "C = cap, P = patch manufacture, A = attachment. Numeric subtotal is direct embroidery and does not substitute for a patch."
+        }
+      ],
+      "notes": "No local public pricing found for complete patch cap. Assumed direct crest ≤8,000 stitches for comparison."
+    },
+    {
+      "product_id": 5,
+      "scope": "local_partial",
+      "label": "Conquer embroidery-only pom-beanie component",
+      "source_ids": [
+        "conquer_price"
+      ],
+      "rows": [
+        {
+          "requested_quantity": 24,
+          "ordered_quantity": 24,
+          "estimated_unit_usd": 8.3,
+          "estimated_total_usd": 199.2,
+          "arithmetic": "B + 6.85 embroidery + 0.45 ski-hat surcharge + 24/24",
+          "qualifications": "B = unpriced cuffed pom blank. Numeric amounts cover decoration only."
+        },
+        {
+          "requested_quantity": 48,
+          "ordered_quantity": 48,
+          "estimated_unit_usd": 7.5,
+          "estimated_total_usd": 360.0,
+          "arithmetic": "B + 6.55 embroidery + 0.45 ski-hat surcharge + 24/48",
+          "qualifications": "B = unpriced cuffed pom blank. Numeric amounts cover decoration only."
+        },
+        {
+          "requested_quantity": 100,
+          "ordered_quantity": 100,
+          "estimated_unit_usd": 6.69,
+          "estimated_total_usd": 669.0,
+          "arithmetic": "B + 6.00 embroidery + 0.45 ski-hat surcharge + 24/100",
+          "qualifications": "B = unpriced cuffed pom blank. Numeric amounts cover decoration only."
+        }
+      ],
+      "notes": "No local public pricing found for complete cuffed pom beanie. Crest assumed ≤8,000 stitches."
+    },
+    {
+      "product_id": 6,
+      "scope": "local_unpriced",
+      "label": "No local public pricing found",
+      "source_ids": [],
+      "rows": [
+        {
+          "requested_quantity": 24,
+          "ordered_quantity": 24,
+          "estimated_unit_usd": null,
+          "estimated_total_usd": null,
+          "arithmetic": "No local public pricing found",
+          "qualifications": ""
+        },
+        {
+          "requested_quantity": 48,
+          "ordered_quantity": 48,
+          "estimated_unit_usd": null,
+          "estimated_total_usd": null,
+          "arithmetic": "No local public pricing found",
+          "qualifications": ""
+        },
+        {
+          "requested_quantity": 100,
+          "ordered_quantity": 100,
+          "estimated_unit_usd": null,
+          "estimated_total_usd": null,
+          "arithmetic": "No local public pricing found",
+          "qualifications": ""
+        }
+      ],
+      "notes": "R5 confirms metal drinkware engraving, but no 32-oz bottle price or unit engraving rate found."
+    },
+    {
+      "product_id": 7,
+      "scope": "local_unpriced",
+      "label": "No local public pricing found",
+      "source_ids": [],
+      "rows": [
+        {
+          "requested_quantity": 24,
+          "ordered_quantity": 24,
+          "estimated_unit_usd": null,
+          "estimated_total_usd": null,
+          "arithmetic": "No local public pricing found",
+          "qualifications": ""
+        },
+        {
+          "requested_quantity": 48,
+          "ordered_quantity": 48,
+          "estimated_unit_usd": null,
+          "estimated_total_usd": null,
+          "arithmetic": "No local public pricing found",
+          "qualifications": ""
+        },
+        {
+          "requested_quantity": 100,
+          "ordered_quantity": 100,
+          "estimated_unit_usd": null,
+          "estimated_total_usd": null,
+          "arithmetic": "No local public pricing found",
+          "qualifications": ""
+        }
+      ],
+      "notes": "Quantities mean complete four-pin sets, hence 96/192/400 physical pins and 24/48/100 of each design. Separate tooling may apply to all four designs."
+    },
+    {
+      "product_id": 8,
+      "scope": "local_partial",
+      "label": "Conquer embroidery-only blanket component",
+      "source_ids": [
+        "conquer_price"
+      ],
+      "rows": [
+        {
+          "requested_quantity": 24,
+          "ordered_quantity": 24,
+          "estimated_unit_usd": 7.85,
+          "estimated_total_usd": 188.4,
+          "arithmetic": "B + 6.85 embroidery + 24/24",
+          "qualifications": "B = unknown local sherpa blanket. Numeric amounts cover decoration only."
+        },
+        {
+          "requested_quantity": 48,
+          "ordered_quantity": 48,
+          "estimated_unit_usd": 7.05,
+          "estimated_total_usd": 338.4,
+          "arithmetic": "B + 6.55 embroidery + 24/48",
+          "qualifications": "B = unknown local sherpa blanket. Numeric amounts cover decoration only."
+        },
+        {
+          "requested_quantity": 100,
+          "ordered_quantity": 100,
+          "estimated_unit_usd": 6.24,
+          "estimated_total_usd": 624.0,
+          "arithmetic": "B + 6.00 embroidery + 24/100",
+          "qualifications": "B = unknown local sherpa blanket. Numeric amounts cover decoration only."
+        }
+      ],
+      "notes": "No local public pricing found for a complete embroidered sherpa blanket. Assumes ≤8,000 stitches. Blanket-specific handling or hooping may add cost."
+    },
+    {
+      "product_id": 8,
+      "scope": "hybrid_benchmark",
+      "label": "National sherpa blank plus local Conquer embroidery",
+      "source_ids": [
+        "blanket_blank",
+        "conquer_price"
+      ],
+      "rows": [
+        {
+          "requested_quantity": 24,
+          "ordered_quantity": 24,
+          "estimated_unit_usd": 33.1,
+          "estimated_total_usd": 794.4,
+          "arithmetic": "25.25 national blank + 6.85 local embroidery + 24/24",
+          "qualifications": ""
+        },
+        {
+          "requested_quantity": 48,
+          "ordered_quantity": 48,
+          "estimated_unit_usd": 32.3,
+          "estimated_total_usd": 1550.4,
+          "arithmetic": "25.25 national blank + 6.55 local embroidery + 24/48",
+          "qualifications": ""
+        },
+        {
+          "requested_quantity": 100,
+          "ordered_quantity": 100,
+          "estimated_unit_usd": 29.49,
+          "estimated_total_usd": 2949.0,
+          "arithmetic": "23.25 national blank + 6.00 local embroidery + 24/100",
+          "qualifications": ""
+        }
+      ],
+      "notes": "NorthEast Fleece 50×60-inch blanket with embroidery-access zipper. Blank minimum 10. Local decoration acceptance and freight remain unverified."
+    },
+    {
+      "product_id": 9,
+      "scope": "local_partial",
+      "label": "Conquer backpack embroidery component",
+      "source_ids": [
+        "conquer_price"
+      ],
+      "rows": [
+        {
+          "requested_quantity": 24,
+          "ordered_quantity": 24,
+          "estimated_unit_usd": 8.6,
+          "estimated_total_usd": 206.4,
+          "arithmetic": "B + 6.85 embroidery + 0.75 bag surcharge + 24/24",
+          "qualifications": "B = unpriced local youth cleat-compartment backpack. Numeric amounts cover decoration only."
+        },
+        {
+          "requested_quantity": 48,
+          "ordered_quantity": 48,
+          "estimated_unit_usd": 7.8,
+          "estimated_total_usd": 374.4,
+          "arithmetic": "B + 6.55 embroidery + 0.75 bag surcharge + 24/48",
+          "qualifications": "B = unpriced local youth cleat-compartment backpack. Numeric amounts cover decoration only."
+        },
+        {
+          "requested_quantity": 100,
+          "ordered_quantity": 100,
+          "estimated_unit_usd": 6.99,
+          "estimated_total_usd": 699.0,
+          "arithmetic": "B + 6.00 embroidery + 0.75 bag surcharge + 24/100",
+          "qualifications": "B = unpriced local youth cleat-compartment backpack. Numeric amounts cover decoration only."
+        }
+      ],
+      "notes": "No local public pricing found for complete requested backpack. Assumes crest ≤8,000 stitches and accessible hooping area."
+    },
+    {
+      "product_id": 9,
+      "scope": "hybrid_benchmark",
+      "label": "Athletico youth blank reference plus local Conquer embroidery",
+      "source_ids": [
+        "bag",
+        "bag_price",
+        "conquer_price"
+      ],
+      "rows": [
+        {
+          "requested_quantity": 24,
+          "ordered_quantity": 24,
+          "estimated_unit_usd": 48.59,
+          "estimated_total_usd": 1166.16,
+          "arithmetic": "39.99 national bag + 6.85 embroidery + 0.75 bag surcharge + 24/24",
+          "qualifications": ""
+        },
+        {
+          "requested_quantity": 48,
+          "ordered_quantity": 48,
+          "estimated_unit_usd": 47.79,
+          "estimated_total_usd": 2293.92,
+          "arithmetic": "39.99 national bag + 6.55 embroidery + 0.75 bag surcharge + 24/48",
+          "qualifications": ""
+        },
+        {
+          "requested_quantity": 100,
+          "ordered_quantity": 100,
+          "estimated_unit_usd": 46.98,
+          "estimated_total_usd": 4698.0,
+          "arithmetic": "39.99 national bag + 6.00 embroidery + 0.75 bag surcharge + 24/100",
+          "qualifications": ""
+        }
+      ],
+      "notes": "Historical/current-catalog budgeting reference only. Athletico variant images show sold out; inventory unverified. Separate vented cleat compartment is documented. Not an available-to-order combined quote."
+    },
+    {
+      "product_id": 10,
+      "scope": "local_unpriced",
+      "label": "No local public pricing found",
+      "source_ids": [],
+      "rows": [
+        {
+          "requested_quantity": 24,
+          "ordered_quantity": 24,
+          "estimated_unit_usd": null,
+          "estimated_total_usd": null,
+          "arithmetic": "No local public pricing found for the requested pair",
+          "qualifications": ""
+        },
+        {
+          "requested_quantity": 48,
+          "ordered_quantity": 48,
+          "estimated_unit_usd": null,
+          "estimated_total_usd": null,
+          "arithmetic": "No local public pricing found for the requested pair",
+          "qualifications": ""
+        },
+        {
+          "requested_quantity": 100,
+          "ordered_quantity": 100,
+          "estimated_unit_usd": null,
+          "estimated_total_usd": null,
+          "arithmetic": "No local public pricing found for the requested pair",
+          "qualifications": ""
+        }
+      ],
+      "notes": "Peak price widget does not cover 5 inches; Costello larger magnets cannot be scaled by area into a 6×4 oval price."
+    },
+    {
+      "product_id": 3,
+      "scope": "national_benchmark",
+      "label": "Pinpops custom jacquard scarf",
+      "source_ids": [
+        "scarf"
+      ],
+      "rows": [
+        {
+          "requested_quantity": 24,
+          "ordered_quantity": 25,
+          "estimated_unit_usd": 21.05,
+          "estimated_total_usd": 526.25,
+          "arithmetic": "25×18.29 bundled knit + 69 setup; per delivered scarf = 18.29+69/25",
+          "qualifications": "Buy 25 to meet a published quantity; 1 extra. Effective spend per requested scarf = $21.93."
+        },
+        {
+          "requested_quantity": 48,
+          "ordered_quantity": 50,
+          "estimated_unit_usd": 16.21,
+          "estimated_total_usd": 810.5,
+          "arithmetic": "50×14.83 bundled knit + 69 setup; per delivered scarf = 14.83+69/50",
+          "qualifications": "Buy 50 to meet a published quantity; 2 extra. Effective spend per requested scarf = $16.89."
+        },
+        {
+          "requested_quantity": 100,
+          "ordered_quantity": 100,
+          "estimated_unit_usd": 14.32,
+          "estimated_total_usd": 1432.0,
+          "arithmetic": "100×13.63 bundled knit + 69 setup; per delivered scarf = 13.63+69/100",
+          "qualifications": "Buy 100 to meet a published quantity; 0 extra. Effective spend per requested scarf = $14.32."
+        }
+      ],
+      "notes": "Price includes knitting in up to six colors. Shipping/tax extra. 57×7 inches plus tassels. Uses live-page $14.83 at 50."
+    },
+    {
+      "product_id": 4,
+      "scope": "national_benchmark",
+      "label": "Custom Patch Hats Richardson 112 + embroidered fabric patch",
+      "source_ids": [
+        "patchhat"
+      ],
+      "rows": [
+        {
+          "requested_quantity": 24,
+          "ordered_quantity": 24,
+          "estimated_unit_usd": 23.0,
+          "estimated_total_usd": 552.0,
+          "arithmetic": "24×23.00 bundled cap and patch + 0 setup",
+          "qualifications": "0 extra caps; effective spend per requested cap = $23.00."
+        },
+        {
+          "requested_quantity": 48,
+          "ordered_quantity": 50,
+          "estimated_unit_usd": 19.25,
+          "estimated_total_usd": 962.5,
+          "arithmetic": "50×19.25 bundled cap and patch + 0 setup",
+          "qualifications": "2 extra caps; effective spend per requested cap = $20.05."
+        },
+        {
+          "requested_quantity": 100,
+          "ordered_quantity": 100,
+          "estimated_unit_usd": 17.0,
+          "estimated_total_usd": 1700.0,
+          "arithmetic": "100×17.00 bundled cap and patch + 0 setup",
+          "qualifications": "0 extra caps; effective spend per requested cap = $17.00."
+        }
+      ],
+      "notes": "Published amounts include patch design and no setup fees. Shipping and exact crest stitch/size limits not established. No separate blank/patch/attachment breakdown published."
+    },
+    {
+      "product_id": 5,
+      "scope": "national_benchmark",
+      "label": "Shirts From Fargo embroidered cuffed pom beanie",
+      "source_ids": [
+        "pom"
+      ],
+      "rows": [
+        {
+          "requested_quantity": 24,
+          "ordered_quantity": 24,
+          "estimated_unit_usd": 25.0,
+          "estimated_total_usd": 600.0,
+          "arithmetic": "24×25.00 bundled beanie and embroidery; separate setup amount not posted",
+          "qualifications": ""
+        },
+        {
+          "requested_quantity": 48,
+          "ordered_quantity": 48,
+          "estimated_unit_usd": 24.0,
+          "estimated_total_usd": 1152.0,
+          "arithmetic": "48×24.00 bundled beanie and embroidery; separate setup amount not posted",
+          "qualifications": ""
+        },
+        {
+          "requested_quantity": 100,
+          "ordered_quantity": 100,
+          "estimated_unit_usd": 24.0,
+          "estimated_total_usd": 2400.0,
+          "arithmetic": "100×24.00 bundled beanie and embroidery; separate setup amount not posted",
+          "qualifications": ""
+        }
+      ],
+      "notes": "Pom and 3-inch cuff specified. Art issues may produce additional charges. No digitizing amount or stitch allowance posted, so totals are merchandise subtotals."
+    },
+    {
+      "product_id": 6,
+      "scope": "national_benchmark",
+      "label": "4imprint Hydro Flask 32 oz laser-engraved bottle",
+      "source_ids": [
+        "bottle"
+      ],
+      "rows": [
+        {
+          "requested_quantity": 24,
+          "ordered_quantity": 24,
+          "estimated_unit_usd": 66.0,
+          "estimated_total_usd": 1584.0,
+          "arithmetic": "24×63.50 bottle and one-side laser + 60 setup",
+          "qualifications": ""
+        },
+        {
+          "requested_quantity": 48,
+          "ordered_quantity": 48,
+          "estimated_unit_usd": 62.2,
+          "estimated_total_usd": 2985.6,
+          "arithmetic": "48×60.95 bottle and one-side laser + 60 setup",
+          "qualifications": ""
+        },
+        {
+          "requested_quantity": 100,
+          "ordered_quantity": 100,
+          "estimated_unit_usd": 59.1,
+          "estimated_total_usd": 5910.0,
+          "arithmetic": "100×58.50 bottle and one-side laser + 60 setup",
+          "qualifications": "Uses the published 72-unit breakpoint conservatively; exact 100-unit slider price was not obtained."
+        }
+      ],
+      "notes": "Insulated 32-oz branded premium benchmark. 24/48 prices are posted breakpoints; 100 estimate carries the 72-piece rate. No separate bottle/laser cost breakdown published."
+    },
+    {
+      "product_id": 7,
+      "scope": "national_benchmark",
+      "label": "VeperPins four 1.25-inch hard-enamel designs",
+      "source_ids": [
+        "pin_price"
+      ],
+      "rows": [
+        {
+          "requested_quantity": 24,
+          "ordered_quantity": 100,
+          "estimated_unit_usd": 12.88,
+          "estimated_total_usd": 1288.0,
+          "arithmetic": "4 designs × 100 pins/design × 3.22 = 1288, plus unposted tooling/fees",
+          "qualifications": "Lowest published tier is 100 per design. Buy 100 sets; 76 extra sets. Known spend per requested set = $53.67, before unknown fees."
+        },
+        {
+          "requested_quantity": 48,
+          "ordered_quantity": 100,
+          "estimated_unit_usd": 12.88,
+          "estimated_total_usd": 1288.0,
+          "arithmetic": "4 designs × 100 pins/design × 3.22 = 1288, plus unposted tooling/fees",
+          "qualifications": "Lowest published tier is 100 per design. Buy 100 sets; 52 extra sets. Known spend per requested set = $26.83, before unknown fees."
+        },
+        {
+          "requested_quantity": 100,
+          "ordered_quantity": 100,
+          "estimated_unit_usd": 12.88,
+          "estimated_total_usd": 1288.0,
+          "arithmetic": "4 designs × 100 pins/design × 3.22 = 1288, plus unposted tooling/fees",
+          "qualifications": "Lowest published tier is 100 per design. Buy 100 sets; 0 extra sets. Known spend per requested set = $12.88, before unknown fees."
+        }
+      ],
+      "notes": "Only a merchandise subtotal. VeperPins is an online USD-price benchmark and its operating location was not verified. Three enamel colors are included. Each extra color adds $0.10 per physical pin. Tooling, packaging and freight are not established. Each design uses its own quantity tier."
+    },
+    {
+      "product_id": 8,
+      "scope": "national_benchmark",
+      "label": "NorthEast Fleece embroidered sherpa blanket",
+      "source_ids": [
+        "blanket"
+      ],
+      "rows": [
+        {
+          "requested_quantity": 24,
+          "ordered_quantity": 48,
+          "estimated_unit_usd": 30.97,
+          "estimated_total_usd": 1486.6,
+          "arithmetic": "48×29.95 bundled blanket/embroidery + 49 setup",
+          "qualifications": "24 extra blankets; effective spend per requested blanket = $61.94."
+        },
+        {
+          "requested_quantity": 48,
+          "ordered_quantity": 48,
+          "estimated_unit_usd": 30.97,
+          "estimated_total_usd": 1486.6,
+          "arithmetic": "48×29.95 bundled blanket/embroidery + 49 setup",
+          "qualifications": "0 extra blankets; effective spend per requested blanket = $30.97."
+        },
+        {
+          "requested_quantity": 100,
+          "ordered_quantity": 100,
+          "estimated_unit_usd": 30.44,
+          "estimated_total_usd": 3044.0,
+          "arithmetic": "100×29.95 bundled blanket/embroidery + 49 setup",
+          "qualifications": "0 extra blankets; effective spend per requested blanket = $30.44."
+        }
+      ],
+      "notes": "Minimum 48. Includes up to 6,000 stitches, unlike the local 8,000-stitch model. Shipping/tax extra; promotional shipping code not applied."
+    },
+    {
+      "product_id": 10,
+      "scope": "national_benchmark",
+      "label": "Bagmasters 5-inch decal + 4AllPromos 6×4 oval magnet",
+      "source_ids": [
+        "decal",
+        "magnet"
+      ],
+      "rows": [
+        {
+          "requested_quantity": 24,
+          "ordered_quantity": 50,
+          "estimated_unit_usd": null,
+          "estimated_total_usd": 333.72,
+          "arithmetic": "50 decals×2.70 + 24 magnets×8.28; unknown setup/freight extra",
+          "qualifications": "Delivers 50 decals and 24 magnets. Merchandise spend per requested pair = $13.90."
+        },
+        {
+          "requested_quantity": 48,
+          "ordered_quantity": 50,
+          "estimated_unit_usd": null,
+          "estimated_total_usd": 481.5,
+          "arithmetic": "50 decals×2.70 + 50 magnets×6.93; unknown setup/freight extra",
+          "qualifications": "Delivers 50 decals and 50 magnets. Merchandise spend per requested pair = $10.03."
+        },
+        {
+          "requested_quantity": 100,
+          "ordered_quantity": 100,
+          "estimated_unit_usd": null,
+          "estimated_total_usd": 602.0,
+          "arithmetic": "100 decals×1.88 + 100 magnets×4.14; unknown setup/freight extra",
+          "qualifications": "Delivers 100 decals and 100 magnets. Merchandise spend per requested pair = $6.02."
+        }
+      ],
+      "notes": "Bagmasters minimum 50; full-color vinyl. 4AllPromos normal-production tier used; site displays a cheaper 3-business-day column whose relationship to normal pricing is unclear. Full-color magnet included; no verified setup amount. Magnet thickness is 0.01 inch, so suitability for sustained vehicle use needs confirmation."
+    }
+  ],
+  "sources": [
+    {
+      "id": "rcd",
+      "title": "RCD public estimator and contact",
+      "url": "https://rcdincprintco.com/",
+      "accessed_date": "2026-11-09",
+      "note": ""
+    },
+    {
+      "id": "rcd_js",
+      "title": "RCD publicly served calculator JavaScript",
+      "url": "https://rcdincprintco.com/assets/index-Bm1Rqqjl.js",
+      "accessed_date": "2026-11-09",
+      "note": "Read-only download. Inputs and arithmetic were inspected locally. Asset URL is versioned and may change."
+    },
+    {
+      "id": "rcd_rep",
+      "title": "RCD recent public reviews",
+      "url": "https://www.loc8nearme.com/california/placerville/robinson-custom-designs-rcd/5674266/",
+      "accessed_date": "2026-11-09",
+      "note": ""
+    },
+    {
+      "id": "sierra",
+      "title": "Sierra Stitch Factory contact",
+      "url": "https://sierrastitchfactory.com/",
+      "accessed_date": "2026-11-09",
+      "note": ""
+    },
+    {
+      "id": "sierra_about",
+      "title": "Sierra Stitch Factory history and services",
+      "url": "https://sierrastitchfactory.com/about-us",
+      "accessed_date": "2026-11-09",
+      "note": ""
+    },
+    {
+      "id": "bougie",
+      "title": "Bougie Print services and contact",
+      "url": "https://bougieprint.com/",
+      "accessed_date": "2026-11-09",
+      "note": ""
+    },
+    {
+      "id": "bougie_price",
+      "title": "Bougie Print published pricing",
+      "url": "https://bougieprint.com/custom-apparel-pricing",
+      "accessed_date": "2026-11-09",
+      "note": ""
+    },
+    {
+      "id": "bougie_catalog",
+      "title": "Bougie Print catalog",
+      "url": "https://bougieprint.com/catalog",
+      "accessed_date": "2026-11-09",
+      "note": "Catalog landing page accessible. Filtered product pages returned cache misses, so exact requested blanks were not verified."
+    },
+    {
+      "id": "branded",
+      "title": "Branded Graphics & Apparel",
+      "url": "https://branded-graphics.com/",
+      "accessed_date": "2026-11-09",
+      "note": ""
+    },
+    {
+      "id": "branded_rep",
+      "title": "Branded public address and Neighborhood Favorite awards",
+      "url": "https://nextdoor.com/pages/branded-graphics-and-apparel-el-dorado-hills-ca/",
+      "accessed_date": "2026-11-09",
+      "note": ""
+    },
+    {
+      "id": "peak",
+      "title": "Peak Printz stickers",
+      "url": "https://peakprintz.com/custom-stickers",
+      "accessed_date": "2026-11-09",
+      "note": ""
+    },
+    {
+      "id": "tree",
+      "title": "TreeCity public contact information",
+      "url": "https://treecityprint.com/policies/contact-information",
+      "accessed_date": "2026-11-09",
+      "note": ""
+    },
+    {
+      "id": "tree_home",
+      "title": "TreeCity services",
+      "url": "https://treecityprint.com/",
+      "accessed_date": "2026-11-09",
+      "note": ""
+    },
+    {
+      "id": "tree_screen",
+      "title": "TreeCity screen-printing prices",
+      "url": "https://treecityprint.com/pages/screen-printing-pricing-treecity-print-embroidery-sacramento",
+      "accessed_date": "2026-11-09",
+      "note": ""
+    },
+    {
+      "id": "tree_emb",
+      "title": "TreeCity embroidery prices",
+      "url": "https://treecityprint.com/pages/embroidery-pricing-treecity-print-embroidery-sacramento",
+      "accessed_date": "2026-11-09",
+      "note": ""
+    },
+    {
+      "id": "tree_dtf",
+      "title": "TreeCity DTF print-and-press prices",
+      "url": "https://treecityprint.com/pages/dtf-garment-printing-treecity-print-embroidery-sacramento",
+      "accessed_date": "2026-11-09",
+      "note": ""
+    },
+    {
+      "id": "conquer",
+      "title": "Conquer contact",
+      "url": "https://conquerprinting.com/contact",
+      "accessed_date": "2026-11-09",
+      "note": ""
+    },
+    {
+      "id": "conquer_home",
+      "title": "Conquer services and local pickup",
+      "url": "https://conquerprinting.com/",
+      "accessed_date": "2026-11-09",
+      "note": ""
+    },
+    {
+      "id": "conquer_price",
+      "title": "Conquer published price list, effective July 2026",
+      "url": "https://conquerprinting.com/printing-prices",
+      "accessed_date": "2026-11-09",
+      "note": ""
+    },
+    {
+      "id": "ray",
+      "title": "RayLay screen-printing rates and contact",
+      "url": "https://www.ray-lay.com/screen-printing",
+      "accessed_date": "2026-11-09",
+      "note": ""
+    },
+    {
+      "id": "hard",
+      "title": "Hard Eight services, minimum, contact and review widget",
+      "url": "https://hardeightscreenprinting.com/",
+      "accessed_date": "2026-11-09",
+      "note": ""
+    },
+    {
+      "id": "hard_faq",
+      "title": "Hard Eight customer-supplied goods and pricing FAQ",
+      "url": "https://hardeightscreenprinting.com/faq",
+      "accessed_date": "2026-11-09",
+      "note": ""
+    },
+    {
+      "id": "fnd",
+      "title": "FnD services, minimums and contact",
+      "url": "https://www.fndembroidery.net/",
+      "accessed_date": "2026-11-09",
+      "note": ""
+    },
+    {
+      "id": "pins",
+      "title": "Great Lapel Pins services and address",
+      "url": "https://www.greatlapelpins.com/",
+      "accessed_date": "2026-11-09",
+      "note": ""
+    },
+    {
+      "id": "r5",
+      "title": "R5 laser engraving and contact",
+      "url": "https://www.r5print.com/laser-engraving",
+      "accessed_date": "2026-11-09",
+      "note": ""
+    },
+    {
+      "id": "r5_home",
+      "title": "R5 services and customer work",
+      "url": "https://www.r5print.com/",
+      "accessed_date": "2026-11-09",
+      "note": ""
+    },
+    {
+      "id": "r5_rep",
+      "title": "R5 third-party review listing",
+      "url": "https://www.sewinglocal.com/california/sacramento/r5-stitch-print-sacramento-ca",
+      "accessed_date": "2026-11-09",
+      "note": "Shows 4.9 from 67 reviews, but lists Unit A. Primary business website lists Unit B and is preferred for address."
+    },
+    {
+      "id": "costello",
+      "title": "Costello services, promotions and contact",
+      "url": "https://costelloprintshop.com/",
+      "accessed_date": "2026-11-09",
+      "note": ""
+    },
+    {
+      "id": "costello_mag",
+      "title": "Costello vehicle magnet pricing",
+      "url": "https://costelloprintshop.com/shop/vehicle-printing/",
+      "accessed_date": "2026-11-09",
+      "note": "Search-index text was readable. Direct open returned a verification page."
+    },
+    {
+      "id": "stencil",
+      "title": "Stencil Stop laser services and rates",
+      "url": "https://stencilstop.com/pages/laser-engraving-cutting-services",
+      "accessed_date": "2026-11-09",
+      "note": ""
+    },
+    {
+      "id": "stencil_contact",
+      "title": "Stencil Stop contact",
+      "url": "https://stencilstop.com/pages/contact",
+      "accessed_date": "2026-11-09",
+      "note": ""
+    },
+    {
+      "id": "stencil_address",
+      "title": "Stencil Stop public return address",
+      "url": "https://stencilstop.com/policies/refund-policy",
+      "accessed_date": "2026-11-09",
+      "note": ""
+    },
+    {
+      "id": "hood_blank",
+      "title": "3Dot Tees IND4000 heavyweight blank",
+      "url": "https://www.3dotteessav.com/product-page/independent-trading-co-ind4000-heavyweight-blank-pullover-hoodie-solid-colors",
+      "accessed_date": "2026-11-09",
+      "note": ""
+    },
+    {
+      "id": "scarf",
+      "title": "Pinpops jacquard-knit scarf prices",
+      "url": "https://www.pinpops.com/en/promo/custom-scarves/",
+      "accessed_date": "2026-11-09",
+      "note": "Live page shows $14.83 at 50, whereas search snippet showed $14.84. Live page used."
+    },
+    {
+      "id": "scarf_alt",
+      "title": "Climate Headwear US scarf pricing",
+      "url": "https://climateheadwear.com/US/",
+      "accessed_date": "2026-11-09",
+      "note": ""
+    },
+    {
+      "id": "patchhat",
+      "title": "Custom Patch Hats embroidered fabric patch prices",
+      "url": "https://www.custompatchhats.com/custom-fabric-patch-hats/",
+      "accessed_date": "2026-11-09",
+      "note": ""
+    },
+    {
+      "id": "pom",
+      "title": "Shirts From Fargo custom embroidered pom beanie",
+      "url": "https://shirtsfromfargo.com/custom-embroidered-pom-beanie/",
+      "accessed_date": "2026-11-09",
+      "note": ""
+    },
+    {
+      "id": "bottle",
+      "title": "4imprint 32 oz laser-engraved Hydro Flask",
+      "url": "https://www.4imprint.com/product/164380-32-FL-L/Hydro-Flask-Wide-Mouth-with-Flex-Cap-32-oz-Laser-Engraved",
+      "accessed_date": "2026-11-09",
+      "note": ""
+    },
+    {
+      "id": "bottle_alt",
+      "title": "Legacy Lasers 32 oz bulk bottle range",
+      "url": "https://www.legacylasersco.com/pages/custom-bottles-bulk-orders",
+      "accessed_date": "2026-11-09",
+      "note": "Reno, Nevada. Range only, no quantity-tier assignment."
+    },
+    {
+      "id": "pin_price",
+      "title": "VeperPins public hard-enamel prices",
+      "url": "https://veperpins.com/custom-pins-pricing/",
+      "accessed_date": "2026-11-09",
+      "note": ""
+    },
+    {
+      "id": "blanket",
+      "title": "NorthEast Fleece embroidered sherpa blanket",
+      "url": "https://northeastfleece.com/shop/sherpa-blanket-embroidery/",
+      "accessed_date": "2026-11-09",
+      "note": ""
+    },
+    {
+      "id": "blanket_blank",
+      "title": "NorthEast Fleece blank sherpa blanket",
+      "url": "https://northeastfleece.com/shop/sherpa-blanket/",
+      "accessed_date": "2026-11-09",
+      "note": ""
+    },
+    {
+      "id": "blanket_alt",
+      "title": "Amsterdam embroidered fleece sherpa blanket",
+      "url": "https://www.amsterdamprinting.com/p/embroidered-fleece-sherpa-blanket?id=46008",
+      "accessed_date": "2026-11-09",
+      "note": ""
+    },
+    {
+      "id": "bag",
+      "title": "Athletico youth bag specification and stock",
+      "url": "https://www.athleticogear.com/products/athletico-league-youth-soccer-bag",
+      "accessed_date": "2026-11-09",
+      "note": "Variant images say sold out. Current purchasability and bulk stock are unverified."
+    },
+    {
+      "id": "bag_price",
+      "title": "Athletico catalog public retail price",
+      "url": "https://www.athleticogear.com/collections/soccer",
+      "accessed_date": "2026-11-09",
+      "note": ""
+    },
+    {
+      "id": "bag_alt",
+      "title": "Hamco soccer backpack pricing",
+      "url": "https://hamcospo.com/custom-soccer-uniforms/custom-soccer-backpacks/",
+      "accessed_date": "2026-11-09",
+      "note": "Live page specifies sublimation included and embroidery separately quoted. Search excerpt claiming lower all-inclusive prices was superseded by live page."
+    },
+    {
+      "id": "decal",
+      "title": "Bagmasters 5-inch die-cut vinyl stickers",
+      "url": "https://www.bagmasters.com/5-die-cut-custom-shape-stickers",
+      "accessed_date": "2026-11-09",
+      "note": ""
+    },
+    {
+      "id": "magnet",
+      "title": "4AllPromos 6 by 4 oval car magnet",
+      "url": "https://www.4allpromos.com/product/car-sign-oval-magnet-6-x-4",
+      "accessed_date": "2026-11-09",
+      "note": ""
+    },
+    {
+      "id": "district",
+      "title": "District DT6100 specification",
+      "url": "https://www.districtclothing.com/p/10641_White",
+      "accessed_date": "2026-11-09",
+      "note": ""
+    }
+  ],
+  "assumptions": [
+    "Adult standard sizes; youth/adult mix unknown",
+    "Pickaxe <=4000 stitches; crest <=8000 stitches",
+    "Four total production screens unless underbase sensitivity is used",
+    "Separate setup per product; no unverified reuse discounts",
+    "No tax or unposted freight, handling, artwork, packaging or set-assembly costs"
+  ],
+  "gaps": [
+    "Exact complete local pricing for requested specifications not verified",
+    "Royal not present in RCD quick estimator",
+    "Local patch manufacture/attachment and custom-knit scarf prices not found",
+    "Hard-enamel tooling not publicly established",
+    "Great Lapel Pins present operation and conflicting address need verification",
+    "Athletico displayed stock uncertain",
+    "Supplied-good handling/acceptance not verified in hybrid models"
+  ],
+  "rounding_note": "Unit figures are rounded to cents after calculation; totals use unrounded arithmetic. Local component amounts are identified by scope."
+}
