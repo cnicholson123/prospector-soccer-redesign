@@ -230,7 +230,13 @@ ul, ol { margin: 0; padding: 0; }
 .menu-toggle__icon span { display: block; height: 2px; background: currentColor; border-radius: 2px; }
 .menu-toggle__icon span:last-child { width: 70%; justify-self: end; }
 
-@media (max-width: 1140px) {
+@media (min-width: 1201px) and (max-width: 1320px) {
+  .site-header__inner { gap: 14px; }
+  .primary-nav ul { gap: 0; }
+  .primary-nav a { padding-inline: 9px; }
+  .primary-nav a::after { left: 9px; right: 9px; }
+}
+@media (max-width: 1200px) {
   .primary-nav, .site-header__cta { display: none; }
   .menu-toggle { display: inline-flex; }
 }
@@ -999,3 +1005,152 @@ h3 { text-transform: uppercase; }
   .program__media { aspect-ratio: 16 / 9; max-height: 380px; }
 }
 .subnav ul { position: relative; }
+
+/* ==========================================================================
+   Design review, pass 2 (Fable, 2026-11-09): polish and modern platform
+   features. Everything here is progressive: older browsers keep the base.
+   ========================================================================== */
+
+/* ---------- Page-to-page transitions ----------
+   Same-origin navigations cross-fade while the header stays put. */
+@media (prefers-reduced-motion: no-preference) {
+  @view-transition { navigation: auto; }
+  .site-header { view-transition-name: site-header; }
+  ::view-transition-old(root) { animation: vt-out .14s ease-out both; }
+  ::view-transition-new(root) { animation: vt-in .28s var(--ease) both; }
+  ::view-transition-group(site-header) { animation-duration: .2s; }
+  @keyframes vt-out { to { opacity: 0; } }
+  @keyframes vt-in { from { opacity: 0; } }
+}
+
+/* ---------- Base refinements ---------- */
+:root { color-scheme: light; accent-color: var(--blue-600); interpolate-size: allow-keywords; }
+html { scrollbar-color: var(--line-2) transparent; -webkit-tap-highlight-color: transparent; }
+/* Anchors must also clear the sticky sub-nav where a page has one. */
+html:has(.subnav) { scroll-padding-top: 140px; }
+body { font-kerning: normal; }
+h1, h2, h3, .statement p { text-wrap: balance; }
+p, li, dd, figcaption { text-wrap: pretty; }
+.nowrap { white-space: nowrap; }
+.season, .price-card__amount, .tier__price, .stat__num, .ticket__day, .facts dd, .cost-stack, .glance dd { font-variant-numeric: tabular-nums; }
+
+/* Inline text links: a quiet underline that firms up on hover. */
+:is(.prose, .faq__a, .note, .lead, .info, .card, .glance__note, .site-footer__base) a:not(.btn, .link-arrow) {
+  text-decoration-color: color-mix(in srgb, currentColor 38%, transparent);
+  transition: text-decoration-color .15s, color .15s;
+}
+:is(.prose, .faq__a, .note, .lead, .info, .card, .glance__note, .site-footer__base) a:not(.btn, .link-arrow):hover { text-decoration-color: currentColor; }
+
+/* Focus: gold disappears on cream, so light surfaces get a blue ring and
+   dark surfaces keep the gold one. */
+:focus-visible { outline-color: var(--blue-600); }
+:is(.utility-bar, .hero, .page-hero, .section--navy, .band, .cta-band, .site-footer, .mobile-menu, .action-bar, .tier--gold, .price-card--featured, .person--lead, .shop-hero, .shop-bundle) :focus-visible,
+.tile:focus-visible, .skip-link:focus-visible { outline-color: var(--gold-500); }
+.tile:focus-visible { outline-offset: 4px; }
+
+/* ---------- Utility bar ---------- */
+/* The key icon is a line drawing; the global svg fill turned it into a blob. */
+.utility-bar__admin svg { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+/* ---------- Header ---------- */
+.primary-nav a { white-space: nowrap; }
+/* Reading progress: a gold hairline that fills as the page scrolls. */
+@supports (animation-timeline: scroll()) {
+  .site-header::after {
+    content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; pointer-events: none;
+    background: linear-gradient(90deg, var(--gold-500), var(--gold-300));
+    transform: scaleX(0); transform-origin: 0 50%;
+    animation: read-progress linear both; animation-timeline: scroll(root block);
+  }
+  @keyframes read-progress { to { transform: scaleX(1); } }
+}
+@media print { .site-header::after { display: none; } }
+
+/* ---------- Buttons ---------- */
+.btn:not(.btn--ghost, .btn--ghost-light) { box-shadow: inset 0 1px 0 rgb(255 255 255 / .22), 0 1px 2px rgb(11 42 91 / .12); }
+.btn:not(.btn--ghost, .btn--ghost-light):hover { box-shadow: inset 0 1px 0 rgb(255 255 255 / .22), 0 8px 22px rgb(11 42 91 / .2); }
+.btn--gold:hover { box-shadow: inset 0 1px 0 rgb(255 255 255 / .3), 0 8px 22px rgb(217 158 0 / .32); }
+.btn:active { transform: translateY(0) scale(.98); transition-duration: .06s; }
+.chip:active, .subnav a:active { transform: scale(.97); }
+.link-arrow { text-underline-offset: 5px; }
+.link-arrow:hover { text-decoration: underline; text-decoration-thickness: 2px; text-decoration-color: var(--gold-500); }
+
+/* ---------- Mobile menu ---------- */
+.mobile-menu__panel { overscroll-behavior: contain; box-shadow: -24px 0 60px rgb(6 24 51 / .35); }
+@media (min-width: 421px) { .mobile-menu__panel { border-radius: var(--radius-lg) 0 0 var(--radius-lg); } }
+.mobile-menu__list a { transition: color .15s, padding-left .2s var(--ease); }
+.mobile-menu__list a:hover { color: var(--gold-300); padding-left: 6px; }
+.icon-btn { transition: background-color .15s, border-color .15s, transform .2s var(--ease); }
+.icon-btn:hover { background: rgb(255 255 255 / .1); border-color: rgb(255 255 255 / .45); transform: rotate(90deg); }
+.menu-toggle { transition: background-color .15s, transform .15s var(--ease); }
+.menu-toggle:hover { background: var(--blue-800); }
+.menu-toggle:active { transform: scale(.96); }
+@media (prefers-reduced-motion: no-preference) {
+  .mobile-menu.is-open .mobile-menu__list li, .mobile-menu.is-open .mobile-menu__foot { animation: menu-item-in .45s var(--ease) both; }
+  .mobile-menu.is-open .mobile-menu__list li:nth-child(1) { animation-delay: 60ms; }
+  .mobile-menu.is-open .mobile-menu__list li:nth-child(2) { animation-delay: 90ms; }
+  .mobile-menu.is-open .mobile-menu__list li:nth-child(3) { animation-delay: 120ms; }
+  .mobile-menu.is-open .mobile-menu__list li:nth-child(4) { animation-delay: 150ms; }
+  .mobile-menu.is-open .mobile-menu__list li:nth-child(5) { animation-delay: 180ms; }
+  .mobile-menu.is-open .mobile-menu__list li:nth-child(6) { animation-delay: 210ms; }
+  .mobile-menu.is-open .mobile-menu__list li:nth-child(7) { animation-delay: 240ms; }
+  .mobile-menu.is-open .mobile-menu__list li:nth-child(8) { animation-delay: 270ms; }
+  .mobile-menu.is-open .mobile-menu__list li:nth-child(n+9) { animation-delay: 300ms; }
+  .mobile-menu.is-open .mobile-menu__foot { animation-delay: 330ms; }
+  @keyframes menu-item-in { from { opacity: 0; transform: translateX(18px); } }
+}
+
+/* ---------- Disclosure (FAQ, past events) ----------
+   Height animates open and closed where the browser supports it. */
+@media (prefers-reduced-motion: no-preference) {
+  :is(.faq details, .tickets-past)::details-content {
+    block-size: 0; overflow: clip; opacity: 0;
+    transition: block-size .34s var(--ease), opacity .28s ease, content-visibility .34s allow-discrete;
+  }
+  :is(.faq details, .tickets-past)[open]::details-content { block-size: auto; opacity: 1; }
+}
+.faq summary { transition: color .15s; border-radius: var(--radius); }
+.faq summary:hover { color: var(--blue-600); }
+.faq details:hover { border-color: var(--line-2); }
+.faq summary:hover::after { background-color: var(--blue-100); }
+.faq details[open] summary:hover::after { background-color: var(--gold-300); }
+.tickets-past summary { transition: color .15s; }
+.tickets-past summary:hover { color: var(--blue-900); }
+
+/* ---------- Cards ---------- */
+/* Team cards are not links, so they should not lift like one. */
+.team:hover { transform: none; box-shadow: none; }
+.callout, .doc, .sponsor-card, .tile { -webkit-tap-highlight-color: transparent; }
+.tile { transition: box-shadow .3s var(--ease), transform .3s var(--ease); }
+.tile:hover { box-shadow: var(--shadow-lg); transform: translateY(-3px); }
+.tile:hover::before { background: linear-gradient(0deg, rgb(6 24 51 / .94) 0%, rgb(6 24 51 / .5) 50%, rgb(6 24 51 / .1) 80%); }
+.callout:active, .doc:active, .sponsor-card:active, .tile:active { transform: scale(.99); }
+.search input { transition: border-color .15s, box-shadow .15s; }
+.search input::placeholder { color: var(--slate); opacity: .8; }
+
+/* ---------- Stats band ----------
+   A side scrim keeps the headline readable over busy photography. */
+@media (min-width: 761px) {
+  .band::before { background: linear-gradient(90deg, rgb(6 24 51 / .72) 0%, rgb(6 24 51 / .45) 55%, rgb(6 24 51 / .2) 100%), linear-gradient(180deg, rgb(6 24 51 / .5), rgb(6 24 51 / .84)); }
+}
+.band h2, .band .lead, .hero__title, .hero__lead, .page-hero h1, .page-hero .lead { text-shadow: 0 1px 24px rgb(6 24 51 / .35); }
+
+/* ---------- Sub-nav ---------- */
+.subnav { transition: box-shadow .2s; }
+.subnav a.is-active { box-shadow: 0 4px 12px rgb(11 42 91 / .22); }
+
+/* ---------- Mobile action bar ---------- */
+@media (max-width: 760px) {
+  .action-bar { border: 1px solid rgb(255 255 255 / .12); -webkit-backdrop-filter: blur(10px) saturate(1.4); backdrop-filter: blur(10px) saturate(1.4); }
+  .action-bar .btn { min-width: 0; padding-inline: 1em; }
+}
+@media (max-width: 360px) { .action-bar .btn { font-size: .875rem; padding-inline: .7em; } }
+
+/* ---------- Sponsors: wrapped names keep a sensible shape ---------- */
+@media (prefers-reduced-motion: reduce) { .marquee__track li { border-radius: 22px; } }
+
+/* ---------- Footer ---------- */
+.site-footer ul a { transition: color .15s, transform .2s var(--ease); }
+.site-footer ul a:hover { transform: translateX(3px); }
+.to-top svg { transition: transform .2s var(--ease); }
+.to-top:hover svg { transform: translateY(-3px); }
