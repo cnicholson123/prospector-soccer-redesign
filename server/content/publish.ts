@@ -1,6 +1,6 @@
 import { isDeepStrictEqual } from 'node:util';
 import { collectionNames, type CollectionName } from '../../shared/schema';
-import type { Doc, PublishRecord, Revision, ScheduledItem } from '../../shared/types';
+import type { Doc, PublishRecord, Revision, ScheduledItem, Snapshot } from '../../shared/types';
 import type { Store } from '../store/types';
 import { audit, type Actor } from '../audit';
 import { buildSnapshot } from './snapshot';
@@ -25,15 +25,20 @@ export function select(docs: Doc[], items: Item[]) {
     return doc;
   });
 }
-export async function commitSnapshot(store: Store, original: Doc[], changes: Doc[], actor: Actor, now: Date, options: { kind: PublishRecord['kind']; summary?: string; scheduled?: ScheduledItem[]; restoredFrom?: number; effectiveAt?: string; action?: string }) {
-  const current = await store.getSnapshot();
+export async function commitSnapshot(store: Store, capture: { docs: Doc[]; snapshot: Snapshot | null }, changes: Doc[], actor: Actor, now: Date, options: { kind: PublishRecord['kind']; summary?: string; scheduled?: ScheduledItem[]; restoredFrom?: number; effectiveAt?: string; action?: string }) {
+  const { docs: original, snapshot: current } = capture;
   const siteVersion = (current?.siteVersion ?? 0) + 1;
-  const next = original.map(doc => changes.find(d => d.id === doc.id && d.collection === doc.collection) ?? { ...doc });
+  const next = original.map(doc => {
+    const change = changes.find(d => d.id === doc.id && d.collection === doc.collection);
+    if (!change) return { ...doc };
+    return { ...change, version: doc.version + 1, updatedAt: now.toISOString(), updatedBy: actor.id,
+      publishedVersion: change.published !== undefined && isDeepStrictEqual(change.published, change.draft) ? doc.version + 1 : change.publishedVersion };
+  });
   // Newly referenced media metadata participates in the versioned snapshot too.
-  for (const ref of next.filter(d => d.published !== undefined && !d.trashedAt).flatMap(d => references(d.collection, d.published)).concat((options.scheduled ?? current?.scheduled ?? []).flatMap(d => references(d.collection, d.data)))) {
+  for (const ref of next.filter(d => d.published !== undefined).flatMap(d => references(d.collection, d.published)).concat((options.scheduled ?? current?.scheduled ?? []).flatMap(d => references(d.collection, d.data)))) {
     if (ref.collection !== 'media') continue;
     const media = next.find(d => d.collection === 'media' && d.id === ref.id);
-    if (media && media.published === undefined && !media.trashedAt) Object.assign(media, { published: structuredClone(media.draft), publishedVersion: media.version, status: 'published' });
+    if (media && media.published === undefined && !media.trashedAt) Object.assign(media, { published: structuredClone(media.draft), publishedVersion: media.version + 1, version: media.version + 1, status: 'published' });
   }
   const revisions: Revision[] = [], manifest: PublishRecord['manifest'] = [];
   const previous = current ? await store.getPublish(current.siteVersion) : null;
@@ -44,7 +49,7 @@ export async function commitSnapshot(store: Store, original: Doc[], changes: Doc
       if (options.kind === 'schedule') revisions.push(revision(doc, actor, 'scheduled', now, { sealedAt: now.toISOString(), publishSiteVersion: siteVersion }));
       else if (doc.published === undefined) revisions.push(revision(doc, actor, 'unpublished', now, { sealedAt: now.toISOString(), publishSiteVersion: siteVersion, summary: options.summary }));
     }
-    if (doc.published === undefined || doc.trashedAt || doc.status === 'trashed') continue;
+    if (doc.published === undefined) continue;
     const prior = previous?.manifest.find(e => e.collection === doc.collection && e.id === doc.id && e.version === doc.publishedVersion);
     let revId = prior?.revId;
     if (!revId || changed) {
@@ -58,7 +63,7 @@ export async function commitSnapshot(store: Store, original: Doc[], changes: Doc
     // Guard every input used to assemble the snapshot, including unchanged docs.
     await store.publish({ docs: next.map(doc => ({ expectedVersion: original.find(d => d.id === doc.id && d.collection === doc.collection)!.version, nextDoc: doc })), snapshot, revisions,
       record: { siteVersion, at: now.toISOString(), actorId: actor.id, summary: options.summary, kind: options.kind, manifest, restoredFrom: options.restoredFrom },
-      audit: [audit(actor, options.action ?? `content.${options.kind}`, { meta: { siteVersion, items: changes.map(d => ({ collection: d.collection, id: d.id })) } }, now)] });
+      audit: [audit(actor, options.action ?? `content.${options.kind}`, { meta: { siteVersion, items: next.filter(d => !isDeepStrictEqual(d, original.find(o => o.id === d.id && o.collection === d.collection))).map(d => ({ collection: d.collection, id: d.id })) } }, now)] });
   } catch (error) {
     if (error instanceof Error && /version conflict|pending publish/i.test(error.message)) throw new ApiError(409, 'conflict', 'Someone else saved this. Reload and compare', { current: await store.getSnapshot() });
     throw error;
@@ -68,8 +73,7 @@ export async function commitSnapshot(store: Store, original: Doc[], changes: Doc
 }
 export async function publishDocuments(store: Store, items: Item[], actor: Actor, now: Date, summary?: string, unpublish = false) {
   await store.recoverPublish();
-  const docs = await allDocs(store), selected = select(docs, items);
-  const snapshot = await store.getSnapshot();
+  const capture = await store.capturePublication(), { docs, snapshot } = capture, selected = select(docs, items);
   const changes = selected.map(doc => ({ ...doc, published: unpublish || doc.trashedAt ? undefined : structuredClone(doc.draft), publishedVersion: unpublish || doc.trashedAt ? undefined : doc.version, publishedOrder: unpublish || doc.trashedAt ? undefined : doc.order ?? 0, scheduledAt: undefined, reviewRequestedBy: undefined, reviewNote: undefined, status: doc.trashedAt ? 'trashed' as const : unpublish ? 'draft' as const : 'published' as const }));
-  return commitSnapshot(store, docs, changes, actor, now, { kind: unpublish ? 'unpublish' : 'publish', summary, scheduled: (snapshot?.scheduled ?? []).filter(s => !selected.some(d => d.id === s.id && d.collection === s.collection)) });
+  return commitSnapshot(store, capture, changes, actor, now, { kind: unpublish ? 'unpublish' : 'publish', summary, scheduled: (snapshot?.scheduled ?? []).filter(s => !selected.some(d => d.id === s.id && d.collection === s.collection)) });
 }

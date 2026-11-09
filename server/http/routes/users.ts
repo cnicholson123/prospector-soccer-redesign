@@ -5,15 +5,10 @@ import { validateFields } from '../../content/validate';
 import { roles } from '../../../shared/permissions-table';
 import { audit, publicUser } from '../../audit';
 import { hashPassword, checkPassword } from '../../auth/password';
-import { revokeSessions } from '../../auth/session';
+import { username } from '../../store/identifiers';
 import { requirePermission } from '../middleware/permission';
 import { actor, type AdminEnv } from '../middleware/auth';
 import { ApiError, object, string } from '../middleware/errors';
-function username(value: unknown): string {
-  const name = string(value, 'username', 100).trim();
-  if (!/^[a-zA-Z0-9_.@-]+$/.test(name)) throw new ApiError(422, 'validation', 'Username contains unsupported characters');
-  return name;
-}
 function email(value: unknown): string | undefined {
   if (value === undefined || value === '') return undefined;
   if (!validateFields({ email: { type: 'email' } }, { email: value }).valid) throw new ApiError(422, 'validation', 'Invalid email');
@@ -44,7 +39,6 @@ export function userRoutes(app: Hono<AdminEnv>) {
     const revoke = next.role !== user.role || next.active !== user.active;
     if (revoke) next.authVersion = (user.authVersion ?? 0) + 1;
     await c.get('store').changeUser(next, c.get('user').id, audit(actor(c), 'users.update', { meta: { userId: user.id, role: next.role } }, c.get('now')), user);
-    if (revoke) await revokeSessions(c.get('store'), user.id);
     return c.json({ user: publicUser(next) });
   });
   app.post('/api/admin/users/:id/reset-password', async c => {
@@ -53,18 +47,18 @@ export function userRoutes(app: Hono<AdminEnv>) {
     const password = randomBytes(18).toString('base64url');
     const next = { ...user, passwordHash: await hashPassword(password), passwordChangedAt: c.get('now').toISOString(), passwordWeak: false, authVersion: (user.authVersion ?? 0) + 1 };
     await c.get('store').changeUser(next, c.get('user').id, audit(actor(c), 'users.reset_password', { meta: { userId: user.id } }, c.get('now')), user);
-    await revokeSessions(c.get('store'), user.id); return c.json({ temporaryPassword: password });
+    return c.json({ temporaryPassword: password });
   });
   app.post('/api/admin/users/:id/revoke-sessions', async c => {
     const user = await c.get('store').getUser(c.req.param('id'));
     if (!user) throw new ApiError(404, 'not_found', 'User not found');
     await c.get('store').changeUser({ ...user, authVersion: (user.authVersion ?? 0) + 1 }, c.get('user').id, audit(actor(c), 'users.revoke_sessions', { meta: { userId: user.id } }, c.get('now')), user);
-    await revokeSessions(c.get('store'), user.id); return c.json({ ok: true });
+    return c.json({ ok: true });
   });
   app.delete('/api/admin/users/:id', async c => {
     const user = await c.get('store').getUser(c.req.param('id'));
     if (!user) throw new ApiError(404, 'not_found', 'User not found');
     await c.get('store').changeUser({ ...user, active: false, authVersion: (user.authVersion ?? 0) + 1 }, c.get('user').id, audit(actor(c), 'users.deactivate', { meta: { userId: user.id } }, c.get('now')), user);
-    await revokeSessions(c.get('store'), user.id); return c.json({ ok: true });
+    return c.json({ ok: true });
   });
 }

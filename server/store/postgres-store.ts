@@ -1,3 +1,5 @@
+import { keyPart, documentId, username } from './identifiers';
+import { loginGenerationKey, usernameRateKey } from '../auth/ratelimit';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { Pool, type PoolClient } from '@neondatabase/serverless';
 import { ApiError } from '../http/middleware/errors';
@@ -25,6 +27,7 @@ export class PostgresStore implements Store {
     return result.rows as T[];
   }
   private async read<T>(table: Table, id: string): Promise<T | null> {
+    keyPart(id);
     return (await this.rows<{ body: T }>(`SELECT body FROM ${table} WHERE id=$1`, [id]))[0]?.body ?? null;
   }
   private async all<T>(table: Table, where = '', values: unknown[] = []): Promise<T[]> {
@@ -32,6 +35,8 @@ export class PostgresStore implements Store {
   }
   private async write(table: Table, id: string, value: unknown, expectedVersion?: number): Promise<void> {
     if (!this.transaction.getStore()) throw new Error('Write requires a transaction');
+    keyPart(id);
+    if (table === 'docs') documentId(id);
     const body = JSON.stringify(value);
     if (table === 'users') {
       await this.rows('INSERT INTO users(id,body,username_key) VALUES($1,$2::jsonb,$3) ON CONFLICT(id) DO UPDATE SET body=excluded.body, username_key=excluded.username_key', [id, body, (value as User).username.toLowerCase()]);
@@ -59,6 +64,7 @@ export class PostgresStore implements Store {
   }
   private allDocs() { return this.all<Doc>('docs'); }
   async getDoc(collection: CollectionName, id: string): Promise<Doc | null> {
+    documentId(id);
     const doc = await this.read<Doc>('docs', id); return doc?.collection === collection ? doc : null;
   }
   listDocs(collection: CollectionName, opts: { includeTrashed?: boolean } = {}): Promise<Doc[]> {
@@ -104,7 +110,7 @@ export class PostgresStore implements Store {
       if (patch.order !== undefined && current.status === 'published') doc.status = 'changed';
       if (patch.order !== undefined && current.published !== undefined && current.publishedOrder === undefined) doc.publishedOrder = current.order ?? 0;
       if ((doc.trashedAt || doc.status === 'trashed') && !current.trashedAt && current.status !== 'trashed') {
-        const usage = referenceUsage(await this.allDocs(), collection, id);
+        const usage = referenceUsage(await this.allDocs(), collection, id, (await this.getSnapshot())?.scheduled);
         if (usage.length) throw Object.assign(new Error('Document is in use'), { code: 'in_use', status: 409, details: { usage } });
       }
       const revisions: Revision[] = [];
@@ -144,6 +150,11 @@ export class PostgresStore implements Store {
     });
   }
   getSnapshot() { return this.read<Snapshot>('snapshots', 'published'); }
+  capturePublication(): Promise<{ docs: Doc[]; snapshot: Snapshot | null }> {
+    return this.exclusive(async () => {
+      return { docs: await this.allDocs(), snapshot: await this.getSnapshot() };
+    });
+  }
   publish(tx: PublishTx): Promise<{ siteVersion: number }> {
     return this.exclusive(async () => {
       const current = await this.getSnapshot();
@@ -166,6 +177,7 @@ export class PostgresStore implements Store {
         const index = docs.findIndex(doc => doc.id === nextDoc.id && doc.collection === nextDoc.collection);
         const stored = docs[index];
         if (!stored || stored.version !== expectedVersion) throw new Error('Document version conflict');
+        if (!equal(stored, nextDoc) && nextDoc.version !== expectedVersion + 1) throw new Error('Document version conflict: envelope change requires a new version');
         if (![expectedVersion, expectedVersion + 1].includes(nextDoc.version)) throw new Error('Invalid next document version');
         if (stored.createdAt !== nextDoc.createdAt || stored.createdBy !== nextDoc.createdBy) throw new Error('Cannot change document creation metadata');
         docs[index] = nextDoc;
@@ -188,14 +200,14 @@ export class PostgresStore implements Store {
       for (const entry of tx.record.manifest) {
         const key = entry.id;
         const doc = docs.find(doc => doc.collection === entry.collection && doc.id === entry.id);
-        if (manifestIds.has(key) || !doc || doc.status === 'trashed' || doc.trashedAt || doc.published === undefined || entry.version !== doc.publishedVersion || entry.order !== (doc.publishedOrder ?? doc.order ?? 0)) throw new Error('Invalid publish manifest');
+        if (manifestIds.has(key) || !doc || doc.published === undefined || entry.version !== doc.publishedVersion || entry.order !== (doc.publishedOrder ?? doc.order ?? 0)) throw new Error('Invalid publish manifest');
         manifestIds.add(key);
         const rev = tx.revisions?.find(rev => rev.id === entry.revId && rev.docId === entry.id) ?? await this.getRevision(entry.id, entry.revId);
         if (!rev || rev.collection !== entry.collection || rev.docVersion !== entry.version || !equal(rev.data, doc.published)) throw new Error('Manifest revision does not match published document');
       }
-      for (const doc of docs.filter(doc => doc.published !== undefined && doc.status !== 'trashed' && !doc.trashedAt)) {
+      for (const doc of docs.filter(doc => doc.published !== undefined)) {
         if (!manifestIds.has(doc.id)) throw new Error('Published document missing from manifest');
-        const result = validate(doc.collection, doc.published, { mode: 'publish', resolve: (collection, id) => docs.find(target => target.collection === collection && target.id === id) ?? null });
+        const result = validate(doc.collection, doc.published, { mode: 'publish', resolve: (collection, id) => docs.map(target => target.published === undefined ? target : { ...target, trashedAt: undefined, status: 'published' as const }).find(target => target.collection === collection && target.id === id) ?? null });
         if (!result.valid) throw new ValidationError(result.errors.map(error => ({ ...error, path: `${doc.collection}.${doc.id}.${error.path}` })));
       }
       for (const item of tx.snapshot.scheduled) {
@@ -231,12 +243,14 @@ export class PostgresStore implements Store {
   }
   async listRevisions(collection: CollectionName, id: string, limit: number, before?: string): Promise<Revision[]> {
     const boundary = before ? await this.getRevision(id, before) : null;
+    if (before && !boundary && !Number.isFinite(Date.parse(before))) throw new ApiError(422, 'validation', 'Invalid revision cursor');
     const values: unknown[] = [collection, id, pageLimit(limit)]; let clause = '';
     if (boundary) { clause = 'AND (at,doc_version,id COLLATE "C") < ($4,$5,$6)'; values.push(boundary.at, boundary.docVersion, boundary.id); }
     else if (before) { clause = 'AND at<$4'; values.push(before); }
     return this.all<Revision>('revisions', `WHERE collection=$1 AND doc_id=$2 ${clause} ORDER BY at DESC, doc_version DESC, id COLLATE "C" DESC LIMIT $3`, values);
   }
   async getRevision(docId: string, revId: string): Promise<Revision | null> {
+    documentId(docId); keyPart(revId);
     return (await this.all<Revision>('revisions', 'WHERE doc_id=$1 AND id=$2', [docId, revId]))[0] ?? null;
   }
   async queryAudit(q: AuditQuery): Promise<{ items: AuditEntry[]; cursor?: string }> {
@@ -249,7 +263,7 @@ export class PostgresStore implements Store {
     if (q.text) { values.push(q.text.toLowerCase()); clauses.push(`strpos(lower(body::text),$${values.length})>0`); }
     if (q.cursor) {
       const cursor = await this.read<AuditEntry>('audit', q.cursor);
-      if (!cursor) throw new Error('Invalid audit cursor');
+      if (!cursor) throw new ApiError(422, 'validation', 'Invalid audit cursor');
       values.push(cursor.at, cursor.id); clauses.push(`(at,id COLLATE "C") < ($${values.length-1},$${values.length})`);
     }
     values.push(limit+1);
@@ -281,10 +295,34 @@ export class PostgresStore implements Store {
       await this.saveUser(next); return next;
     });
   }
+  unlockLogin(name: string, entry: AuditEntry): Promise<void> {
+    return this.exclusive(async () => {
+      const key = loginGenerationKey(username(name));
+      const generation = Number(await this.getMeta(key) ?? 0) + 1;
+      await this.checkAudit(entry);
+      await this.write('audit', entry.id, entry);
+      await this.setMeta(key, generation);
+      await this.remove('rate_limits', usernameRateKey(name));
+    });
+  }
+  revokeSessions(userId: string, entry: AuditEntry, options: { hash?: string; except?: string; seal?: boolean } = {}): Promise<boolean> {
+    return this.exclusive(async () => {
+      const sessions = (await this.listSessions(userId)).filter(s => s.hash !== options.except && (!options.hash || s.hash === options.hash));
+      if (options.hash && !sessions.length) return false;
+      await this.checkAudit(entry);
+      await this.write('audit', entry.id, entry);
+      if (options.seal) for (const rev of await this.all<Revision>('revisions')) if (!rev.sealedAt && rev.authorId === userId) await this.write('revisions', rev.id, { ...rev, sealedAt: entry.at });
+      for (const session of sessions) await this.remove('sessions', session.hash);
+      return true;
+    });
+  }
   loginFailure(key: string, now: string): Promise<{ failures: number; locks: number; until?: string }> {
     return this.exclusive(async () => {
       const state = await this.getMeta(key) as { failures: number; locks: number; until?: string } | null ?? { failures: 0, locks: 0 };
       if (state.until && Date.parse(state.until) > Date.parse(now)) return state;
+      const window = state as typeof state & { windowStart?: string; count?: number };
+      if (!window.windowStart || Date.parse(now) - Date.parse(window.windowStart) >= 900000) { state.failures = 0; window.windowStart = now; window.count = 0; }
+      window.count = (window.count ?? 0) + 1;
       state.failures++;
       if (state.failures >= 5) { state.failures = 0; state.until = new Date(Date.parse(now) + Math.min(86400, 900 * 2 ** state.locks) * 1000).toISOString(); state.locks++; }
       await this.setMeta(key, state); return state;
@@ -330,10 +368,14 @@ export class PostgresStore implements Store {
   listUsers() { return this.all<User>('users'); }
   getUser(id: string) { return this.read<User>('users', id); }
   async getUserByUsername(username: string): Promise<User | null> {
+    keyPart(username);
     return (await this.all<User>('users', 'WHERE username_key=$1', [username.toLowerCase()]))[0] ?? null;
   }
   putUser(user: User): Promise<void> { return this.exclusive(() => this.saveUser(user)); }
   private async saveUser(user: User): Promise<void> {
+    username(user.username);
+    const old = await this.getUser(user.id);
+    if (old && (old.authVersion ?? 0) !== (user.authVersion ?? 0)) for (const session of await this.listSessions(user.id)) await this.remove('sessions', session.hash);
     const owner = await this.getUserByUsername(user.username);
     if (owner && owner.id !== user.id) throw new Error('Username already exists');
     await this.write('users', user.id, user);

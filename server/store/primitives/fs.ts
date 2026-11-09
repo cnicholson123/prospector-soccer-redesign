@@ -4,7 +4,7 @@ import { randomUUID } from 'node:crypto';
 import { setTimeout as delay } from 'node:timers/promises';
 import type { KvPrimitives, RunExclusive } from '../types';
 export function safeKey(key: string): string {
-  if (!key || key.includes('\\') || key.includes('\0') || key.startsWith('/') || key.split('/').some(p => !p || p === '.' || p === '..' || p.startsWith('.'))) throw new Error('Invalid storage key');
+  if (!key || key.includes('\\') || key.includes('\0') || key.startsWith('/') || key.split('/').some(p => !p || p === '.' || p === '..' || p.startsWith('.') || Buffer.byteLength(p) > 200)) throw new Error('Invalid storage key');
   return key;
 }
 /** Reject symlink components, including missing-file writes below an existing symlink. */

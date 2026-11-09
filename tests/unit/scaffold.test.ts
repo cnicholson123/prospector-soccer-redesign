@@ -9,7 +9,7 @@ describe('Phase 0 scaffold', () => {
     const response = await adminApp.request('/api/admin/healthz');
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ ok: true });
-    expect((await adminApp.request('/api/admin/missing')).status).toBe(404);
+    expect((await adminApp.request('/api/admin/missing')).status).toBe(401);
   });
   it('loads local defaults and warns for ephemeral secrets', () => {
     const warn = vi.fn(); const config = loadConfig({}, warn);

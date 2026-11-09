@@ -77,6 +77,6 @@ it('publishing after soft trash removes the document while untrash keeps its dra
   expect((await f.store.getSnapshot())?.docs.events?.some(d => d.id === doc.id)).toBe(true);
   expect((await f.req('/publish', 'POST', { items: [{ collection: 'events', id: doc.id, expectedVersion: 2 }] })).status).toBe(200);
   expect((await f.store.getSnapshot())?.docs.events?.some(d => d.id === doc.id)).toBe(false);
-  expect((await f.req(`/docs/events/${doc.id}/untrash`, 'POST', { baseVersion: 2 })).status).toBe(200);
+  expect((await f.req(`/docs/events/${doc.id}/untrash`, 'POST', { baseVersion: 3 })).status).toBe(200);
   expect((await f.store.getDoc('events', doc.id))?.draft).toEqual(doc.draft);
 });

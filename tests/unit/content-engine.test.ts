@@ -22,21 +22,22 @@ describe('Phase 5 HTTP content lifecycle', () => {
     let doc = (await response.json()).doc;
     const createdId = (await f.store.listRevisions('events', doc.id, 20))[0].id;
     response = await f.req(`/docs/events/${doc.id}`, 'PUT', { baseVersion: doc.version, draft: event('Updated event') }); expect(response.status).toBe(200); doc = (await response.json()).doc;
-    let history = await f.store.listRevisions('events', doc.id, 20); expect(history).toHaveLength(1); expect(history[0].id).toBe(createdId); expect(history[0].docVersion).toBe(2);
+    let history = await f.store.listRevisions('events', doc.id, 20); expect(history).toHaveLength(2); expect(history[1].id).toBe(createdId); expect(history[0].docVersion).toBe(2);
     const stale = await f.req(`/docs/events/${doc.id}`, 'PUT', { baseVersion: 1, draft: event('Stale edit') }); expect(stale.status).toBe(409); expect((await stale.json()).error.details.current.version).toBe(2);
     const stalePublish = await f.req('/publish', 'POST', { items: [{ ...item(doc), expectedVersion: 1 }] }); expect(stalePublish.status).toBe(409);
     const published = await f.req('/publish', 'POST', { items: [item(doc)] }); expect(published.status).toBe(200); expect(await published.json()).toMatchObject({ siteVersion: 2, purged: false, message: 'Live within about 5 minutes' });
     history = await f.store.listRevisions('events', doc.id, 20); expect(history.every(r => r.sealedAt)).toBe(true);
-    response = await f.req(`/docs/events/${doc.id}`, 'PUT', { baseVersion: 2, draft: event('Later event'), checkpoint: true }); expect(response.status).toBe(200); doc = (await response.json()).doc;
+    doc = (await f.store.getDoc('events', doc.id))!;
+    response = await f.req(`/docs/events/${doc.id}`, 'PUT', { baseVersion: doc.version, draft: event('Later event'), checkpoint: true }); expect(response.status).toBe(200); doc = (await response.json()).doc;
     const restored = await f.req(`/revisions/${createdId}/restore?docId=${doc.id}`, 'POST', { baseVersion: doc.version, publish: true }); expect(restored.status).toBe(200);
-    expect((await f.store.getDoc('events', doc.id))?.draft).toMatchObject({ title: 'Updated event' });
+    expect((await f.store.getDoc('events', doc.id))?.draft).toMatchObject({ title: 'New event' });
     expect((await f.req('/publishes/1/restore', 'POST', { summary: 'Return to the starting point' })).status).toBe(200);
     const final = (await f.store.getSnapshot())!;
     expect(final.siteVersion).toBe(4); expect(contents(final)).toEqual(contents(original));
     expect((await f.store.getPublish(4))?.kind).toBe('restore');
-    expect((await f.store.getDoc('events', doc.id))?.draft).toMatchObject({ title: 'Updated event' });
+    expect((await f.store.getDoc('events', doc.id))?.draft).toMatchObject({ title: 'New event' });
     expect(final.docs.events!.some(d => d.id === doc.id)).toBe(false);
-    expect((await f.req('/search?q=Updated')).status).toBe(200);
+    expect((await f.req('/search?q=New')).status).toBe(200);
     expect((await f.req('/publishes/1?diff=1')).status).toBe(200);
   });
   it('seals a working revision when another author saves or ten minutes elapse', async () => {
@@ -96,6 +97,7 @@ describe('schedules and cache boundaries', () => {
     const at = '2030-01-01T12:01:00Z';
     expect((await f.req('/schedule', 'POST', { items: [item(doc)], at })).status).toBe(200);
     expect((await f.store.getPublish(2))?.kind).toBe('schedule');
+    doc = (await f.store.getDoc('events', doc.id))!;
     doc = (await (await f.req(`/docs/events/${doc.id}`, 'PUT', { baseVersion: doc.version, draft: event('Newer private draft') })).json()).doc;
     let time = new Date('2030-01-01T12:00:30Z');
     const render = createRenderHandler(f.store, { ...f.config, cacheSmaxage: 15, cacheSwr: 300 }, () => time);
@@ -112,8 +114,9 @@ describe('schedules and cache boundaries', () => {
     expect(renderPage((await f.store.getSnapshot())!, 'home', { now: time })).toContain('Frozen scheduled title');
   });
   it('records schedule cancellation, rejects unauthenticated cron, and accepts GET/POST bearer cron', async () => {
-    const f = await fixture(); const doc = (await (await f.req('/docs/events', 'POST', { draft: event('Cancelled') })).json()).doc;
+    const f = await fixture(); let doc = (await (await f.req('/docs/events', 'POST', { draft: event('Cancelled') })).json()).doc;
     await f.req('/schedule', 'POST', { items: [item(doc)], at: '2030-01-02T12:00:00Z' });
+    doc = (await f.store.getDoc('events', doc.id))!;
     expect((await f.req(`/schedule/events/${doc.id}`, 'DELETE', { baseVersion: doc.version })).status).toBe(200);
     expect((await f.store.getSnapshot())?.scheduled).toEqual([]); expect((await f.store.getPublish(3))?.kind).toBe('schedule');
     expect((await f.req('/cron/settle', 'POST')).status).toBe(401);

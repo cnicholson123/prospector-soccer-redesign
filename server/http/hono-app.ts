@@ -25,7 +25,7 @@ export function createAdminApp(storeFactory: () => Store = createStore, options:
       const headers = new Headers(c.req.raw.headers); headers.delete('content-length');
       c.req.raw = new Request(c.req.raw, { headers });
     }
-    await next();
+    try { await next(); } catch (error) { throw error instanceof Error ? error : new Error('Non-Error exception', { cause: error }); }
   });
   app.use('/api/admin/*', async (c, next) => {
     const maxSize = c.req.path === '/api/admin/media/local-upload' ? (config ?? loadConfig()).maxFileBytes : 1024 * 1024;
@@ -45,13 +45,18 @@ export function createAdminApp(storeFactory: () => Store = createStore, options:
     await next();
     if (c.res.status >= 500) needsRecovery = true;
   });
+  app.use('/api/admin/*', async (c, next) => {
+    for (const segment of c.req.path.split('/').filter(Boolean)) {
+      let decoded: string;
+      try { decoded = decodeURIComponent(segment); } catch { throw new ApiError(422, 'validation', 'Invalid path'); }
+      if (Buffer.byteLength(encodeURIComponent(decoded)) > 200) throw new ApiError(422, 'validation', 'Identifier too long');
+    }
+    if (c.req.path === '/api/admin/auth/login' || c.req.path === '/api/admin/healthz' || c.req.path.startsWith('/api/admin/cron/')) return next();
+    return authenticate(c, next);
+  });
   mediaCallbacks(app);
   authRoutes(app);
   cronRoutes(app);
-  for (const path of ['media', 'docs', 'users', 'audit', 'publish', 'unpublish', 'schedule', 'pending', 'revisions', 'publishes', 'dashboard', 'search', 'health', 'export', 'rebuild']) {
-    app.use(`/api/admin/${path}`, authenticate);
-    app.use(`/api/admin/${path}/*`, authenticate);
-  }
   app.use('/api/admin/docs/media', async (c, next) => {
     if (!['GET','HEAD'].includes(c.req.method)) throw new ApiError(403,'forbidden','Use the verified media upload routes');
     await next();
@@ -67,8 +72,8 @@ export function createAdminApp(storeFactory: () => Store = createStore, options:
       return c.json({ error: { code: error.code, message: error.message, details: error.details } }, error.status);
     }
     if (error instanceof SyntaxError) return c.json({ error: { code: 'validation', message: 'Invalid JSON' } }, 422);
-    if ('code' in error && error.code === 'validation' && 'details' in error) return c.json({ error: { code: 'validation', message: error.message, details: error.details } }, 422);
-    if ('code' in error && error.code === 'in_use' && 'details' in error) return c.json({ error: { code: 'in_use', message: error.message, details: error.details } }, 409);
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'validation' && 'details' in error) return c.json({ error: { code: 'validation', message: error.message, details: error.details } }, 422);
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'in_use' && 'details' in error) return c.json({ error: { code: 'in_use', message: error.message, details: error.details } }, 409);
     needsRecovery = true;
     console.error(error);
     return c.json({ error: { code: 'internal', message: 'Internal server error' } }, 500);

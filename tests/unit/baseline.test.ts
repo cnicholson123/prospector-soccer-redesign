@@ -2,6 +2,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
+import { newSession } from '../../server/auth/session';
+import { bootstrap } from '../../server/auth/bootstrap';
 import { loadConfig } from '../../server/config';
 import { createStore, createMediaBlobs } from '../../server/store';
 import { createDocument } from '../../server/content/documents';
@@ -60,11 +62,12 @@ describe('Phase 1b config and runtime dispatch', () => {
     app.get('/api/admin/test-failure', () => { throw new Error('Injected error'); });
     app.get('/api/admin/test-read', c => c.json({ ok: true }));
     await app.request('/api/admin/healthz'); expect(recover).not.toHaveBeenCalled();
-    await app.request('/api/admin/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: 'Phil', password: 'Phil' }) });
+    const login = await app.request('/api/admin/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: 'Phil', password: 'Phil' }) });
+    const headers = { Cookie: login.headers.get('set-cookie')!.split(';')[0] };
     expect(recover).toHaveBeenCalledTimes(1);
-    await app.request('/api/admin/test-read'); expect(recover).toHaveBeenCalledTimes(1);
-    await app.request('/api/admin/test-failure');
-    await app.request('/api/admin/test-read'); expect(recover).toHaveBeenCalledTimes(2);
+    await app.request('/api/admin/test-read', { headers }); expect(recover).toHaveBeenCalledTimes(2);
+    await app.request('/api/admin/test-failure', { headers });
+    await app.request('/api/admin/test-read', { headers }); expect(recover).toHaveBeenCalledTimes(5);
   });
   it('caps actual streamed bytes as well as declared content-length', async () => {
     const large = 'a'.repeat(1024 * 1024 + 1);
@@ -73,7 +76,7 @@ describe('Phase 1b config and runtime dispatch', () => {
       expect(response.status).toBe(413);
     }
     const response = await adminApp.request('/api/admin/missing', { method: 'POST', body: 'a'.repeat(1024 * 1024) });
-    expect(response.status).toBe(404);
+    expect(response.status).toBe(401);
   });
 });
 
@@ -126,9 +129,12 @@ describe('draft defaults and publish validation', () => {
   });
   it('returns validation paths with 422 through the API error handler', async () => {
     // This test route exercises the error boundary until Phase 5 adds the authenticated publish route.
-    const app = createAdminApp();
+    const { store, config } = await local();
+    await bootstrap(store, config);
+    const { token, session } = await newSession(store, (await store.listUsers())[0], {});
+    const app = createAdminApp(() => store, { config });
     app.post('/api/admin/test-validation', () => { throw new ValidationError([{ path: 'home.hero', message: 'Required section' }]); });
-    const response = await app.request('/api/admin/test-validation', { method: 'POST' });
+    const response = await app.request('/api/admin/test-validation', { method: 'POST', headers: { Cookie: 'psc_session=' + token, 'X-CSRF-Token': session.csrfToken } });
     expect(response.status).toBe(422);
     expect(await response.json()).toEqual({ error: { code: 'validation', message: 'Content validation failed', details: [{ path: 'home.hero', message: 'Required section' }] } });
   });
@@ -163,10 +169,11 @@ describe('snapshot and reference integrity', () => {
     const mediaDoc = makeDoc('media', 'med_a', draft);
     const rev = { id: createHistoryId('rev'), collection: mediaDoc.collection, docId: mediaDoc.id, docVersion: 1, at, authorId: 'test', authorName: 'Test', action: 'created' as const, sealedAt: at, data: draft };
     await store.createDoc({ doc: mediaDoc, revision: rev, audit: audit() });
-    const published = { ...mediaDoc, published: draft, publishedVersion: 1, status: 'published' as const };
-    await store.publish({ docs: [{ expectedVersion: 1, nextDoc: published }], snapshot: buildSnapshot([published], { siteVersion: 1, publishedAt: at, templateHash: 'test' }), record: { siteVersion: 1, at, actorId: 'test', kind: 'publish', manifest: [{ collection: 'media', id: 'med_a', version: 1, order: 0, title: 'original.pdf', revId: rev.id }] } });
-    const unpublished = { ...published, published: undefined, publishedVersion: undefined, status: 'draft' as const };
-    await store.publish({ docs: [{ expectedVersion: 1, nextDoc: unpublished }], snapshot: buildSnapshot([unpublished], { siteVersion: 2, publishedAt: at, templateHash: 'test' }), record: { siteVersion: 2, at, actorId: 'test', kind: 'unpublish', manifest: [] } });
+    const published = { ...mediaDoc, version: 2, published: draft, publishedVersion: 2, status: 'published' as const };
+    const pubRev = { ...rev, id: createHistoryId('rev'), docVersion: 2 };
+    await store.publish({ docs: [{ expectedVersion: 1, nextDoc: published }], revisions: [pubRev], snapshot: buildSnapshot([published], { siteVersion: 1, publishedAt: at, templateHash: 'test' }), record: { siteVersion: 1, at, actorId: 'test', kind: 'publish', manifest: [{ collection: 'media', id: 'med_a', version: 2, order: 0, title: 'original.pdf', revId: pubRev.id }] } });
+    const unpublished = { ...published, version: 3, published: undefined, publishedVersion: undefined, status: 'draft' as const };
+    await store.publish({ docs: [{ expectedVersion: 2, nextDoc: unpublished }], snapshot: buildSnapshot([unpublished], { siteVersion: 2, publishedAt: at, templateHash: 'test' }), record: { siteVersion: 2, at, actorId: 'test', kind: 'unpublish', manifest: [] } });
     await expect(blobs.delete(url)).rejects.toThrow('retained');
     await expect(blobs.delete(url.replace('/media/', '/%6Dedia/'))).rejects.toThrow('retained');
     await expect(blobs.put('media/2026/med_a/original.pdf', new Uint8Array([4]), { contentType: 'application/pdf' })).rejects.toThrow('retained');
@@ -191,9 +198,12 @@ describe('snapshot and reference integrity', () => {
     const manifest = previous.manifest.map(entry => entry.id === 'home' ? { ...entry, version: next.version, revId: rev.id } : entry);
     const tx: PublishTx = { docs: [{ expectedVersion: home.version, nextDoc: next }], snapshot: buildSnapshot(all, { siteVersion: 2, publishedAt: at, templateHash: 'test' }), record: { ...previous, siteVersion: 2, manifest }, revisions: [rev] };
     await expect(store.publish(tx)).rejects.toMatchObject({ code: 'validation', status: 422 });
-    const app = createAdminApp(() => store);
+    const config = loadConfig({}, () => undefined);
+    await bootstrap(store, config);
+    const { token, session } = await newSession(store, (await store.listUsers())[0], {});
+    const app = createAdminApp(() => store, { config });
     app.post('/api/admin/test-publish-validation', async c => c.json(await store.publish(tx)));
-    const response = await app.request('/api/admin/test-publish-validation', { method: 'POST' });
+    const response = await app.request('/api/admin/test-publish-validation', { method: 'POST', headers: { Cookie: 'psc_session=' + token, 'X-CSRF-Token': session.csrfToken } });
     expect(response.status).toBe(422);
     expect(await response.json()).toMatchObject({ error: { code: 'validation', details: expect.arrayContaining([{ path: 'home.home.hero', message: 'Required section' }]) } });
     expect((await store.getSnapshot())?.siteVersion).toBe(1); expect(await store.getDoc('home', 'home')).toEqual(home);

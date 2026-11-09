@@ -1,6 +1,7 @@
 import type { Hono } from 'hono';
 import { collectionNames, collections, type CollectionName } from '../../../shared/schema';
 import type { Doc } from '../../../shared/types';
+import { documentId } from '../../store/identifiers';
 import { createId } from '../../content/ids';
 import { createDocument, documentTitle } from '../../content/documents';
 import { saveDraft, revision, conflict } from '../../content/revisions';
@@ -14,17 +15,17 @@ export function collection(c: AdminContext): CollectionName {
   return value;
 }
 export async function document(c: AdminContext) {
-  const doc = await c.get('store').getDoc(collection(c), c.req.param('id')!);
+  const doc = await c.get('store').getDoc(collection(c), documentId(c.req.param('id')!));
   if (!doc) throw new ApiError(404, 'not_found', 'Document not found');
   return doc;
 }
-export async function create(c: AdminContext, draft: unknown) {
+export async function create(c: AdminContext, draft: unknown, action: 'created' | 'duplicated' = 'created') {
   const col = collection(c);
   if (col === 'media') throw new ApiError(403, 'forbidden', 'Use the media upload flow');
   const now = c.get('now'), user = actor(c), id = createId(col);
   if (await c.get('store').getDoc(col, id)) throw new ApiError(409, 'conflict', 'Document already exists');
   const doc: Doc = { id, collection: col, draft, version: 1, status: 'draft', createdAt: now.toISOString(), updatedAt: now.toISOString(), createdBy: user.id, updatedBy: user.id, order: (await c.get('store').listDocs(col)).length };
-  return createDocument(c.get('store'), { doc, revision: revision(doc, user, 'created', now), audit: audit(user, 'content.create', { collection: col, docId: id, targetTitle: documentTitle(doc) }, now) });
+  return createDocument(c.get('store'), { doc, revision: revision(doc, user, action, now), audit: audit(user, action === 'duplicated' ? 'content.duplicate' : 'content.create', { collection: col, docId: id, targetTitle: documentTitle(doc) }, now) });
 }
 export function docRoutes(app: Hono<AdminEnv>) {
   app.get('/api/admin/docs/:collection', requirePermission('content.read'), async c => c.json({ docs: await c.get('store').listDocs(collection(c), { includeTrashed: c.req.query('trashed') === '1' }) }));
@@ -45,7 +46,7 @@ export function docRoutes(app: Hono<AdminEnv>) {
   });
   app.post('/api/admin/docs/:collection/:id/duplicate', requirePermission('content.create'), async c => {
     if (collections[collection(c)].kind === 'singleton') throw new ApiError(422, 'validation', 'Singletons cannot be duplicated');
-    return c.json({ doc: await create(c, (await document(c)).draft) }, 201);
+    return c.json({ doc: await create(c, (await document(c)).draft, 'duplicated') }, 201);
   });
   for (const action of ['trash', 'untrash'] as const) app.post(`/api/admin/docs/:collection/:id/${action}`, requirePermission('content.manage'), async c => {
     const doc = await document(c), input = object(await c.req.json());
@@ -61,7 +62,7 @@ export function docRoutes(app: Hono<AdminEnv>) {
   app.post('/api/admin/docs/:collection/reorder', requirePermission('content.manage'), async c => {
     const col = collection(c), input = object(await c.req.json());
     if (!collections[col].orderable || !Array.isArray(input.items)) throw new ApiError(422, 'validation', 'An orderable collection and versioned items are required');
-    const docs = await c.get('store').listDocs(col), items = input.items.map(v => { const x = object(v); return { id: string(x.id, 'id'), version: version(x.baseVersion) }; });
+    const docs = await c.get('store').listDocs(col), items = input.items.map(v => { const x = object(v); return { id: documentId(string(x.id, 'id')), version: version(x.baseVersion) }; });
     if (new Set(items.map(x => x.id)).size !== docs.length || items.length !== docs.length || items.some(x => !docs.some(d => d.id === x.id))) throw new ApiError(422, 'validation', 'Reorder must include every active document exactly once');
     for (const item of items) { const doc = docs.find(d => d.id === item.id)!; if (doc.version !== item.version) conflict(doc); }
     const mutations = items.flatMap((item, order) => { const doc = docs.find(d => d.id === item.id)!; return doc.order === order ? [] : [{ collection: col, id: doc.id, expectedVersion: doc.version, patch: { order, updatedAt: c.get('now').toISOString(), updatedBy: c.get('user').id } }]; });

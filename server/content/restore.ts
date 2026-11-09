@@ -15,13 +15,18 @@ export async function restoreRevision(store: Store, revId: string, baseVersion: 
   const current = await store.getDoc(rev.collection, rev.docId);
   if (!current) throw new ApiError(404, 'not_found', 'Document not found');
   const doc = await saveDraft(store, current, baseVersion, rev.data, actor, now, { action: 'restored', baseRevId: rev.id });
-  return publish ? { doc, ...await publishDocuments(store, [{ collection: doc.collection, id: doc.id, expectedVersion: doc.version }], actor, now) } : { doc };
+  if (!publish) return { doc };
+  try { const result = await publishDocuments(store, [{ collection: doc.collection, id: doc.id, expectedVersion: doc.version }], actor, now); return { ...result, doc: (await store.getDoc(doc.collection, doc.id))!, published: true }; }
+  catch (error) {
+    // The draft is committed. Return it explicitly even if publication fails.
+    return { doc, published: false, publishError: error instanceof ApiError ? { code: error.code, message: error.message, details: error.details } : { code: 'internal', message: 'Publication failed; restored draft was saved' } };
+  }
 }
 export async function restoreSite(store: Store, siteVersion: number, actor: Actor, now: Date, summary?: string) {
   await store.recoverPublish();
   const record = await store.getPublish(siteVersion);
   if (!record) throw new ApiError(404, 'not_found', 'Site version not found');
-  const docs = await allDocs(store), changes = [];
+  const capture = await store.capturePublication(), { docs } = capture, changes = [];
   for (const doc of docs) {
     const entry = record.manifest.find(e => e.collection === doc.collection && e.id === doc.id);
     if (!entry) { changes.push({ ...doc, published: undefined, publishedVersion: undefined, scheduledAt: undefined, status: doc.trashedAt ? 'trashed' as const : 'draft' as const }); continue; }
@@ -30,5 +35,5 @@ export async function restoreSite(store: Store, siteVersion: number, actor: Acto
     changes.push({ ...doc, draft: structuredClone(rev.data), published: structuredClone(rev.data), version: doc.version + 1, publishedVersion: doc.version + 1, order: entry.order, publishedOrder: entry.order, status: 'published' as const, updatedAt: now.toISOString(), updatedBy: actor.id, trashedAt: undefined, trashedBy: undefined, scheduledAt: undefined, reviewRequestedBy: undefined, reviewNote: undefined });
   }
   if (record.manifest.some(e => !docs.some(d => d.id === e.id && d.collection === e.collection))) throw new ApiError(409, 'conflict', 'Historical document is missing');
-  return commitSnapshot(store, docs, changes, actor, now, { kind: 'restore', restoredFrom: siteVersion, summary, scheduled: [], action: 'site.restore' });
+  return commitSnapshot(store, capture, changes, actor, now, { kind: 'restore', restoredFrom: siteVersion, summary, scheduled: [], action: 'site.restore' });
 }

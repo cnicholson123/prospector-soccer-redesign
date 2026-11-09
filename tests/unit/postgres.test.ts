@@ -36,8 +36,8 @@ describe.skipIf(!process.env.DATABASE_URL)('Postgres transactions',()=>{
     let armed=false;const f=await postgresFixture({afterWrite:table=>{if(armed&&table===stage)throw new Error('Injected');}});
     try {
       await f.store.createDoc({doc,revision:revision(doc),audit:audit()});
-      const next={...doc,published:doc.draft,publishedVersion:1,status:'published' as const},rev={...revision(next),sealedAt:at};
-      const tx:PublishTx={docs:[{expectedVersion:1,nextDoc:next}],revisions:[rev],audit:[audit()],record:{siteVersion:1,at,actorId:'owner',kind:'publish',manifest:[{collection:'events',id:doc.id,version:1,order:0,title:'Original',revId:rev.id}]},snapshot:buildSnapshot([next],{siteVersion:1,publishedAt:at,templateHash:'test'})};
+      const next={...doc,version:2,published:doc.draft,publishedVersion:2,status:'published' as const},rev={...revision(next),sealedAt:at};
+      const tx:PublishTx={docs:[{expectedVersion:1,nextDoc:next}],revisions:[rev],audit:[audit()],record:{siteVersion:1,at,actorId:'owner',kind:'publish',manifest:[{collection:'events',id:doc.id,version:2,order:0,title:'Original',revId:rev.id}]},snapshot:buildSnapshot([next],{siteVersion:1,publishedAt:at,templateHash:'test'})};
       armed=true;await expect(f.store.publish(tx)).rejects.toThrow('Injected');
       expect(await f.reopen().getDoc('events',doc.id)).toEqual(doc);expect(await f.store.getSnapshot()).toBeNull();expect(await f.store.getPublish(1)).toBeNull();
       expect(await f.store.recoverPublish()).toEqual({repaired:false,siteVersion:0});

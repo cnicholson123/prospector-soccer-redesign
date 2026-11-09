@@ -15,7 +15,7 @@ export async function saveDraft(store: Store, doc: Doc, baseVersion: number, dra
   if (!result.valid) throw new ValidationError(result.errors);
   const latest = (await store.listRevisions(doc.collection, doc.id, 1))[0];
   const action = options.action ?? (options.checkpoint ? 'checkpoint' : 'edited');
-  const coalesce = action === 'edited' && latest && !latest.sealedAt && latest.authorId === actor.id && now.getTime() - Date.parse(latest.at) < 600000 && now.getTime() >= Date.parse(latest.at);
+  const coalesce = action === 'edited' && latest?.action === 'edited' && !latest.sealedAt && latest.authorId === actor.id && now.getTime() - Date.parse(latest.at) < 600000 && now.getTime() >= Date.parse(latest.at);
   const next = { ...doc, ...options.patch, draft, version: doc.version + 1 };
   const rev = revision(next, actor, action, now, { ...(coalesce ? { id: latest.id } : {}), summary: options.summary, baseRevId: options.baseRevId, ...((action !== 'edited' && action !== 'created') ? { sealedAt: now.toISOString() } : {}) });
   const changed = await store.mutateDoc({ collection: doc.collection, id: doc.id, expectedVersion: baseVersion,

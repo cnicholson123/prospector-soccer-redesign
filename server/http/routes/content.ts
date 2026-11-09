@@ -1,6 +1,7 @@
 import { collectIncoming } from '../../media';
 import type { Hono } from 'hono';
-import { timingSafeEqual } from 'node:crypto';
+import { safeEqual } from '../../auth/csrf';
+import { documentId } from '../../store/identifiers';
 import { collectionNames, type CollectionName } from '../../../shared/schema';
 import { allDocs, pending, publishDocuments, title, commitSnapshot, type Item } from '../../content/publish';
 import { diff } from '../../content/diff';
@@ -20,7 +21,7 @@ function items(input: unknown): Item[] {
   return input.map(value => {
     const item = object(value), col = item.collection as CollectionName;
     if (!collectionNames.includes(col)) throw new ApiError(422, 'validation', 'Invalid collection');
-    return { collection: col, id: string(item.id, 'id'), expectedVersion: version(item.expectedVersion) };
+    return { collection: col, id: documentId(string(item.id, 'id')), expectedVersion: version(item.expectedVersion) };
   });
 }
 export function contentRoutes(app: Hono<AdminEnv>) {
@@ -58,6 +59,7 @@ export function contentRoutes(app: Hono<AdminEnv>) {
     const input = object(await c.req.json());
     const rev = await findRevision(c.get('store'), c.req.param('revId'), c.req.query('docId'));
     if (!rev) throw new ApiError(404, 'not_found', 'Revision not found');
+    if (rev.collection === 'media') throw new ApiError(403, 'forbidden', 'Use the media editing flow');
     if (!can(c.get('user'), 'content.edit', { collection: rev.collection }) || input.publish === true && !can(c.get('user'), 'content.publish')) throw new ApiError(403, 'forbidden', 'You do not have permission for this restore');
     if (input.publish !== undefined && typeof input.publish !== 'boolean') throw new ApiError(422, 'validation', 'Invalid publish flag');
     return c.json(await restoreRevision(c.get('store'), rev.id, version(input.baseVersion), actor(c), c.get('now'), input.publish === true, rev.docId));
@@ -85,11 +87,11 @@ export function contentRoutes(app: Hono<AdminEnv>) {
     const input = object(await c.req.json());
     return c.json(await restoreSite(c.get('store'), version(Number(c.req.param('siteVersion'))), actor(c), c.get('now'), input.summary === undefined ? undefined : string(input.summary, 'summary', 1000)));
   });
-  app.post('/api/admin/rebuild', requirePermission('content.publish'), async c => c.json(await commitSnapshot(c.get('store'), await allDocs(c.get('store')), [], actor(c), c.get('now'), { kind: 'rebuild' })));
+  app.post('/api/admin/rebuild', requirePermission('content.publish'), async c => c.json(await commitSnapshot(c.get('store'), await c.get('store').capturePublication(), [], actor(c), c.get('now'), { kind: 'rebuild' })));
   app.get('/api/admin/search', requirePermission('content.read'), async c => c.json({ results: await search(c.get('store'), c.req.query('q') ?? '') }));
   app.get('/api/admin/dashboard', requirePermission('content.read'), async c => {
     const docs = await allDocs(c.get('store'));
-    return c.json({ pendingCount: pending(docs).length, reviewCount: docs.filter(d => d.reviewRequestedBy).length, scheduled: (await c.get('store').getSnapshot())?.scheduled ?? [], linkChecks: await c.get('store').getMeta('link-checks'), health: await health(c.get('store'), c.get('now'), c.get('config').tzName), recent: can(c.get('user'), 'audit.read') ? (await c.get('store').queryAudit({ limit: 15 })).items : [], titles: docs.map(d => ({ id: d.id, title: title(d) })) });
+    return c.json({ pendingCount: pending(docs).length, reviewCount: docs.filter(d => d.reviewRequestedBy).length, scheduled: (await c.get('store').getSnapshot())?.scheduled ?? [], linkChecks: await c.get('store').getMeta('link-checks'), health: await health(c.get('store'), c.get('now'), c.get('config').tzName, c.get('user')), recent: can(c.get('user'), 'audit.read') ? (await c.get('store').queryAudit({ limit: 15 })).items : [], titles: docs.map(d => ({ id: d.id, title: title(d) })) });
   });
   app.get('/api/admin/export/content', requirePermission('site.export'), async c => {
     c.header('Content-Disposition', 'attachment; filename="content.json"'); return c.json({ docs: await allDocs(c.get('store')), snapshot: await c.get('store').getSnapshot() });
@@ -111,7 +113,7 @@ export function cronRoutes(app: Hono<AdminEnv>) {
   for (const method of ['get', 'post'] as const) app[method]('/api/admin/cron/settle', async c => {
     const secret = c.get('config').cronSecret, authorization = c.req.header('authorization') ?? '';
     const expected = `Bearer ${secret}`;
-    if (!secret || authorization.length !== expected.length || !timingSafeEqual(Buffer.from(authorization), Buffer.from(expected))) throw new ApiError(401, 'unauthenticated', 'Invalid cron credential');
+    if (!secret || !safeEqual(authorization, expected)) throw new ApiError(401, 'unauthenticated', 'Invalid cron credential');
     await collectIncoming(c.get('blobs'), c.get('now'));
     await c.get('store').deleteExpiredSessions(c.get('now').toISOString());
     return c.json(await settleSchedules(c.get('store'), c.get('now')));

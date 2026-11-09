@@ -1,0 +1,10 @@
+import { createStore } from '../server/store';
+import { loadConfig } from '../server/config';
+import { username } from '../server/store/identifiers';
+import { audit } from '../server/audit';
+const name = username(process.argv[2]);
+const store = createStore(loadConfig());
+const user = await store.getUserByUsername(name);
+if (!user) throw new Error('User not found');
+await store.unlockLogin(name, audit({ id: 'system', displayName: 'Local operator' }, 'auth.unlock', { meta: { userId: user.id, username: name } }));
+console.info(`Unlocked ${name}`);

@@ -27,7 +27,7 @@ describe('Vercel private binary adapter',()=>{
     const blobs=new VercelBlobs('server-token',store), request=new Request('https://example.com/api/admin/media/upload-url');
     sdk.handleUpload.mockImplementation(async options=>{
       expect(options.token).toBe('server-token');
-      expect(await options.onBeforeGenerateToken('media/incoming/abc/original.png')).toEqual({allowedContentTypes:['image/png'],maximumSizeInBytes:50,validUntil:10000,addRandomSuffix:false,allowOverwrite:false});
+      expect(await options.onBeforeGenerateToken('media/incoming/abc/original.png')).toEqual({allowedContentTypes:['image/png'],maximumSizeInBytes:50,validUntil:10000,addRandomSuffix:false,allowOverwrite:false,callbackUrl:'https://example.com/api/admin/cron/blob-upload'});
       await expect(options.onBeforeGenerateToken('media/2030/abc/original.png')).rejects.toThrow();
       return {type:'blob.generate-client-token',clientToken:'scoped-token'};
     });

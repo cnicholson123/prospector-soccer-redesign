@@ -19,7 +19,7 @@ const mutation = (expectedVersion = 1, title = 'Edited', id = 'evt_a'): DocMutat
   revision: { append: revision({ ...doc(id), version: expectedVersion + 1, draft: { title, date: '2026-11-09' } }) }, audit: audit() });
 const user = (id = 'usr_a', username = 'Phil'): User => ({ id, username, displayName: username, role: 'Owner', active: true, passwordHash: 'test-placeholder', createdAt: at, createdBy: 'system' });
 function publishTx(document: Doc, siteVersion = 1, increment = false): PublishTx {
-  const nextDoc: Doc = { ...document, version: document.version + Number(increment), published: document.draft, publishedVersion: document.version + Number(increment), status: 'published' };
+  const nextDoc: Doc = { ...document, version: document.version + 1, published: document.draft, publishedVersion: document.version + 1, status: 'published' };
   const rev = { ...revision(nextDoc), sealedAt: at };
   return { docs: [{ expectedVersion: document.version, nextDoc }],
     snapshot: buildSnapshot([nextDoc], { siteVersion, publishedAt: at, templateHash: 'test' }),

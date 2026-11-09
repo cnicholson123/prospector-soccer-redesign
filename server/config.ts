@@ -7,7 +7,7 @@ export interface Config {
   adminBootstrapUser: string; adminBootstrapPassword: string; publicBaseUrl: string;
   cookieSecure: boolean; cacheSmaxage: number; cacheSwr: number; cdnPurge: 'off' | 'tag';
   cronSecret?: string; tzName: string; maxImageBytes: number; maxFileBytes: number;
-  production: boolean;
+  production: boolean; adminForcePasswordChange: boolean;
 }
 export function loadConfig(env: NodeJS.ProcessEnv = process.env, warn = console.warn): Config {
   const production = env.NODE_ENV === 'production';
@@ -40,7 +40,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env, warn = console.
   if (production && !cookieSecure) fail('COOKIE_SECURE must be true in production');
   const tzName = env.TZ_NAME ?? 'America/Los_Angeles';
   try { new Intl.DateTimeFormat('en-US', { timeZone: tzName }); } catch { fail('TZ_NAME must be a valid IANA timezone'); }
-  return { production, storeDriver, dataDir: resolve(env.DATA_DIR ?? '.data'),
+  return { production, adminForcePasswordChange: bool('ADMIN_FORCE_PASSWORD_CHANGE', production), storeDriver, dataDir: resolve(env.DATA_DIR ?? '.data'),
     databaseUrl: env.DATABASE_URL, blobReadWriteToken: env.BLOB_READ_WRITE_TOKEN, sessionSecret,
     adminBootstrapUser: env.ADMIN_BOOTSTRAP_USER || 'Phil', adminBootstrapPassword: env.ADMIN_BOOTSTRAP_PASSWORD || 'Phil',
     publicBaseUrl: base.origin, cookieSecure, cacheSmaxage: integer('CACHE_SMAXAGE', production ? 15 : 0),

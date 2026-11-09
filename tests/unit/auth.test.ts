@@ -84,11 +84,11 @@ describe('auth HTTP and user administration', () => {
     for (let i = 0; i < 5; i++) expect((await f.req('/auth/login', 'POST', { username: 'Phil', password: 'bad' })).status).toBe(i === 4 ? 423 : 401);
     expect((await f.req('/auth/login', 'POST', { username: 'Phil', password: 'Phil' })).status).toBe(423);
     const failed = (await f.store.queryAudit({ action: 'auth.login_failed', limit: 100 })).items;
-    expect(failed).toHaveLength(5); expect(failed.every(r => r.ip === '192.0.2.40' && r.userAgent === 'Admin test')).toBe(true);
-    expect((await f.store.queryAudit({ action: 'auth.locked', limit: 100 })).items).toHaveLength(2);
+    expect(failed).toHaveLength(1); expect(failed.every(r => r.ip === '192.0.2.40' && r.userAgent === 'Admin test')).toBe(true);
+    expect((await f.store.queryAudit({ action: 'auth.locked', limit: 100 })).items).toHaveLength(1);
     const csv = await f.req('/audit/export?format=csv&action=auth.login');
     expect(csv.status).toBe(200); expect(csv.headers.get('content-type')).toContain('text/csv'); expect(await csv.text()).toContain('auth.login');
-    const json = await f.req('/audit/export?format=json&action=auth.login_failed'); expect(await json.json()).toHaveLength(5);
+    const json = await f.req('/audit/export?format=json&action=auth.login_failed'); expect(await json.json()).toHaveLength(1);
   });
   it('enforces route permissions, user ceilings, last Owner, and password/session rotation', async () => {
     const f = await fixture(); const owner = await f.login();
@@ -135,5 +135,5 @@ it('rate-limits login attempts by IP with Retry-After and audits malformed attem
   const limited = await f.req('/auth/login', 'POST', { username: 'next', password: 'incorrect' });
   expect(limited.status).toBe(429); expect(Number(limited.headers.get('retry-after'))).toBeGreaterThan(0);
   expect((await f.req('/auth/login', 'POST', {}, { 'X-Forwarded-For': '192.0.2.41' })).status).toBe(422);
-  expect((await f.store.queryAudit({ action: 'auth.login_failed', limit: 100 })).items).toHaveLength(12);
+  expect((await f.store.queryAudit({ action: 'auth.login_failed', limit: 100 })).items).toHaveLength(2);
 });

@@ -1,3 +1,5 @@
+import { keyPart, documentId, username } from './identifiers';
+import { loginGenerationKey, usernameRateKey } from '../auth/ratelimit';
 import { ApiError } from '../http/middleware/errors';
 import { can } from '../permissions';
 import { isDeepStrictEqual } from 'node:util';
@@ -8,11 +10,11 @@ import { referenceUsage } from '../content/references';
 import type { AuditEntry, AuditQuery, CreateDoc, Doc, DocMutation, KvPrimitives, PublishRecord, PublishTx, Revision, RunExclusive, Session, Snapshot, Store, User } from './types';
 
 const part = (value: string): string => {
-  if (!value || value === '.' || value === '..') throw new Error('Empty or invalid storage identifier');
+  keyPart(value);
   return encodeURIComponent(value).replace(/\./g, '%2E');
 };
 const equal = (a: unknown, b: unknown) => isDeepStrictEqual(JSON.parse(JSON.stringify(a)), JSON.parse(JSON.stringify(b)));
-const docKey = (collection: CollectionName, id: string) => `docs/${part(collection)}/${part(id)}.json`;
+const docKey = (collection: CollectionName, id: string) => `docs/${part(collection)}/${part(documentId(id))}.json`;
 const revKey = (rev: Pick<Revision, 'docId' | 'id'>) => `revisions/${part(rev.docId)}/${part(rev.id)}.json`;
 const auditKey = (entry: AuditEntry) => `audit/${entry.at.slice(0, 7)}/${part(entry.id)}.json`;
 const publishKey = (version: number) => {
@@ -20,7 +22,7 @@ const publishKey = (version: number) => {
   return `publishes/${String(version).padStart(8, '0')}.json`;
 };
 const pageLimit = (limit: number) => { if (!Number.isInteger(limit) || limit < 1 || limit > 1000) throw new Error('Limit must be 1–1000'); return limit; };
-interface MutationJournal { writes: { key: string; value: unknown }[]; doc?: Doc; docs?: Doc[] }
+interface MutationJournal { writes: { key: string; value: unknown }[]; doc?: Doc; docs?: Doc[]; deletes?: string[] }
 const mutationKey = 'meta/pending-mutation.json';
 const pendingPublishKey = 'meta/pending-publish.json';
 /** FS serializes across processes. Journals make interrupted multi-file writes
@@ -37,6 +39,8 @@ export class KvStore implements Store {
       this.queue = next.catch(() => undefined);
       return next;
     });
+    const lock = this.exclusive;
+    this.exclusive = operation => lock(async () => { await this.resumeMutation(); return operation(); });
   }
   private async read<T>(key: string): Promise<T | null> { return await this.kv.get(key) as T | null; }
   private async all<T>(prefix: string): Promise<T[]> {
@@ -44,7 +48,7 @@ export class KvStore implements Store {
     return values.filter((value): value is Awaited<T> => value !== null);
   }
   private async allDocs(): Promise<Doc[]> { return (await Promise.all(collectionNames.map(name => this.listDocs(name, { includeTrashed: true })))).flat(); }
-  getDoc(collection: CollectionName, id: string) { return this.read<Doc>(docKey(collection, id)); }
+  async getDoc(collection: CollectionName, id: string) { return this.read<Doc>(docKey(collection, id)); }
   async listDocs(collection: CollectionName, opts: { includeTrashed?: boolean } = {}): Promise<Doc[]> {
     const docs = await this.all<Doc>(`docs/${part(collection)}/`);
     return docs.filter(doc => opts.includeTrashed || (!doc.trashedAt && doc.status !== 'trashed'))
@@ -55,6 +59,7 @@ export class KvStore implements Store {
     if (!pending) return;
     for (const write of pending.writes) await this.kv.put(write.key, write.value);
     for (const doc of pending.docs ?? (pending.doc ? [pending.doc] : [])) await this.kv.put(docKey(doc.collection, doc.id), doc);
+    for (const key of pending.deletes ?? []) await this.kv.delete(key);
     await this.kv.delete(mutationKey);
   }
   private async readyToMutate(): Promise<void> {
@@ -110,7 +115,7 @@ export class KvStore implements Store {
       if (patch.order !== undefined && current.status === 'published') doc.status = 'changed';
       if (patch.order !== undefined && current.published !== undefined && current.publishedOrder === undefined) doc.publishedOrder = current.order ?? 0;
       if ((doc.trashedAt || doc.status === 'trashed') && !current.trashedAt && current.status !== 'trashed') {
-        const usage = referenceUsage(await this.allDocs(), collection, id);
+        const usage = referenceUsage(await this.allDocs(), collection, id, (await this.getSnapshot())?.scheduled);
         if (usage.length) throw Object.assign(new Error('Document is in use'), { code: 'in_use', status: 409, details: { usage } });
       }
       const revisions: Revision[] = [];
@@ -164,6 +169,14 @@ export class KvStore implements Store {
     await this.kv.put('snapshot/published.json', tx.snapshot);
     await this.kv.delete(pendingPublishKey);
   }
+  capturePublication(): Promise<{ docs: Doc[]; snapshot: Snapshot | null }> {
+    return this.exclusive(async () => {
+      await this.resumeMutation();
+      const pending = await this.read<PublishTx>(pendingPublishKey);
+      if (pending) await this.writePublish(pending);
+      return { docs: await this.allDocs(), snapshot: await this.getSnapshot() };
+    });
+  }
   publish(tx: PublishTx): Promise<{ siteVersion: number }> {
     return this.exclusive(async () => {
       await this.resumeMutation();
@@ -199,6 +212,7 @@ export class KvStore implements Store {
         const index = docs.findIndex(doc => doc.id === nextDoc.id && doc.collection === nextDoc.collection);
         const stored = docs[index];
         if (!stored || stored.version !== expectedVersion) throw new Error('Document version conflict');
+        if (!equal(stored, nextDoc) && nextDoc.version !== expectedVersion + 1) throw new Error('Document version conflict: envelope change requires a new version');
         if (![expectedVersion, expectedVersion + 1].includes(nextDoc.version)) throw new Error('Invalid next document version');
         if (stored.createdAt !== nextDoc.createdAt || stored.createdBy !== nextDoc.createdBy) throw new Error('Cannot change document creation metadata');
         docs[index] = nextDoc;
@@ -221,14 +235,14 @@ export class KvStore implements Store {
       for (const entry of tx.record.manifest) {
         const key = docKey(entry.collection, entry.id);
         const doc = docs.find(doc => doc.collection === entry.collection && doc.id === entry.id);
-        if (manifestIds.has(key) || !doc || doc.status === 'trashed' || doc.trashedAt || doc.published === undefined || entry.version !== doc.publishedVersion || entry.order !== (doc.publishedOrder ?? doc.order ?? 0)) throw new Error('Invalid publish manifest');
+        if (manifestIds.has(key) || !doc || doc.published === undefined || entry.version !== doc.publishedVersion || entry.order !== (doc.publishedOrder ?? doc.order ?? 0)) throw new Error('Invalid publish manifest');
         manifestIds.add(key);
         const rev = tx.revisions?.find(rev => rev.id === entry.revId && rev.docId === entry.id) ?? await this.getRevision(entry.id, entry.revId);
         if (!rev || rev.collection !== entry.collection || rev.docVersion !== entry.version || !equal(rev.data, doc.published)) throw new Error('Manifest revision does not match published document');
       }
-      for (const doc of docs.filter(doc => doc.published !== undefined && doc.status !== 'trashed' && !doc.trashedAt)) {
+      for (const doc of docs.filter(doc => doc.published !== undefined)) {
         if (!manifestIds.has(docKey(doc.collection, doc.id))) throw new Error('Published document missing from manifest');
-        const result = validate(doc.collection, doc.published, { mode: 'publish', resolve: (collection, id) => docs.find(target => target.collection === collection && target.id === id) ?? null });
+        const result = validate(doc.collection, doc.published, { mode: 'publish', resolve: (collection, id) => docs.map(target => target.published === undefined ? target : { ...target, trashedAt: undefined, status: 'published' as const }).find(target => target.collection === collection && target.id === id) ?? null });
         if (!result.valid) throw new ValidationError(result.errors.map(error => ({ ...error, path: `${doc.collection}.${doc.id}.${error.path}` })));
       }
       for (const item of tx.snapshot.scheduled) {
@@ -291,6 +305,7 @@ export class KvStore implements Store {
     const values = await this.all<Revision>(`revisions/${part(id)}/`);
     const revisions = [...new Map(values.map(rev => [rev.id, rev])).values()];
     const boundary = before ? revisions.find(rev => rev.id === before) : undefined;
+    if (before && !boundary && !Number.isFinite(Date.parse(before))) throw new ApiError(422, 'validation', 'Invalid revision cursor');
     return revisions.filter(rev => rev.collection === collection && (!before || (boundary ? rev.at < boundary.at || (rev.at === boundary.at && (rev.docVersion < boundary.docVersion || rev.docVersion === boundary.docVersion && rev.id < boundary.id)) : rev.at < before)))
       .sort((a, b) => b.at.localeCompare(a.at) || b.docVersion - a.docVersion || b.id.localeCompare(a.id)).slice(0, pageLimit(limit));
   }
@@ -304,21 +319,31 @@ export class KvStore implements Store {
     const limit = pageLimit(q.limit);
     const text = q.text?.toLowerCase();
     const keys = await this.kv.list('audit/');
+    const cursorKey = q.cursor ? keys.find(key => key.endsWith('/' + part(q.cursor!) + '.json') || key.endsWith('-' + part(q.cursor!) + '.json')) : undefined;
+    if (q.cursor && !cursorKey) throw new ApiError(422, 'validation', 'Invalid audit cursor');
+    const position = (key: string) => {
+      const name = decodeURIComponent(key.split('/').at(-1)!);
+      const modern = /^aud_([0-9a-v]{10})_/.exec(name);
+      const time = modern ? new Date(parseInt(modern[1], 32)).toISOString() : /^([0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:.]+Z)-/.exec(name)?.[1] ?? '';
+      return time + (modern ? name : name.slice(time.length + 1));
+    };
     const months = [...new Set(keys.map(key => key.split('/')[1]))].sort().reverse();
     const rows: AuditEntry[] = [];
     let afterCursor = !q.cursor;
     for (const month of months) {
       if ((q.from && month < q.from.slice(0, 7)) || (q.to && month > q.to.slice(0, 7))) continue;
-      const entries = await Promise.all(keys.filter(key => key.startsWith(`audit/${month}/`)).map(key => this.read<AuditEntry>(key)));
-      for (const row of entries.filter((row): row is AuditEntry => row !== null).sort((a, b) => b.at.localeCompare(a.at) || b.id.localeCompare(a.id))) {
-        if (!afterCursor) { if (row.id === q.cursor) afterCursor = true; continue; }
+      const monthKeys = keys.filter(key => key.startsWith(`audit/${month}/`)).sort((a,b) => position(b).localeCompare(position(a)));
+      for (const key of monthKeys) {
+        if (!afterCursor) { if (key === cursorKey) afterCursor = true; continue; }
+        const row = await this.read<AuditEntry>(key);
+        if (!row) continue;
         if ((!q.actorId || row.actorId === q.actorId) && (!q.action || row.action === q.action) &&
           (!q.collection || row.collection === q.collection) && (!q.docId || row.docId === q.docId) &&
           (!q.from || row.at >= q.from) && (!q.to || row.at <= q.to) && (!text || JSON.stringify(row).toLowerCase().includes(text))) rows.push(row);
         if (rows.length > limit) return { items: rows.slice(0, limit), cursor: rows[limit - 1].id };
       }
     }
-    if (!afterCursor) throw new Error('Invalid audit cursor');
+    if (!afterCursor) throw new ApiError(422, 'validation', 'Invalid audit cursor');
     return { items: rows };
   }
   claimMaintenance(key: string, intervalMs: number, now: string): Promise<boolean> {
@@ -333,8 +358,7 @@ export class KvStore implements Store {
       const user = await this.getUser(userId);
       if (!user?.active || user.passwordHash !== expectedHash) return null;
       const next = { ...user, lastLoginAt: entry.at, passwordWeak: weak };
-      await this.checkAudit(entry); await this.kv.put(auditKey(entry), entry);
-      await this.saveUser(next); return next;
+      await this.saveUser(next, entry); return next;
     });
   }
   changePassword(userId: string, expectedHash: string, hash: string, entry: AuditEntry): Promise<User | null> {
@@ -342,14 +366,45 @@ export class KvStore implements Store {
       const user = await this.getUser(userId);
       if (!user?.active || user.passwordHash !== expectedHash) return null;
       const next = { ...user, passwordHash: hash, passwordWeak: false, mustChangePassword: false, passwordChangedAt: entry.at, authVersion: (user.authVersion ?? 0) + 1 };
-      await this.checkAudit(entry); await this.kv.put(auditKey(entry), entry);
-      await this.saveUser(next); return next;
+      await this.saveUser(next, entry); return next;
+    });
+  }
+  unlockLogin(name: string, entry: AuditEntry): Promise<void> {
+    return this.exclusive(async () => {
+      const key = loginGenerationKey(username(name));
+      const generation = Number(await this.getMeta(key) ?? 0) + 1;
+      await this.checkAudit(entry);
+      await this.readyToMutate();
+      await this.kv.put(mutationKey, { writes: [{ key: auditKey(entry), value: entry }, { key: `meta/${part(key)}.json`, value: generation }], deletes: [`ratelimit/${part(usernameRateKey(name))}.json`] } satisfies MutationJournal);
+      await this.resumeMutation();
+    });
+  }
+  revokeSessions(userId: string, entry: AuditEntry, options: { hash?: string; except?: string; seal?: boolean } = {}): Promise<boolean> {
+    return this.exclusive(async () => {
+      await this.readyToMutate();
+      const sessions = (await this.listSessions(userId)).filter(s => s.hash !== options.except && (!options.hash || s.hash === options.hash));
+      if (options.hash && !sessions.length) return false;
+      await this.checkAudit(entry);
+      // One atomic marker makes a bulk revoke visible together even if physical
+      // cleanup stops between session deletions. The audit precedes that marker.
+      const key = `meta/revoked-sessions/${part(userId)}.json`;
+      const revoked = await this.read<Record<string, string>>(key) ?? {};
+      for (const [hash, expiresAt] of Object.entries(revoked)) if (Date.parse(expiresAt) <= this.now().getTime()) delete revoked[hash];
+      for (const session of sessions) revoked[session.hash] = session.expiresAt;
+      const writes = [{ key: auditKey(entry), value: entry as unknown }, { key, value: revoked }];
+      if (options.seal) for (const rev of await this.all<Revision>('revisions/')) if (!rev.sealedAt && rev.authorId === userId) writes.push({ key: revKey(rev), value: { ...rev, sealedAt: entry.at } });
+      await this.kv.put(mutationKey, { writes, deletes: sessions.map(s => `sessions/${part(s.hash)}.json`) } satisfies MutationJournal);
+      await this.resumeMutation();
+      return true;
     });
   }
   loginFailure(key: string, now: string): Promise<{ failures: number; locks: number; until?: string }> {
     return this.exclusive(async () => {
       const state = await this.getMeta(key) as { failures: number; locks: number; until?: string } | null ?? { failures: 0, locks: 0 };
       if (state.until && Date.parse(state.until) > Date.parse(now)) return state;
+      const window = state as typeof state & { windowStart?: string; count?: number };
+      if (!window.windowStart || Date.parse(now) - Date.parse(window.windowStart) >= 900000) { state.failures = 0; window.windowStart = now; window.count = 0; }
+      window.count = (window.count ?? 0) + 1;
       state.failures++;
       if (state.failures >= 5) { state.failures = 0; state.until = new Date(Date.parse(now) + Math.min(86400, 900 * 2 ** state.locks) * 1000).toISOString(); state.locks++; }
       await this.setMeta(key, state); return state;
@@ -363,8 +418,7 @@ export class KvStore implements Store {
       if ((await this.listUsers()).length) return false;
       if (user.role !== 'Owner' || !user.active) throw new Error('Bootstrap requires an active Owner');
       await this.checkAudit(entry);
-      await this.kv.put(auditKey(entry), entry);
-      await this.saveUser(user);
+      await this.saveUser(user, entry);
       return true;
     });
   }
@@ -380,8 +434,7 @@ export class KvStore implements Store {
       // Check name collision before any audit or user writes.
       const named = await this.getUserByUsername(user.username);
       if (named && named.id !== user.id) throw new ApiError(409, 'conflict', 'Username already exists');
-      await this.kv.put(auditKey(entry), entry);
-      await this.saveUser(user);
+      await this.saveUser(user, entry);
     });
   }
   sealWorkingRevisions(authorId: string, before: string, entry: AuditEntry): Promise<void> {
@@ -400,14 +453,19 @@ export class KvStore implements Store {
     return id ? this.getUser(id) : null;
   }
   putUser(user: User): Promise<void> { return this.exclusive(() => this.saveUser(user)); }
-  private async saveUser(user: User): Promise<void> {
+  private async saveUser(user: User, entry?: AuditEntry): Promise<void> {
+    await this.readyToMutate();
+    username(user.username);
     const nameKey = `users-by-name/${part(user.username.toLowerCase())}.json`;
     const owner = await this.read<string>(nameKey);
     if (owner && owner !== user.id) throw new Error('Username already exists');
     const old = await this.getUser(user.id);
-    await this.kv.put(`users/${part(user.id)}.json`, user);
-    await this.kv.put(nameKey, user.id);
-    if (old && old.username.toLowerCase() !== user.username.toLowerCase()) await this.kv.delete(`users-by-name/${part(old.username.toLowerCase())}.json`);
+    const writes = [{ key: `users/${part(user.id)}.json`, value: user as unknown }, { key: nameKey, value: user.id as unknown }];
+    const deletes = old && old.username.toLowerCase() !== user.username.toLowerCase() ? [`users-by-name/${part(old.username.toLowerCase())}.json`] : [];
+    if (entry) { await this.checkAudit(entry); writes.unshift({ key: auditKey(entry), value: entry }); }
+    if (old && (old.authVersion ?? 0) !== (user.authVersion ?? 0)) for (const session of await this.listSessions(user.id)) deletes.push(`sessions/${part(session.hash)}.json`);
+    await this.kv.put(mutationKey, { writes, deletes } satisfies MutationJournal);
+    await this.resumeMutation();
   }
   refreshSession(hash: string, now: string): Promise<{ session: Session; refreshed: boolean } | null> {
     return this.exclusive(async () => {
@@ -419,10 +477,18 @@ export class KvStore implements Store {
       return { session: next, refreshed: true };
     });
   }
-  getSession(hash: string) { return this.read<Session>(`sessions/${part(hash)}.json`); }
+  async getSession(hash: string): Promise<Session | null> {
+    const session = await this.read<Session>(`sessions/${part(hash)}.json`);
+    if (!session) return null;
+    const revoked = await this.read<Record<string, string>>(`meta/revoked-sessions/${part(session.userId)}.json`);
+    return revoked?.[hash] ? null : session;
+  }
   async putSession(session: Session) { await this.exclusive(() => this.kv.put(`sessions/${part(session.hash)}.json`, session)); }
   async deleteSession(hash: string) { await this.exclusive(() => this.kv.delete(`sessions/${part(hash)}.json`)); }
-  async listSessions(userId: string) { return (await this.all<Session>('sessions/')).filter(session => session.userId === userId); }
+  async listSessions(userId: string) {
+    const revoked = await this.read<Record<string, string>>(`meta/revoked-sessions/${part(userId)}.json`);
+    return (await this.all<Session>('sessions/')).filter(session => session.userId === userId && !revoked?.[session.hash]);
+  }
   deleteExpiredSessions(now: string): Promise<number> {
     const cutoff = Date.parse(now);
     if (!Number.isFinite(cutoff)) return Promise.reject(new Error('Invalid session expiry cutoff'));

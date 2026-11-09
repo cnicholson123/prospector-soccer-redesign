@@ -9,5 +9,10 @@ export function checkOrigin(request: Request, config: Config) {
 export function checkCsrf(request: Request, csrfToken: string, config: Config) {
   checkOrigin(request, config);
   const token = request.headers.get('x-csrf-token') ?? '';
-  if (token.length !== csrfToken.length || !timingSafeEqual(Buffer.from(token), Buffer.from(csrfToken))) throw new ApiError(403, 'forbidden', 'Invalid CSRF token');
+  if (!safeEqual(token, csrfToken)) throw new ApiError(403, 'forbidden', 'Invalid CSRF token');
+}
+
+export function safeEqual(a: string, b: string): boolean {
+  const left = Buffer.from(a), right = Buffer.from(b);
+  return left.length === right.length && timingSafeEqual(left, right);
 }

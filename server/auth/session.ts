@@ -5,7 +5,7 @@ import type { Config } from '../config';
 export const DAY = 86400000;
 export const tokenHash = (token: string) => createHash('sha256').update(token).digest('hex');
 export function cookie(token: string, config: Config, expires = 14 * DAY / 1000) {
-  return `psc_session=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${expires}${config.cookieSecure ? '; Secure' : ''}`;
+  return `${config.production ? '__Host-psc_session' : 'psc_session'}=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${expires}${config.cookieSecure ? '; Secure' : ''}`;
 }
 export async function newSession(store: Store, user: User, context: { ip?: string; userAgent?: string }, now = new Date()) {
   const token = randomBytes(32).toString('base64url');
@@ -13,9 +13,10 @@ export async function newSession(store: Store, user: User, context: { ip?: strin
   await store.putSession(session);
   return { token, session };
 }
-export async function readSession(store: Store, request: Request, now = new Date()) {
-  const token = /(?:^|;\s*)psc_session=([A-Za-z0-9_-]{43})(?:;|$)/.exec(request.headers.get('cookie') ?? '')?.[1];
-  if (!token) return null;
+export async function readSession(store: Store, request: Request, now = new Date(), production = process.env.NODE_ENV === 'production') {
+  const name = production ? '__Host-psc_session' : 'psc_session';
+  const token = (request.headers.get('cookie') ?? '').split(';').map(value => value.trim()).find(value => value.startsWith(name + '='))?.slice(name.length + 1);
+  if (!token || !/^[A-Za-z0-9_-]{43}$/.test(token)) return null;
   const session = await store.getSession(tokenHash(token));
   if (!session) return null;
   const user = await store.getUser(session.userId);
@@ -27,7 +28,4 @@ export async function readSession(store: Store, request: Request, now = new Date
     return result ? { user, session: result.session, token, refreshed: result.refreshed } : null;
   }
   return { user, session, token, refreshed: false };
-}
-export async function revokeSessions(store: Store, userId: string, except?: string) {
-  for (const session of await store.listSessions(userId)) if (session.hash !== except) await store.deleteSession(session.hash);
 }

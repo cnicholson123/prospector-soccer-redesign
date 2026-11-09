@@ -21,7 +21,7 @@ export interface Snapshot {
 export interface Revision {
   id: string; collection: CollectionName; docId: string; docVersion: number;
   authorId: string; authorName: string; at: string; sealedAt?: string;
-  action: 'created' | 'edited' | 'checkpoint' | 'published' | 'unpublished' | 'restored' | 'trashed' | 'untrashed' | 'scheduled' | 'site_restored';
+  action: 'created' | 'duplicated' | 'edited' | 'checkpoint' | 'published' | 'unpublished' | 'restored' | 'trashed' | 'untrashed' | 'scheduled' | 'site_restored';
   summary?: string; data: unknown; baseRevId?: string; publishSiteVersion?: number;
 }
 export interface PublishRecord {

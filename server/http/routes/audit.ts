@@ -16,6 +16,7 @@ export function auditRoutes(app: Hono<AdminEnv>) {
     const format = c.req.query('format') ?? 'csv';
     if (!['csv', 'json'].includes(format)) throw new ApiError(422, 'validation', 'Invalid export format');
     const q = query(c);
+    if (q.cursor) await c.get('store').queryAudit({ ...q, limit: 1 });
     c.header('Content-Type', format === 'csv' ? 'text/csv; charset=utf-8' : 'application/json');
     c.header('Content-Disposition', `attachment; filename="audit.${format}"`);
     const columns = ['at', 'actorName', 'action', 'collection', 'docId', 'targetTitle', 'ip', 'userAgent', 'meta'] as const;

@@ -4,15 +4,15 @@ const postgresCleanups: (()=>Promise<void>)[] = [];
 afterEach(async () => { for (const cleanup of postgresCleanups.splice(0)) await cleanup(); });
 import { mkdir, mkdtemp } from 'node:fs/promises';
 import { resolve } from 'node:path';
-import { loadConfig } from '../../server/config';
+import { loadConfig, type Config } from '../../server/config';
 import { KvStore } from '../../server/store/kv-store';
 import { FsPrimitives } from '../../server/store/primitives/fs';
 import { createAdminApp } from '../../server/http/hono-app';
 import { seedStore } from '../../scripts/seed';
-export async function adminFixture(seed = false) {
+export async function adminFixture(seed = false, overrides: Partial<Config> = {}) {
   await mkdir('.cache', { recursive: true });
   const root = await mkdtemp(resolve('.cache/psc-admin-'));
-  const config = loadConfig({ DATA_DIR: root, SESSION_SECRET: 'x'.repeat(32), CRON_SECRET: 'test-cron' }, () => undefined);
+  const config = { ...loadConfig({ DATA_DIR: root, SESSION_SECRET: 'x'.repeat(32), CRON_SECRET: 'test-cron' }, () => undefined), ...overrides };
   let time = new Date('2030-01-01T12:00:00Z');
   const primitives = new FsPrimitives(root);
   const pg = process.env.POSTGRES_HTTP_TESTS === '1' ? await postgresFixture({ now: () => time }) : undefined;

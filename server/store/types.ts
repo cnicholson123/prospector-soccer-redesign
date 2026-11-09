@@ -26,6 +26,7 @@ export interface Store {
   createDoc(input: CreateDoc): Promise<Doc>;
   mutateDoc(mutation: DocMutation): Promise<Doc | 'conflict'>;
   getSnapshot(): Promise<Snapshot | null>;
+  capturePublication(): Promise<{ docs: Doc[]; snapshot: Snapshot | null }>;
   publish(tx: PublishTx): Promise<{ siteVersion: number }>;
   recoverPublish(): Promise<{ repaired: boolean; siteVersion: number }>;
   listPublishes(limit: number, before?: number): Promise<PublishRecord[]>;
@@ -36,6 +37,8 @@ export interface Store {
   claimMaintenance(key: string, intervalMs: number, now: string): Promise<boolean>;
   recordLogin(userId: string, expectedHash: string, weak: boolean, audit: AuditEntry): Promise<User | null>;
   changePassword(userId: string, expectedHash: string, hash: string, audit: AuditEntry): Promise<User | null>;
+  unlockLogin(username: string, audit: AuditEntry): Promise<void>;
+  revokeSessions(userId: string, audit: AuditEntry, options?: { hash?: string; except?: string; seal?: boolean }): Promise<boolean>;
   loginFailure(key: string, now: string): Promise<{ failures: number; locks: number; until?: string }>;
   recordAudit(entry: AuditEntry): Promise<void>;
   bootstrapOwner(user: User, audit: AuditEntry): Promise<boolean>;

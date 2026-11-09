@@ -26,6 +26,7 @@ for (const width of [390, 1280]) {
     const published = await api.post('/api/admin/publish', { headers, data: { items: [{ collection: 'events', id: doc.id, expectedVersion: doc.version }] } });
     expect(published.ok()).toBeTruthy();
     await page.goto('/?v=' + (await published.json()).siteVersion); await expect(page.getByText(changed.title, { exact: true })).toBeVisible();
+    doc = (await (await api.get(path)).json()).doc;
     const restored = await api.post(`/api/admin/revisions/${originalRevision.id}/restore?docId=${doc.id}`, { headers, data: { baseVersion: doc.version, publish: true } });
     expect(restored.ok()).toBeTruthy();
     await page.goto('/?v=' + (await restored.json()).siteVersion); await expect(page.getByText(draft.title, { exact: true })).toBeVisible();

@@ -12,9 +12,9 @@ import { allDocs } from '../../content/publish';
 import { can } from '../../permissions';
 /** SDK callbacks are signed by Blob, carry no user cookie and cannot create metadata. */
 export function mediaCallbacks(app: Hono<AdminEnv>) {
-  app.post('/api/admin/media/upload-url', async (c, next) => {
+  app.post('/api/admin/cron/blob-upload', async (c, next) => {
     const body = object(await c.req.raw.clone().json());
-    if (body.type !== 'blob.upload-completed') return next();
+    if (body.type !== 'blob.upload-completed') throw new ApiError(422, 'validation', 'Invalid upload callback');
     try { return c.json(await c.get('blobs').clientUpload(c.req.raw, body)); }
     catch { throw new ApiError(403, 'forbidden', 'Invalid upload callback'); }
   });

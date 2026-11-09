@@ -44,7 +44,7 @@ export class VercelBlobs implements MediaStorage {
       onBeforeGenerateToken: async pathname => {
         if (!grant || mediaPath(pathname) !== grant.path || !pathname.startsWith('media/incoming/')) throw new Error('Invalid upload grant');
         return { allowedContentTypes: [grant.mime], maximumSizeInBytes: grant.size, validUntil: grant.expires,
-          addRandomSuffix: false, allowOverwrite: false };
+          addRandomSuffix: false, allowOverwrite: false, callbackUrl: new URL('/api/admin/cron/blob-upload', request.url).href };
       },
       // SDK verifies completion signatures. A callback never creates trusted metadata.
       onUploadCompleted: async () => {},

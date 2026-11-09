@@ -61,7 +61,9 @@ export function createRenderHandler(store: Store, config: Config, now: () => Dat
     const url = new URL(request.url);
     if (request.method !== 'GET' && request.method !== 'HEAD') return new Response('Method not allowed', { status: 405, headers: { ...headers, Allow: 'GET, HEAD' } });
     const preview = url.searchParams.has('preview') || url.searchParams.has('edit');
-    if (preview && !await readSession(store, request, now())) return new Response('Preview requires authentication', { status: 401, headers: { ...headers, 'Cache-Control': 'no-store' } });
+    const auth = preview ? await readSession(store, request, now(), config.production) : null;
+    if (preview && !auth) return new Response('Preview requires authentication', { status: 401, headers: { ...headers, 'Cache-Control': 'no-store' } });
+    if (preview && auth?.user.mustChangePassword) return new Response('Change your password to continue', { status: 403, headers: { ...headers, 'Cache-Control': 'no-store' } });
     const redirect = /^\/(index|home|recreational|competitive|referees|sponsors|board|resources|about)\.html$/.exec(url.pathname);
     if (redirect) {
       const target = ['index', 'home'].includes(redirect[1]) ? '/' : `/${redirect[1]}`;
