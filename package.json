@@ -14,11 +14,13 @@
     "test:e2e:install": "PLAYWRIGHT_BROWSERS_PATH=.cache/playwright playwright install chromium --only-shell",
     "seed": "tsx --env-file-if-exists=.env scripts/seed.ts",
     "export:golden": "tsx scripts/export-golden.ts",
-    "check-facts": "tsx scripts/check-facts.ts"
+    "check-facts": "tsx scripts/check-facts.ts",
+    "bootstrap": "tsx --env-file-if-exists=.env scripts/bootstrap.ts"
   },
   "dependencies": {
     "@preact/signals": "^2.5.1",
     "@vercel/functions": "^3.11.0",
+    "diff": "^9.0.0",
     "hono": "^4.10.4",
     "preact": "^10.27.2",
     "preact-iso": "^2.11.0"

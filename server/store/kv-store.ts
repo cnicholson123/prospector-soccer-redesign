@@ -1,3 +1,5 @@
+import { ApiError } from '../http/middleware/errors';
+import { can } from '../permissions';
 import { isDeepStrictEqual } from 'node:util';
 import { collectionNames, type CollectionName } from '../../shared/schema';
 import { validate, ValidationError } from '../content/validate';
@@ -18,7 +20,7 @@ const publishKey = (version: number) => {
   return `publishes/${String(version).padStart(8, '0')}.json`;
 };
 const pageLimit = (limit: number) => { if (!Number.isInteger(limit) || limit < 1 || limit > 1000) throw new Error('Limit must be 1–1000'); return limit; };
-interface MutationJournal { writes: { key: string; value: unknown }[]; doc: Doc }
+interface MutationJournal { writes: { key: string; value: unknown }[]; doc?: Doc; docs?: Doc[] }
 const mutationKey = 'meta/pending-mutation.json';
 const pendingPublishKey = 'meta/pending-publish.json';
 /** FS serializes across processes. Journals make interrupted multi-file writes
@@ -52,7 +54,7 @@ export class KvStore implements Store {
     const pending = await this.read<MutationJournal>(mutationKey);
     if (!pending) return;
     for (const write of pending.writes) await this.kv.put(write.key, write.value);
-    await this.kv.put(docKey(pending.doc.collection, pending.doc.id), pending.doc);
+    for (const doc of pending.docs ?? (pending.doc ? [pending.doc] : [])) await this.kv.put(docKey(doc.collection, doc.id), doc);
     await this.kv.delete(mutationKey);
   }
   private async readyToMutate(): Promise<void> {
@@ -102,8 +104,11 @@ export class KvStore implements Store {
       const { collection, id, expectedVersion, patch, audit } = mutation;
       const current = await this.getDoc(collection, id);
       if (!current || current.version !== expectedVersion) return 'conflict';
+      for (const guard of mutation.guardVersions ?? []) if ((await this.getDoc(collection, guard.id))?.version !== guard.expectedVersion) return 'conflict';
       const doc = { ...current, ...patch, id: current.id, collection: current.collection,
         createdAt: current.createdAt, createdBy: current.createdBy, version: expectedVersion + 1 };
+      if (patch.order !== undefined && current.status === 'published') doc.status = 'changed';
+      if (patch.order !== undefined && current.published !== undefined && current.publishedOrder === undefined) doc.publishedOrder = current.order ?? 0;
       if ((doc.trashedAt || doc.status === 'trashed') && !current.trashedAt && current.status !== 'trashed') {
         const usage = referenceUsage(await this.allDocs(), collection, id);
         if (usage.length) throw Object.assign(new Error('Document is in use'), { code: 'in_use', status: 409, details: { usage } });
@@ -125,6 +130,20 @@ export class KvStore implements Store {
           if (rev.docVersion <= old.docVersion) throw new Error('Revision docVersion must increase');
         }
         revisions.push(rev);
+      }
+      if (mutation.relatedOrder) {
+        if (mutation.revision || mutation.seal?.length || Object.keys(patch).some(key => !['order', 'updatedAt', 'updatedBy'].includes(key))) throw new Error('Reorder is metadata only');
+        const siblings: Doc[] = [doc];
+        for (const item of mutation.relatedOrder) {
+          if (siblings.some(d => d.id === item.id) || !Number.isSafeInteger(item.order) || item.order < 0) throw new Error('Invalid reorder');
+          const sibling = await this.getDoc(collection, item.id);
+          if (!sibling || sibling.version !== item.expectedVersion) return 'conflict';
+          siblings.push({ ...sibling, status: sibling.status === 'published' ? 'changed' : sibling.status, publishedOrder: sibling.publishedOrder ?? (sibling.published !== undefined ? sibling.order ?? 0 : undefined), order: item.order, version: sibling.version + 1, updatedAt: doc.updatedAt, updatedBy: doc.updatedBy });
+        }
+        await this.checkAudit(audit);
+        await this.kv.put(mutationKey, { writes: [{ key: auditKey(audit), value: audit }], docs: siblings } satisfies MutationJournal);
+        await this.resumeMutation();
+        return structuredClone(doc);
       }
       return this.commitMutation(doc, revisions, audit);
     });
@@ -190,7 +209,7 @@ export class KvStore implements Store {
         if (revisionIds.has(key)) throw new Error('Revision already exists');
         revisionIds.add(key);
         const old = await this.getRevision(rev.docId, rev.id);
-        if (old && !equal(old, rev)) throw new Error('Different content under existing revision id');
+        if (old && !equal(old, rev) && !(rev.sealedAt && !old.sealedAt && equal({ ...old, sealedAt: rev.sealedAt }, rev))) throw new Error('Different content under existing revision id');
       }
       const auditIds = new Set<string>();
       for (const entry of tx.audit ?? []) {
@@ -202,7 +221,7 @@ export class KvStore implements Store {
       for (const entry of tx.record.manifest) {
         const key = docKey(entry.collection, entry.id);
         const doc = docs.find(doc => doc.collection === entry.collection && doc.id === entry.id);
-        if (manifestIds.has(key) || !doc || doc.status === 'trashed' || doc.trashedAt || doc.published === undefined || entry.version !== doc.publishedVersion || entry.order !== (doc.order ?? 0)) throw new Error('Invalid publish manifest');
+        if (manifestIds.has(key) || !doc || doc.status === 'trashed' || doc.trashedAt || doc.published === undefined || entry.version !== doc.publishedVersion || entry.order !== (doc.publishedOrder ?? doc.order ?? 0)) throw new Error('Invalid publish manifest');
         manifestIds.add(key);
         const rev = tx.revisions?.find(rev => rev.id === entry.revId && rev.docId === entry.id) ?? await this.getRevision(entry.id, entry.revId);
         if (!rev || rev.collection !== entry.collection || rev.docVersion !== entry.version || !equal(rev.data, doc.published)) throw new Error('Manifest revision does not match published document');
@@ -272,8 +291,8 @@ export class KvStore implements Store {
     const values = await this.all<Revision>(`revisions/${part(id)}/`);
     const revisions = [...new Map(values.map(rev => [rev.id, rev])).values()];
     const boundary = before ? revisions.find(rev => rev.id === before) : undefined;
-    return revisions.filter(rev => rev.collection === collection && (!before || (boundary ? rev.at < boundary.at || (rev.at === boundary.at && rev.id < boundary.id) : rev.at < before)))
-      .sort((a, b) => b.at.localeCompare(a.at) || b.id.localeCompare(a.id)).slice(0, pageLimit(limit));
+    return revisions.filter(rev => rev.collection === collection && (!before || (boundary ? rev.at < boundary.at || (rev.at === boundary.at && (rev.docVersion < boundary.docVersion || rev.docVersion === boundary.docVersion && rev.id < boundary.id)) : rev.at < before)))
+      .sort((a, b) => b.at.localeCompare(a.at) || b.docVersion - a.docVersion || b.id.localeCompare(a.id)).slice(0, pageLimit(limit));
   }
   async getRevision(docId: string, revId: string): Promise<Revision | null> {
     const rev = await this.read<Revision>(revKey({ docId, id: revId }));
@@ -302,32 +321,113 @@ export class KvStore implements Store {
     if (!afterCursor) throw new Error('Invalid audit cursor');
     return { items: rows };
   }
+  claimMaintenance(key: string, intervalMs: number, now: string): Promise<boolean> {
+    return this.exclusive(async () => {
+      const at = await this.getMeta(key);
+      if (typeof at === 'string' && Date.parse(now) - Date.parse(at) < intervalMs) return false;
+      await this.setMeta(key, now); return true;
+    });
+  }
+  recordLogin(userId: string, expectedHash: string, weak: boolean, entry: AuditEntry): Promise<User | null> {
+    return this.exclusive(async () => {
+      const user = await this.getUser(userId);
+      if (!user?.active || user.passwordHash !== expectedHash) return null;
+      const next = { ...user, lastLoginAt: entry.at, passwordWeak: weak };
+      await this.checkAudit(entry); await this.kv.put(auditKey(entry), entry);
+      await this.saveUser(next); return next;
+    });
+  }
+  changePassword(userId: string, expectedHash: string, hash: string, entry: AuditEntry): Promise<User | null> {
+    return this.exclusive(async () => {
+      const user = await this.getUser(userId);
+      if (!user?.active || user.passwordHash !== expectedHash) return null;
+      const next = { ...user, passwordHash: hash, passwordWeak: false, mustChangePassword: false, passwordChangedAt: entry.at, authVersion: (user.authVersion ?? 0) + 1 };
+      await this.checkAudit(entry); await this.kv.put(auditKey(entry), entry);
+      await this.saveUser(next); return next;
+    });
+  }
+  loginFailure(key: string, now: string): Promise<{ failures: number; locks: number; until?: string }> {
+    return this.exclusive(async () => {
+      const state = await this.getMeta(key) as { failures: number; locks: number; until?: string } | null ?? { failures: 0, locks: 0 };
+      if (state.until && Date.parse(state.until) > Date.parse(now)) return state;
+      state.failures++;
+      if (state.failures >= 5) { state.failures = 0; state.until = new Date(Date.parse(now) + Math.min(86400, 900 * 2 ** state.locks) * 1000).toISOString(); state.locks++; }
+      await this.setMeta(key, state); return state;
+    });
+  }
+  recordAudit(entry: AuditEntry): Promise<void> {
+    return this.exclusive(async () => { await this.checkAudit(entry); await this.kv.put(auditKey(entry), entry); });
+  }
+  bootstrapOwner(user: User, entry: AuditEntry): Promise<boolean> {
+    return this.exclusive(async () => {
+      if ((await this.listUsers()).length) return false;
+      if (user.role !== 'Owner' || !user.active) throw new Error('Bootstrap requires an active Owner');
+      await this.checkAudit(entry);
+      await this.kv.put(auditKey(entry), entry);
+      await this.saveUser(user);
+      return true;
+    });
+  }
+  changeUser(user: User, actorId: string, entry: AuditEntry, expected: User | null): Promise<void> {
+    return this.exclusive(async () => {
+      const actor = await this.getUser(actorId);
+      const old = await this.getUser(user.id);
+      if (!equal(old, expected)) throw new ApiError(409, 'conflict', 'User changed. Reload and compare');
+      if (!actor || !can(actor, 'users.manage', { role: user.role }) || (old && !can(actor, 'users.manage', { role: old.role }))) throw new ApiError(403, 'forbidden', 'Role exceeds your permission');
+      if (old && old.id === actorId && old.role !== user.role) throw new ApiError(403, 'forbidden', 'You cannot change your own role');
+      if (old?.active && old.role === 'Owner' && (!user.active || user.role !== 'Owner') && (await this.listUsers()).filter(u => u.active && u.role === 'Owner').length === 1) throw new ApiError(409, 'last_owner', 'The last active Owner cannot be removed');
+      await this.checkAudit(entry);
+      // Check name collision before any audit or user writes.
+      const named = await this.getUserByUsername(user.username);
+      if (named && named.id !== user.id) throw new ApiError(409, 'conflict', 'Username already exists');
+      await this.kv.put(auditKey(entry), entry);
+      await this.saveUser(user);
+    });
+  }
+  sealWorkingRevisions(authorId: string, before: string, entry: AuditEntry): Promise<void> {
+    return this.exclusive(async () => {
+      await this.readyToMutate();
+      await this.checkAudit(entry);
+      let changed = false;
+      for (const rev of await this.all<Revision>('revisions/')) if (!rev.sealedAt && (authorId === '*' || rev.authorId === authorId) && rev.at <= before) { await this.kv.put(revKey(rev), { ...rev, sealedAt: entry.at }); changed = true; }
+      if (changed || authorId !== '*') await this.kv.put(auditKey(entry), entry);
+    });
+  }
   listUsers() { return this.all<User>('users/'); }
   getUser(id: string) { return this.read<User>(`users/${part(id)}.json`); }
   async getUserByUsername(username: string): Promise<User | null> {
     const id = await this.read<string>(`users-by-name/${part(username.toLowerCase())}.json`);
     return id ? this.getUser(id) : null;
   }
-  putUser(user: User): Promise<void> {
+  putUser(user: User): Promise<void> { return this.exclusive(() => this.saveUser(user)); }
+  private async saveUser(user: User): Promise<void> {
+    const nameKey = `users-by-name/${part(user.username.toLowerCase())}.json`;
+    const owner = await this.read<string>(nameKey);
+    if (owner && owner !== user.id) throw new Error('Username already exists');
+    const old = await this.getUser(user.id);
+    await this.kv.put(`users/${part(user.id)}.json`, user);
+    await this.kv.put(nameKey, user.id);
+    if (old && old.username.toLowerCase() !== user.username.toLowerCase()) await this.kv.delete(`users-by-name/${part(old.username.toLowerCase())}.json`);
+  }
+  refreshSession(hash: string, now: string): Promise<{ session: Session; refreshed: boolean } | null> {
     return this.exclusive(async () => {
-      const nameKey = `users-by-name/${part(user.username.toLowerCase())}.json`;
-      const owner = await this.read<string>(nameKey);
-      if (owner && owner !== user.id) throw new Error('Username already exists');
-      const old = await this.getUser(user.id);
-      await this.kv.put(`users/${part(user.id)}.json`, user);
-      await this.kv.put(nameKey, user.id);
-      if (old && old.username.toLowerCase() !== user.username.toLowerCase()) await this.kv.delete(`users-by-name/${part(old.username.toLowerCase())}.json`);
+      const session = await this.getSession(hash), time = Date.parse(now);
+      if (!session || Date.parse(session.expiresAt) <= time || Date.parse(session.createdAt) + 30 * 86400000 <= time) return null;
+      if (time - Date.parse(session.lastSeenAt) < 3600000) return { session, refreshed: false };
+      const next = { ...session, lastSeenAt: now, expiresAt: new Date(Math.min(time + 14 * 86400000, Date.parse(session.createdAt) + 30 * 86400000)).toISOString() };
+      await this.kv.put(`sessions/${part(hash)}.json`, next);
+      return { session: next, refreshed: true };
     });
   }
   getSession(hash: string) { return this.read<Session>(`sessions/${part(hash)}.json`); }
   async putSession(session: Session) { await this.exclusive(() => this.kv.put(`sessions/${part(session.hash)}.json`, session)); }
-  async deleteSession(hash: string) { await this.kv.delete(`sessions/${part(hash)}.json`); }
+  async deleteSession(hash: string) { await this.exclusive(() => this.kv.delete(`sessions/${part(hash)}.json`)); }
   async listSessions(userId: string) { return (await this.all<Session>('sessions/')).filter(session => session.userId === userId); }
   deleteExpiredSessions(now: string): Promise<number> {
     const cutoff = Date.parse(now);
     if (!Number.isFinite(cutoff)) return Promise.reject(new Error('Invalid session expiry cutoff'));
     return this.exclusive(async () => {
-      const expired = (await this.all<Session>('sessions/')).filter(session => Date.parse(session.expiresAt) <= cutoff);
+      const expired = (await this.all<Session>('sessions/')).filter(session => Date.parse(session.expiresAt) <= cutoff || Date.parse(session.createdAt) + 30 * 86400000 <= cutoff);
       for (const session of expired) await this.kv.delete(`sessions/${part(session.hash)}.json`);
       return expired.length;
     });

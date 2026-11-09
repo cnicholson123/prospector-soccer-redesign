@@ -1,6 +1,7 @@
 import { createStore } from '../server/store';
 import { seedStore } from './seed';
 import { createServer } from 'node:http';
+import { once } from 'node:events';
 import { loadConfig } from '../server/config';
 import { adminApp } from '../server/http/hono-app';
 import { staticFile } from '../server/http/static';
@@ -24,6 +25,8 @@ const server = createServer(async (req, res) => {
       if (Array.isArray(value)) value.forEach((v) => headers.append(name, v));
       else if (value !== undefined) headers.set(name, value);
     }
+    // This local adapter knows the socket peer; ignore client-supplied proxy IPs.
+    headers.set('x-forwarded-for', req.socket.remoteAddress ?? 'unknown');
     const chunks: Buffer[] = [];
     let size = 0;
     for await (const chunk of req) {
@@ -43,7 +46,16 @@ const server = createServer(async (req, res) => {
     response ??= new Response('Not found', { status: 404 });
     if ((url.pathname === '/admin' || url.pathname.startsWith('/admin/')) && !url.pathname.startsWith('/admin/assets/')) response.headers.set('Cache-Control', 'no-store');
     res.writeHead(response.status, Object.fromEntries(response.headers));
-    res.end(method === 'HEAD' ? undefined : Buffer.from(await response.arrayBuffer()));
+    if (method === 'HEAD' || !response.body) { res.end(); return; }
+    const reader = response.body.getReader();
+    try {
+      for (;;) {
+        const chunk = await reader.read();
+        if (chunk.done) break;
+        if (!res.write(chunk.value)) await once(res, 'drain');
+      }
+      res.end();
+    } finally { reader.releaseLock(); }
   } catch (error) { console.error(error); if (!res.headersSent) res.writeHead(500); res.end('Internal server error'); }
 });
 server.on('error', (error) => { console.error(error); process.exitCode = 1; void vite?.close(); });

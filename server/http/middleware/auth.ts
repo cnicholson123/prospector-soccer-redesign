@@ -1,0 +1,23 @@
+import type { Context, MiddlewareHandler } from 'hono';
+import type { Config } from '../../config';
+import type { Store } from '../../store/types';
+import type { Session, User } from '../../../shared/types';
+import { readSession, cookie } from '../../auth/session';
+import { rateLimit } from '../../auth/ratelimit';
+import { checkCsrf } from '../../auth/csrf';
+import { can } from '../../permissions';
+import { settleSchedules } from '../../content/schedule';
+import { ApiError } from './errors';
+export type AdminEnv = { Variables: { user: User; session: Session; store: Store; config: Config; now: Date } };
+export type AdminContext = Context<AdminEnv>;
+export const actor = (c: AdminContext) => ({ id: c.get('user').id, displayName: c.get('user').displayName, ip: c.req.header('x-forwarded-for')?.split(',')[0].trim() ?? 'unknown', userAgent: c.req.header('user-agent') ?? '' });
+export const authenticate: MiddlewareHandler<AdminEnv> = async (c, next) => {
+  const auth = await readSession(c.get('store'), c.req.raw, c.get('now'));
+  if (!auth) throw new ApiError(401, 'unauthenticated', 'Sign in to continue');
+  c.set('user', auth.user); c.set('session', auth.session);
+  await rateLimit(c.get('store'), `api-${auth.session.hash}`, 600, 300, c.get('now'));
+  if (!['GET', 'HEAD', 'OPTIONS'].includes(c.req.method)) checkCsrf(c.req.raw, auth.session.csrfToken, c.get('config'));
+  if (auth.refreshed) c.header('Set-Cookie', cookie(auth.token, c.get('config'), Math.floor((Date.parse(auth.session.expiresAt) - c.get('now').getTime()) / 1000)));
+  if (can(auth.user, 'content.publish')) await settleSchedules(c.get('store'), c.get('now'));
+  await next();
+};

@@ -12,6 +12,9 @@ export interface DocMutation {
   collection: CollectionName; id: string; expectedVersion: number; patch: Partial<Doc>;
   revision?: { upsert: Revision } | { append: Revision };
   seal?: string[]; audit: AuditEntry;
+  /** Atomic, metadata-only reorder siblings; share the primary mutation audit. */
+  guardVersions?: { id: string; expectedVersion: number }[];
+  relatedOrder?: { id: string; expectedVersion: number; order: number }[];
 }
 export interface PublishTx {
   docs: { expectedVersion: number; nextDoc: Doc }[];
@@ -30,10 +33,19 @@ export interface Store {
   listRevisions(collection: CollectionName, id: string, limit: number, before?: string): Promise<Revision[]>;
   getRevision(docId: string, revId: string): Promise<Revision | null>;
   queryAudit(q: AuditQuery): Promise<{ items: AuditEntry[]; cursor?: string }>;
+  claimMaintenance(key: string, intervalMs: number, now: string): Promise<boolean>;
+  recordLogin(userId: string, expectedHash: string, weak: boolean, audit: AuditEntry): Promise<User | null>;
+  changePassword(userId: string, expectedHash: string, hash: string, audit: AuditEntry): Promise<User | null>;
+  loginFailure(key: string, now: string): Promise<{ failures: number; locks: number; until?: string }>;
+  recordAudit(entry: AuditEntry): Promise<void>;
+  bootstrapOwner(user: User, audit: AuditEntry): Promise<boolean>;
+  changeUser(user: User, actorId: string, audit: AuditEntry, expected: User | null): Promise<void>;
+  sealWorkingRevisions(authorId: string, before: string, audit: AuditEntry): Promise<void>;
   listUsers(): Promise<User[]>;
   getUser(id: string): Promise<User | null>;
   getUserByUsername(username: string): Promise<User | null>;
   putUser(user: User): Promise<void>;
+  refreshSession(hash: string, now: string): Promise<{ session: Session; refreshed: boolean } | null>;
   getSession(hash: string): Promise<Session | null>;
   putSession(session: Session): Promise<void>;
   deleteSession(hash: string): Promise<void>;

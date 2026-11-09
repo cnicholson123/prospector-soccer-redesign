@@ -3,7 +3,7 @@ export type Role = 'Owner' | 'Admin' | 'Editor' | 'Contributor' | 'Viewer';
 export type DocStatus = 'draft' | 'published' | 'changed' | 'scheduled' | 'review' | 'trashed';
 export interface Doc<T = unknown> {
   id: string; collection: CollectionName; draft: T; published?: T;
-  version: number; publishedVersion?: number; order?: number; status: DocStatus;
+  version: number; publishedVersion?: number; order?: number; publishedOrder?: number; status: DocStatus;
   reviewRequestedBy?: string; reviewNote?: string; scheduledAt?: string;
   trashedAt?: string; trashedBy?: string;
   createdAt: string; createdBy: string; updatedAt: string; updatedBy: string;
@@ -37,11 +37,11 @@ export interface AuditEntry {
 export interface User {
   id: string; username: string; displayName: string; email?: string; role: Role;
   passwordHash: string; active: boolean; createdAt: string; createdBy: string;
-  lastLoginAt?: string; passwordChangedAt?: string; mustChangePassword?: boolean;
+  authVersion?: number; passwordWeak?: boolean; lastLoginAt?: string; passwordChangedAt?: string; mustChangePassword?: boolean;
 }
 export interface Session {
   hash: string; userId: string; createdAt: string; lastSeenAt: string; expiresAt: string;
-  ip?: string; userAgent?: string; csrfToken: string;
+  ip?: string; userAgent?: string; csrfToken: string; authVersion?: number;
 }
 export interface ValidationIssue { path: string; message: string }
 export interface ValidationResult { valid: boolean; errors: ValidationIssue[] }

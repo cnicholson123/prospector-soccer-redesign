@@ -1,5 +1,9 @@
 import { createHash } from 'node:crypto';
 import { pageNames, type PageName } from '../../shared/schema';
+import { readSession } from '../auth/session';
+import { allDocs } from '../content/publish';
+import { buildSnapshot } from '../content/snapshot';
+import { scheduleStateHash } from '../content/scheduled-view';
 import type { Snapshot } from '../../shared/types';
 import { loadConfig, type Config } from '../config';
 import { createStore } from '../store';
@@ -56,10 +60,8 @@ export function createRenderHandler(store: Store, config: Config, now: () => Dat
   return async (request: Request): Promise<Response> => {
     const url = new URL(request.url);
     if (request.method !== 'GET' && request.method !== 'HEAD') return new Response('Method not allowed', { status: 405, headers: { ...headers, Allow: 'GET, HEAD' } });
-    if (url.searchParams.has('preview') || url.searchParams.has('edit')) {
-      // Session-backed draft selection is introduced with the Phase 5 preview flow.
-      return new Response('Preview requires authentication', { status: 401, headers: { ...headers, 'Cache-Control': 'no-store' } });
-    }
+    const preview = url.searchParams.has('preview') || url.searchParams.has('edit');
+    if (preview && !await readSession(store, request, now())) return new Response('Preview requires authentication', { status: 401, headers: { ...headers, 'Cache-Control': 'no-store' } });
     const redirect = /^\/(index|home|recreational|competitive|referees|sponsors|board|resources|about)\.html$/.exec(url.pathname);
     if (redirect) {
       const target = ['index', 'home'].includes(redirect[1]) ? '/' : `/${redirect[1]}`;
@@ -68,7 +70,12 @@ export function createRenderHandler(store: Store, config: Config, now: () => Dat
     const snapshot = await store.getSnapshot();
     if (!snapshot) return new Response('Content is not initialized. Run npm run seed.', { status: 503, headers: { ...headers, 'Cache-Control': 'no-store' } });
     if (!cached || cached.siteVersion !== snapshot.siteVersion) cached = snapshot;
-    const view = new SnapshotView(cached, now(), false, config.tzName);
+    let selected = cached;
+    if (preview) {
+      const drafts = (await allDocs(store)).filter(d => !d.trashedAt).map(d => ({ ...d, published: d.draft, publishedVersion: d.version, publishedOrder: d.order }));
+      selected = buildSnapshot(drafts, { siteVersion: cached.siteVersion, publishedAt: cached.publishedAt, templateHash });
+    }
+    const view = new SnapshotView(selected, now(), url.searchParams.has('edit'), config.tzName);
     const site = view.doc('site', 'site');
     const requested = url.pathname === '/api/render' || url.pathname === '/'
       ? url.searchParams.get('page') ?? 'home'
@@ -83,18 +90,21 @@ export function createRenderHandler(store: Store, config: Config, now: () => Dat
     } else if (page === 'sitemap.xml') {
       contentType = 'application/xml; charset=utf-8';
       body = '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' + (site.boolean('seo.indexable') ? pageNames.map(name => `<url><loc>${escape(config.publicBaseUrl + (name === 'home' ? '/' : '/' + name))}</loc></url>`).join('') : '') + '</urlset>';
-    } else if (pageNames.includes(page as PageName)) body = renderPage(cached, page as PageName, { now: view.now, timeZone: config.tzName });
+    } else if (pageNames.includes(page as PageName)) body = renderPage(selected, page as PageName, { now: view.now, edit: view.edit, timeZone: config.tzName });
     else {
       status = 404;
       body = layout(view, 'home', notfound(), { title: 'Page not found · ' + site.text('name'), description: 'Find your way back to Prospector Soccer Club.' }).toString();
     }
     // The representation hash also changes when a callout expires or an event ages out.
-    const etag = `W/"${cached.siteVersion}-${templateHash}-${hash(body)}"`;
+    const etag = `W/"${cached.siteVersion}-${templateHash}-${scheduleStateHash(selected, view.now, body)}"`;
+    const until = Math.min(...selected.scheduled.map(s => (Date.parse(s.at) - view.now.getTime()) / 1000).filter(seconds => seconds > 0));
+    const scheduleNear = until <= config.cacheSmaxage + config.cacheSwr;
+    const seconds = Math.min(cacheSeconds(view, config.cacheSmaxage), Math.max(0, Math.floor(until)));
     const responseHeaders = { ...headers, 'Content-Type': contentType, ETag: etag,
-      'Cache-Control': `public, max-age=0, s-maxage=${cacheSeconds(view, config.cacheSmaxage)}, stale-while-revalidate=${config.cacheSwr}` };
-    tagContent();
+      'Cache-Control': preview ? 'no-store' : `public, max-age=0, s-maxage=${seconds}, stale-while-revalidate=${scheduleNear ? 0 : config.cacheSwr}` };
+    if (!preview) tagContent();
     const matches = (request.headers.get('If-None-Match') ?? '').split(',').map(value => value.trim().replace(/^W\//, ''));
-    if (status === 200 && (matches.includes(etag.replace(/^W\//, '')) || matches.includes('*'))) return new Response(null, { status: 304, headers: responseHeaders });
+    if (!preview && status === 200 && (matches.includes(etag.replace(/^W\//, '')) || matches.includes('*'))) return new Response(null, { status: 304, headers: responseHeaders });
     return new Response(request.method === 'HEAD' ? null : body, { status, headers: responseHeaders });
   };
 }

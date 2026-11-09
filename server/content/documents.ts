@@ -16,3 +16,8 @@ export async function createDocument(store: Store, input: CreateDoc): Promise<Do
   if (!result.valid) throw new ValidationError(result.errors);
   return store.createDoc({ ...input, doc: { ...input.doc, draft }, revision: { ...input.revision, data: draft } });
 }
+
+export function documentTitle(doc: Doc, data: unknown = doc.draft): string {
+  const value = collections[doc.collection].titleField.split('.').reduce<unknown>((v, key) => v && typeof v === 'object' ? (v as Record<string, unknown>)[key] : undefined, data);
+  return typeof value === 'string' ? value : doc.id;
+}

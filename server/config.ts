@@ -30,7 +30,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env, warn = console.
   if (production && (!env.SESSION_SECRET || Buffer.byteLength(env.SESSION_SECRET) < 32)) fail('SESSION_SECRET must contain at least 32 bytes in production');
   if (env.SESSION_SECRET && Buffer.byteLength(env.SESSION_SECRET) < 32) fail('SESSION_SECRET must contain at least 32 bytes');
   const sessionSecret = env.SESSION_SECRET ?? randomBytes(32).toString('base64url');
-  if (!env.SESSION_SECRET) warn('SESSION_SECRET is ephemeral; sessions will expire when the server restarts.');
+  if (!env.SESSION_SECRET) warn('SESSION_SECRET is ephemeral; set a persistent value before enabling signed upload tokens.');
   const publicBaseUrl = env.PUBLIC_BASE_URL ?? 'http://localhost:3000';
   let base: URL;
   try { base = new URL(publicBaseUrl); } catch { return fail('PUBLIC_BASE_URL must be an absolute HTTP(S) origin'); }

@@ -143,3 +143,53 @@ Decisions, limitations and later-phase work
 - Authenticated create/publish/dashboard routes remain Phase 4/5 scope. Their creation service, recovery middleware and 422 boundary are implemented and tested with HTTP route fixtures. No end-to-end authenticated publish flow is claimed. Bootstrap creation, login audit/password banners, permission ceilings, cron/login session-GC calls, dashboard broken-reference UI and schedule-aware rendering remain in their assigned phases.
 - A transaction journal and renewable lock lease supplement the plan's required write ordering so interrupted FS writes can be resumed safely. Existing legacy revision and snapshot data remain readable.
 - No commit, push, deployment, credentials or global configuration changes were made.
+
+## CHANGELOG — Phase 4 — Auth, users, sessions, permissions and audit — 2026-11-09
+
+Shipped
+
+- Added the complete auth API, bootstrap CLI (`npm run bootstrap`), scrypt hashing with the prescribed parameters, timing-safe verification and a dummy verify for unknown users. Bundled 1,000 common passwords with SecLists attribution/license. New passwords enforce the policy; the development Phil/Phil bootstrap remains exempt. Production credentials remain explicitly required by configuration.
+- Bootstrap is idempotent and serialized across FS store instances. Added active-user checks, hashed random session IDs, HttpOnly/SameSite cookies, Secure in production, 14-day sliding/30-day absolute expiry, hourly refresh, session listing/revocation, password rotation and credential-generation invalidation. Concurrent refreshes perform at most one write. Login session GC uses an atomic hourly maintenance claim; cron also runs GC.
+- Added CSRF and Origin/Sec-Fetch-Site checks, IP login throttling, serialized username failures with doubling lockouts capped at 24 hours, and session API throttling. Successes, failures, lockouts and malformed processed login requests are audited with IP/UA; the local HTTP adapter records the socket peer instead of trusting a caller-supplied proxy header.
+- Added a shared role table, pure `can`, permission middleware, user administration with role ceilings, self-role-change prohibition and serialized last-Owner protection. User updates compare the current record before writing; password changes and login bookkeeping cannot overwrite concurrent credentials or roles. Password hashes and CSRF secrets are excluded from public user/session results.
+- Added filtered, paginated audit reads and streamed CSV/JSON exports, including CSV formula defanging. The local server now forwards streams instead of buffering the entire response. Added document read endpoints with version ETags, and `passwordWeak`/permissions to auth responses. Dashboard reports weak Owner credentials; lower roles do not receive the private audit feed.
+
+Acceptance and verification
+
+- Phil/Phil returns a session cookie and `passwordWeak: true`; five wrong passwords lock for 15 minutes with failure/lockout audits. Tests cover lockout doubling, IP limits/Retry-After, concurrent refreshes, session rotation/revocation, bootstrap races/idempotence and every role × permission.
+- HTTP tests confirm Viewer cannot create, Contributor cannot edit site settings/reorder/publish, Admin cannot create/reset an Owner, and the last active Owner cannot be removed. CSV/JSON export filters and streaming content types pass.
+- `npm run bootstrap` against an isolated repository-local FS directory — PASS.
+- `npm run build` and `npm test` — PASS with Phase 5 (401 passing tests, two explicit hosted-service skips). `git diff --check` — PASS.
+
+Scope notes
+
+- The login/profile screens and prominent, session-dismissible weak-password banner remain Phase 7a/11 UI work under §18.4. No admin screen or public Admin link was added in these backend phases; `passwordWeak` and the dashboard health finding are ready for those screens. No UI accessibility score is claimed.
+- Narrow Store operations were added for auth audit, serialized account changes/bootstrap/lockouts, maintenance claims, hourly session refresh, and sealing working revisions on logout/expiry. They do not restore the removed standalone content-write/revision APIs. The Phase 6 Postgres driver must implement these extensions.
+
+## CHANGELOG — Phase 5 — Revisions, publishing, restore and scheduling — 2026-11-09
+
+Shipped
+
+- Added create/edit/duplicate/trash/untrash/review APIs. Draft writes use `createDoc`/`mutateDoc`, with schema validation/defaults and required audit. Working revisions coalesce for the same author within ten minutes; checkpoints, other authors, elapsed time, logout, publish and restore seal history. Same-millisecond revision ordering uses document versions to avoid selecting an older author revision by random ID order.
+- Added schema-labelled field/word diffs (`diff`, already allow-listed), stable-key list added/removed/moved/changed diffs, history pagination/detail, revision restore, pending changes, search, dashboard and JSON content backup.
+- Added publish, unpublish, schedule, cancel, rebuild and whole-site restore through kind-tagged `Store.publish` transactions and `recoverPublish`. All publish selections require observed versions; `all: true` also requires the complete versioned selection. Restore is forward-only, restores historical data/order/media via manifest revision pointers, and unpublishes later-created documents while keeping their drafts.
+- Added atomic versioned reorder using `mutateDoc`'s `relatedOrder`/`guardVersions` extension and the existing durable mutation journal. Moved documents gain versions, there is one audit and no per-document reorder revision. `publishedOrder` preserves live order until explicitly published; an unrelated publish cannot release a pending reorder. Snapshot arrays are deterministically ordered.
+- Schedules freeze data, version and order in the snapshot. Public renders apply due items without cron, ETags include the due schedule set plus the existing time-sensitive representation digest, TTL is capped and SWR disabled around the next scheduled boundary. GET/POST bearer-authenticated cron and Editor+ requests settle due items idempotently, record `effectiveAt`, and preserve newer drafts. Cancellation creates a schedule record. Purge failures return “Live within about 5 minutes”; “Live now” requires a successful purge.
+- Authenticated previews/edit renders now use drafts, emit edit annotations only on request and always return `no-store`; public renders do not inspect session cookies. Added referential-integrity error coverage and dashboard broken-reference findings.
+- Added SSRF-safe link checking: HTTP(S) only, all DNS answers checked, DNS pinned for the actual connection, private/reserved destinations refused at each of at most three redirects, HEAD/GET fallback, one eight-second deadline, 1 MB response cap and five workers. A real loopback stub receives zero requests; mocked public transports cover redirects, fallback, timeout, size and concurrency.
+
+Acceptance and verification
+
+- Full HTTP lifecycle passes: create → coalesced edit → checkpoint/publish at site version 2 → later edit → revision restore → site restore to version 1 content/order as a new version. Stale saves/publications return 409 with the current document and the reload-and-compare message. Keep-mine is a checkpoint save against the reloaded version; no automatic field merge was added.
+- Tests cover scheduled rendering before settlement, conditional requests across the due boundary, TTL/SWR changes, newer-draft preservation, cancellation, idempotent settlement, cron authorization, interrupted publish/reorder recovery, trash usage errors, past events and missing alt text. Existing Phase 1b stage-by-stage failure-injection tests remain green.
+- `npm run build` — PASS. `npm test` — PASS: 401 tests, plus two explicit hosted-service skips. All eight public goldens pass; public CSS/JS, seeds, original pages and golden fixtures are unchanged.
+- `npm run check-facts` — PASS, all 122 inventory facts. `git diff --check` — PASS.
+- Local real HTTP smoke — PASS: login, cookie/CSRF, create, private preview, publish, streamed audit CSV, whole-site restore and logout. The temporary server was stopped.
+- `npm run test:e2e -- --list` — PASS, 13 tests across three specs. Added a Phase 4/5 API/preview lifecycle spec at 390px and 1280px. Browser execution — **not run (sandbox)**; Claude must run the installed Chrome outside the sandbox. The actual login/editor/keyboard/compare UI flow remains Phase 7a scope.
+- Neon and Blob tests — **not run (no env)**. No hosting credentials, commit, push, deploy or global configuration changes were used.
+
+Scope notes / follow-up
+
+- The §18.1 comparison panel, its Discard mine/Keep mine buttons, password banner and public Admin link remain explicitly unimplemented UI work for Phase 7a. These phases implement their server contracts, schema-aware diff data and permission enforcement; no UI approximation was substituted.
+- Unscoped `/revisions/:revId` URLs accept `?docId=...` for the Phase 1b direct lookup; without it the compatibility route searches documents. Clients should supply `docId`.
+- Production storage, upload quarantine/real media routes and hosted purge verification stay in Phases 6/10. Link-check tests do not claim connectivity to the club's external sites. Time-expired revisions are sealed lazily on admin activity; no long-lived server timer or extra cron was introduced.

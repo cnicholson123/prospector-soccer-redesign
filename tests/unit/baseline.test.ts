@@ -53,17 +53,18 @@ describe('Phase 1b config and runtime dispatch', () => {
     expect(await home.text()).toContain('Prospector Soccer Club');
     const health = await admin.fetch(fromNode('/api/admin/healthz')); expect(health.status).toBe(200); expect(await health.json()).toEqual({ ok: true });
   });
-  it('recovers lazily on publish/dashboard requests and retries after API errors', async () => {
-    const { store } = await local();
+  it('recovers on the first authenticated request and after unexpected errors', async () => {
+    const { store, config } = await local();
     const recover = vi.spyOn(store, 'recoverPublish');
-    const app = createAdminApp(() => store);
-    app.get('/api/admin/dashboard', c => c.json({ ok: true }));
-    app.post('/api/admin/publish', () => { throw new ValidationError([{ path: 'hero', message: 'Required' }]); });
+    const app = createAdminApp(() => store, { config });
+    app.get('/api/admin/test-failure', () => { throw new Error('Injected error'); });
+    app.get('/api/admin/test-read', c => c.json({ ok: true }));
     await app.request('/api/admin/healthz'); expect(recover).not.toHaveBeenCalled();
-    await app.request('/api/admin/dashboard'); expect(recover).toHaveBeenCalledTimes(1);
-    await app.request('/api/admin/dashboard'); expect(recover).toHaveBeenCalledTimes(1);
-    await app.request('/api/admin/publish', { method: 'POST' });
-    await app.request('/api/admin/dashboard'); expect(recover).toHaveBeenCalledTimes(2);
+    await app.request('/api/admin/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: 'Phil', password: 'Phil' }) });
+    expect(recover).toHaveBeenCalledTimes(1);
+    await app.request('/api/admin/test-read'); expect(recover).toHaveBeenCalledTimes(1);
+    await app.request('/api/admin/test-failure');
+    await app.request('/api/admin/test-read'); expect(recover).toHaveBeenCalledTimes(2);
   });
   it('caps actual streamed bytes as well as declared content-length', async () => {
     const large = 'a'.repeat(1024 * 1024 + 1);
@@ -191,8 +192,8 @@ describe('snapshot and reference integrity', () => {
     const tx: PublishTx = { docs: [{ expectedVersion: home.version, nextDoc: next }], snapshot: buildSnapshot(all, { siteVersion: 2, publishedAt: at, templateHash: 'test' }), record: { ...previous, siteVersion: 2, manifest }, revisions: [rev] };
     await expect(store.publish(tx)).rejects.toMatchObject({ code: 'validation', status: 422 });
     const app = createAdminApp(() => store);
-    app.post('/api/admin/publish', async c => c.json(await store.publish(tx)));
-    const response = await app.request('/api/admin/publish', { method: 'POST' });
+    app.post('/api/admin/test-publish-validation', async c => c.json(await store.publish(tx)));
+    const response = await app.request('/api/admin/test-publish-validation', { method: 'POST' });
     expect(response.status).toBe(422);
     expect(await response.json()).toMatchObject({ error: { code: 'validation', details: expect.arrayContaining([{ path: 'home.home.hero', message: 'Required section' }]) } });
     expect((await store.getSnapshot())?.siteVersion).toBe(1); expect(await store.getDoc('home', 'home')).toEqual(home);

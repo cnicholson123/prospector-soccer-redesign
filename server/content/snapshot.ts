@@ -9,8 +9,9 @@ export function buildSnapshot(docs: Doc[], metadata: Pick<Snapshot, 'siteVersion
     const entry = manifest?.find(item => item.collection === doc.collection && item.id === doc.id);
     if (doc.published === undefined || (manifest ? !entry : doc.status === 'trashed')) continue;
     (published[doc.collection] ??= []).push({ id: doc.id, collection: doc.collection, data: structuredClone(doc.published),
-      version: entry?.version ?? doc.publishedVersion ?? doc.version, order: entry?.order ?? doc.order ?? 0 });
+      version: entry?.version ?? doc.publishedVersion ?? doc.version, order: entry?.order ?? doc.publishedOrder ?? doc.order ?? 0 });
   }
+  for (const items of Object.values(published)) items?.sort((a, b) => a.order - b.order || a.id.localeCompare(b.id));
   const referenced = Object.values(published).flatMap(items => (items ?? []).flatMap(item => references(item.collection, item.data)))
     .concat((metadata.scheduled ?? []).flatMap(item => references(item.collection, item.data)));
   for (const ref of referenced.filter(ref => ref.collection === 'media')) {

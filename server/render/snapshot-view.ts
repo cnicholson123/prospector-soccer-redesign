@@ -1,5 +1,6 @@
 import type { CollectionName } from '../../shared/schema';
 import type { Snapshot } from '../../shared/types';
+import { effectiveSnapshot } from '../content/scheduled-view';
 import { html, raw, type Html } from './html';
 import { richtext } from './richtext';
 import { safeUrl } from './links';
@@ -62,7 +63,8 @@ export class DocumentView {
   }
 }
 export class SnapshotView {
-  constructor(readonly snapshot: Snapshot, readonly now = new Date(), readonly edit = false, readonly timeZone = 'America/Los_Angeles') {}
+  readonly snapshot: Snapshot;
+  constructor(snapshot: Snapshot, readonly now = new Date(), readonly edit = false, readonly timeZone = 'America/Los_Angeles') { this.snapshot = effectiveSnapshot(snapshot, now); }
   doc(collection: CollectionName, id: string): DocumentView {
     const doc = this.snapshot.docs[collection]?.find(item => item.id === id);
     const media = collection === 'media' ? this.snapshot.media?.[id] : undefined;

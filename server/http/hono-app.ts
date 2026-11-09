@@ -1,44 +1,64 @@
-import { Hono, type MiddlewareHandler } from 'hono';
+import { Hono } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
 import { createStore } from '../store';
 import type { Store } from '../store/types';
+import { loadConfig, type Config } from '../config';
+import { bootstrap } from '../auth/bootstrap';
+import { authenticate, type AdminEnv } from './middleware/auth';
+import { ApiError } from './middleware/errors';
+import { authRoutes } from './routes/auth';
+import { userRoutes } from './routes/users';
+import { auditRoutes } from './routes/audit';
+import { docRoutes } from './routes/docs';
+import { contentRoutes, cronRoutes } from './routes/content';
+import { audit } from '../audit';
 
-export function createAdminApp(storeFactory: () => Store = createStore) {
-  const adminApp = new Hono();
-  let needsRecovery = true;
-  let store: Store | undefined;
-  const recover: MiddlewareHandler = async (c, next) => {
-    if (needsRecovery) {
-      store ??= storeFactory();
-      await store.recoverPublish();
-      needsRecovery = false;
-    }
-    await next();
-    if (c.res.status >= 500) needsRecovery = true;
-  };
-  adminApp.use('/api/admin/*', async (c, next) => {
-    // Force the limiter to count actual bytes, including a misdeclared length.
+export function createAdminApp(storeFactory: () => Store = createStore, options: { config?: Config; now?: () => Date } = {}) {
+  const app = new Hono<AdminEnv>();
+  let needsRecovery = true, store: Store | undefined, config = options.config;
+  let initializing: Promise<unknown> | undefined;
+  app.use('/api/admin/*', async (c, next) => {
+    c.header('Cache-Control', 'no-store'); c.header('X-Content-Type-Options', 'nosniff');
     if (c.req.raw.body && c.req.raw.headers.has('content-length')) {
-      const headers = new Headers(c.req.raw.headers);
-      headers.delete('content-length');
+      const headers = new Headers(c.req.raw.headers); headers.delete('content-length');
       c.req.raw = new Request(c.req.raw, { headers });
     }
     await next();
   });
-  adminApp.use('/api/admin/*', bodyLimit({ maxSize: 1024 * 1024, onError: c => c.json({ error: { code: 'payload_too_large', message: 'JSON body exceeds 1 MB' } }, 413) }));
-  // Only replays an already-authorized, durable transaction. The content routes
-  // added in Phase 5 still require their normal auth and permission middleware.
-  adminApp.use('/api/admin/publish', recover);
-  adminApp.use('/api/admin/dashboard', recover);
-  adminApp.onError((error, c) => {
-    needsRecovery = true;
+  app.use('/api/admin/*', bodyLimit({ maxSize: 1024 * 1024, onError: c => c.json({ error: { code: 'payload_too_large', message: 'JSON body exceeds 1 MB' } }, 413) }));
+  app.get('/api/admin/healthz', c => c.json({ ok: true }));
+  app.use('/api/admin/*', async (c, next) => {
+    config ??= loadConfig(); store ??= storeFactory();
+    c.set('config', config); c.set('store', store); c.set('now', options.now?.() ?? new Date());
+    if (!initializing) initializing = bootstrap(store, config, c.get('now')).catch(error => { initializing = undefined; throw error; });
+    await initializing;
+    if (needsRecovery) { await store.recoverPublish(); needsRecovery = false; }
+    if (await store.claimMaintenance('revision-gc-at', 60000, c.get('now').toISOString())) {
+      await store.sealWorkingRevisions('*', new Date(c.get('now').getTime() - 600000).toISOString(), audit({ id: 'system', displayName: 'System' }, 'history.seal_expired', {}, c.get('now')));
+    }
+    await next();
+    if (c.res.status >= 500) needsRecovery = true;
+  });
+  authRoutes(app);
+  cronRoutes(app);
+  for (const path of ['docs', 'users', 'audit', 'publish', 'unpublish', 'schedule', 'pending', 'revisions', 'publishes', 'dashboard', 'search', 'health', 'export', 'rebuild']) {
+    app.use(`/api/admin/${path}`, authenticate);
+    app.use(`/api/admin/${path}/*`, authenticate);
+  }
+  userRoutes(app); auditRoutes(app); docRoutes(app); contentRoutes(app);
+  app.onError((error, c) => {
+    if (error instanceof ApiError) {
+      if (error.retryAfter) c.header('Retry-After', String(error.retryAfter));
+      return c.json({ error: { code: error.code, message: error.message, details: error.details } }, error.status);
+    }
+    if (error instanceof SyntaxError) return c.json({ error: { code: 'validation', message: 'Invalid JSON' } }, 422);
     if ('code' in error && error.code === 'validation' && 'details' in error) return c.json({ error: { code: 'validation', message: error.message, details: error.details } }, 422);
     if ('code' in error && error.code === 'in_use' && 'details' in error) return c.json({ error: { code: 'in_use', message: error.message, details: error.details } }, 409);
+    needsRecovery = true;
     console.error(error);
     return c.json({ error: { code: 'internal', message: 'Internal server error' } }, 500);
   });
-  adminApp.get('/api/admin/healthz', (c) => c.json({ ok: true }));
-  adminApp.notFound((c) => c.json({ error: { code: 'not_found', message: 'Route not found' } }, 404));
-  return adminApp;
+  app.notFound(c => c.json({ error: { code: 'not_found', message: 'Route not found' } }, 404));
+  return app;
 }
 export const adminApp = createAdminApp();
