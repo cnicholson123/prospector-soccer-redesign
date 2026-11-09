@@ -622,3 +622,9 @@ Phases 0–3 unchanged. Then:
 | 14 | **12** Cut-over | as written; deployment checklist adds "set `ADMIN_BOOTSTRAP_*` env before first request" |
 
 Rule: nothing from 7b onward starts until the 7a Playwright flow is green on the FS driver and, once env exists, on Postgres.
+
+## 19. Account decision (Chris, 2026-11-09)
+
+- Initial accounts: **Phil** (Owner) and **Chris** (Owner), with strong passwords chosen by Chris. Plaintext passwords never enter the repo, logs or tests.
+- Password changes are **allowed but never required**: `ADMIN_FORCE_PASSWORD_CHANGE=false` in production.
+- Bootstrap supports multiple users via `ADMIN_BOOTSTRAP_USERS` (secret env): a JSON array of `{ "username", "displayName", "role", "passwordHash" }` where `passwordHash` is the exact string produced by `server/auth/password.ts` (scrypt). Bootstrap is idempotent: it creates missing users only, never overwrites an existing user's password or role, and audits each creation. `scripts/hash-password.ts` reads a password from stdin (no echo, never logged) and prints the hash. The single-user `ADMIN_BOOTSTRAP_USERNAME/PASSWORD` path remains for dev.
