@@ -15,6 +15,8 @@ import { collections, type CollectionName } from '../../shared/schema.js';
 import { contentChanged } from './state/content.js';
 import { PageEditor } from './routes/PageEditor.js';
 import { Pages } from './routes/Pages.js';
+import { History } from './routes/History.js';
+import { Audit } from './routes/Audit.js';
 import { Profile } from './routes/Profile.js';
 function Workspace() {
   const { path, route } = useLocation();
@@ -30,7 +32,7 @@ function Workspace() {
     if (session.value && path === '/admin/login') route('/admin', true);
     if (session.value?.user.mustChangePassword && path !== '/admin/profile') route('/admin/profile', true);
     const section = path.split('/')[2] as CollectionName;
-    document.title = `${collections[section]?.labelPlural || (String(section) === 'pages' ? 'Pages' : String(section) === 'settings' ? 'Site settings' : String(section) === 'profile' ? 'Profile' : 'Dashboard')} · Prospector Admin`;
+    document.title = `${collections[section]?.labelPlural || (String(section) === 'pages' ? 'Pages' : String(section) === 'settings' ? 'Site settings' : String(section) === 'profile' ? 'Profile' : String(section) === 'history' ? 'History' : String(section) === 'audit' ? 'Audit log' : 'Dashboard')} · Prospector Admin`;
   }, [loading, !!session.value, path]);
   useEffect(() => {
     const click = (event: MouseEvent) => {
@@ -70,6 +72,8 @@ function Workspace() {
       <Route key={d.name} component={CollectionList} path={`/admin/${d.name}`} collection={d.name} publish={(ids?: string[]) => openPublish(ids ?? [])} refresh={revision} />,
       <Route key={`${d.name}-${path}`} component={DocEditor} path={`/admin/${d.name}/:id`} collection={d.name} id={path.split('/').at(-1)!} publish={(mode?: PublishMode) => openPublish([], mode)} refresh={revision} />,
     ])}
+    <Route component={History} path="/admin/history" refresh={revision} />
+    <Route component={Audit} path="/admin/audit" />
     <Route component={Profile} path="/admin/profile" />
     <Route default component={() => <div class="card empty-state"><h1>Workspace not found.</h1><p>Choose a page or collection from the navigation.</p><a class="button" href="/admin/events">Go to events</a></div>} />
   </Router></Shell>

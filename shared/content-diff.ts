@@ -19,11 +19,12 @@ export function diff(collection: CollectionName, before: unknown, after: unknown
       if (field.type === 'list' && Array.isArray(x) && Array.isArray(y)) {
         const old = new Map(x.map((item, i) => [record(item)._key, { item, i }]));
         const next = new Map(y.map((item, i) => [record(item)._key, { item, i }]));
-        for (const [key, value] of old) if (!next.has(key)) result.push({ path: `${path}[${String(key)}]`, label, kind: 'removed', before: value.item });
+        const itemLabel = (value: { item: unknown; i: number }) => `${label} · ${String(record(value.item)[field.itemLabel] || `Item ${value.i + 1}`)}`;
+        for (const [key, value] of old) if (!next.has(key)) result.push({ path: `${path}[${String(key)}]`, label: itemLabel(value), kind: 'removed', before: value.item });
         for (const [key, value] of next) {
           const previous = old.get(key), itemPath = `${path}[${String(key)}]`;
-          if (!previous) result.push({ path: itemPath, label, kind: 'added', after: value.item });
-          else { if (previous.i !== value.i) result.push({ path: itemPath, label, kind: 'moved', before: previous.i, after: value.i }); walk(field.of, previous.item, value.item, itemPath + '.'); }
+          if (!previous) result.push({ path: itemPath, label: itemLabel(value), kind: 'added', after: value.item });
+          else { if (previous.i !== value.i) result.push({ path: itemPath, label: itemLabel(value), kind: 'moved', before: previous.i, after: value.i }); walk(field.of, previous.item, value.item, itemPath + '.'); }
         }
       } else result.push({ path, label, kind: x === undefined ? 'added' : y === undefined ? 'removed' : 'changed', before: x, after: y, ...(typeof x === 'string' && typeof y === 'string' ? { words: diffWords(x, y) } : {}) });
     }

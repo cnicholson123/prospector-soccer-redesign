@@ -36,7 +36,9 @@ export function Preview({ version, id, collection = 'events', draft = {}, focuse
     <div class="preview-toolbar"><div><span class="eyebrow">Private preview</span><h2>See it on the site</h2></div><button class="icon-button" onClick={() => setRefresh(refresh + 1)} aria-label="Refresh preview"><Icon name="history" /></button></div>
     <div class="segmented" role="group" aria-label="Preview device">{[[390, 'Phone'], [820, 'iPad'], [1280, 'Desktop']].map(([size, label]) => <button aria-pressed={width === size} onClick={() => setWidth(Number(size))}>{label}</button>)}</div>
     <p class="preview-caption">{width}px · Saved draft · Only visible to signed-in members</p>
-    <div class="preview-scroll" ref={frame}><iframe ref={iframe} onLoad={highlight} key={`${id}-${version}-${refresh}-${width}`} title={collection === 'events' ? 'Draft event preview' : 'Draft content preview'} src={url} style={{ width: `${width}px`, height: `${610 / scale}px`, transform: `scale(${scale})`, transformOrigin: 'top left' }} /></div>
+    {/* Keep the full public site's links out of the editor's tab sequence.
+        The following link opens the same preview for keyboard exploration. */}
+    <div class="preview-scroll" ref={frame}><iframe ref={iframe} tabIndex={-1} onLoad={highlight} key={`${id}-${version}-${refresh}-${width}`} title={collection === 'events' ? 'Draft event preview' : 'Draft content preview'} src={url} style={{ width: `${width}px`, height: `${610 / scale}px`, transform: `scale(${scale})`, transformOrigin: 'top left' }} /></div>
     <a class="text-link preview-open" href={url.replace('&edit=1', '')} target="_blank" rel="noreferrer">Open preview in a new tab <Icon name="external" size={16} /></a>
   </section>;
 }

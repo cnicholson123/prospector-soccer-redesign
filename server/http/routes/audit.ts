@@ -7,10 +7,11 @@ import { requirePermission } from '../middleware/permission.js';
 import { ApiError } from '../middleware/errors.js';
 function query(c: AdminContext): AuditQuery {
   const q = c.req.query(), limit = Number(q.limit ?? 50);
-  if (!Number.isInteger(limit) || limit < 1 || limit > 1000 || q.collection && !collectionNames.includes(q.collection as CollectionName) || [q.from, q.to].some(v => v && !Number.isFinite(Date.parse(v)))) throw new ApiError(422, 'validation', 'Invalid audit filter');
-  return { limit, actorId: q.actor, action: q.action, collection: q.collection as CollectionName | undefined, docId: q.docId, from: q.from, to: q.to, text: q.q, cursor: q.cursor };
+  if (!Number.isInteger(limit) || limit < 1 || limit > 1000 || q.collection && !collectionNames.includes(q.collection as CollectionName) || q.actionGroup && !['auth', 'content', 'site', 'users', 'media', 'system', 'health'].includes(q.actionGroup) || q.from && q.to && Date.parse(q.from) > Date.parse(q.to) || [q.from, q.to].some(v => v && !Number.isFinite(Date.parse(v)))) throw new ApiError(422, 'validation', 'Invalid audit filter');
+  return { limit, actorId: q.actor, action: q.action, actionGroup: q.actionGroup, collection: q.collection as CollectionName | undefined, docId: q.docId, from: q.from ? new Date(q.from).toISOString() : undefined, to: q.to ? new Date(q.to).toISOString() : undefined, text: q.q, cursor: q.cursor };
 }
 export function auditRoutes(app: Hono<AdminEnv>) {
+  app.get('/api/admin/audit/actors', requirePermission('history.read'), async c => c.json({ actors: (await c.get('store').listUsers()).map(user => ({ id: user.id, name: user.displayName })) }));
   app.get('/api/admin/audit', requirePermission('audit.read'), async c => c.json(await c.get('store').queryAudit(query(c))));
   app.get('/api/admin/audit/export', requirePermission('audit.export'), async c => {
     const format = c.req.query('format') ?? 'csv';

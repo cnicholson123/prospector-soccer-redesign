@@ -415,3 +415,57 @@ Scope / remaining gates
 
 - No Phase 8 implementation was deferred. Image/file popovers intentionally reuse the current 7b reference/alt controls; media selection/upload remains Phase 10, as specified by the earlier phase split. The full review-approval dashboard and user administration remain Phase 11.
 - Public design is unchanged outside the explicit private edit-mode controls. Browser accessibility and responsive appearance remain acceptance gates until Claude runs the specs. No dependencies, package/lockfile, global configuration or files outside this repository were changed.
+
+## CHANGELOG — Phase 9 — History and audit UI — 2026-11-09
+
+Shipped against §8 / §14 with §18 amendments
+
+- Extended the shared document Timeline with Pacific timestamps, author/action/summary, explicit sealed/working state, loading/empty/error/retry states, race-safe pagination and revision deep links. Existing 7a/7b restore controls remain available. The confirmation compares the current draft to the selected revision and offers immediate publication only to permitted roles. A successful draft restore with failed publication remains visible as partial success, with the saved draft available to publish later.
+- Extended the existing schema-aware DiffView with labelled added/removed/changed/moved states, item titles and human list positions, stable row keys when a moved item also changes, and accessible word-addition/removal text. Retained the shared diff algorithm and the §18 reload-and-compare conflict flow.
+- Added `/admin/history`: Site versions with manifests, author/time/notes, paginated records, Compare with current, and Owner-only Restore site to this version. The confirmation lists every affected document, including unchanged documents receiving new revisions, draft and live field/word changes, list order, trash/review restoration, cancelled schedules, removed live documents and retained later drafts. A comparison token guards the reviewed document/snapshot state; a concurrent change refuses restoration and asks for another comparison. Original comparison API `diff`/`order` fields remain available alongside the new draft/live detail.
+- Added All revisions with collection/author filters, pagination, document titles and deep links to the exact revision. Media history is readable; generic media restoration remains forbidden under the existing Phase 6b security rule. Added the Store query to both FS and Postgres implementations without driver-specific route code.
+- Added `/admin/audit`: user, action group, exact action, collection, inclusive Pacific date range and text filters; automatic infinite scroll plus keyboard Load more/retry; newest-first rows and a native modal detail drawer containing recorded metadata/IP/user agent/document links. CSV and JSON downloads export the complete applied filter set independently of loaded pages. Publication/site-restore item collections and IDs participate in filtering. Author choices expose only public IDs/names. Navigation respects audit permissions on desktop and the phone menu.
+- Kept the site's admin design tokens, touch targets, visible focus and native modal focus behavior. Added responsive layouts for 390px and 1280px. Public HTML/templates/assets, content seeds and goldens are unchanged. No dependencies were added.
+- Added five Playwright scenarios: two-title checkpoint history → publish → restore first → publish → restored live title → ordered audit → filtered CSV at both widths; complete site comparison/restore at both widths; and multi-page audit scrolling/export with keyboard drawer focus. The existing 7a/7b/8 specs remain intact. Browser fixtures close pages and restore the seed publication.
+
+Verification
+
+- `npm run build` — **PASS**, Vite and both strict TypeScript configurations with explicit `.js` imports.
+- `npm test` — **PASS: 485 tests**, 17 explicit hosted-service skips. All eight public golden comparisons pass. Includes the plain-Node runtime packaging smoke for both function entrypoints.
+- New FS HTTP/Store/component regressions cover sealed checkpoints, immutable historical data, forward restore/publication and audit order, list/word diffs, Pacific DST filter boundaries, full filtered CSV, global revision pagination, author/collection/action filters, stale filter responses, duplicate-page suppression/retry, stale site confirmation rejection, draft-only changes, cancelled schedules, retained later drafts, permission gates and partial restore/publication failure.
+- `npm run test:e2e -- --list` — **PASS: 32 tests across nine specs**. Playwright browser execution, responsive visual verification, actual keyboard/focus behavior and Lighthouse accessibility scores — **not run (sandbox)**. Claude must execute with installed Chrome; no browser/a11y pass is claimed.
+- `npm run check-facts` — **PASS: 122 facts**. `git diff --check` — **PASS**.
+- Real Neon/Postgres and private Blob service checks — **not run (no env)**. Executed application tests use the filesystem driver.
+
+Decisions / open acceptance gates
+
+- The expanded default Vitest run initially exceeded existing five-second limits in several unrelated FS integration cases under unrestricted file-worker concurrency. Capped Vitest at four workers; the complete suite passes with the original timeouts and assertions, including explicit concurrent-writer tests. No application concurrency safeguard was relaxed.
+- Fixed a discovered same-millisecond restore-and-publish ordering ambiguity by timestamping the chained publication after the committed restore. Retained the required random-suffix history ID format and immutable audit records.
+- Phase 9 implementation is complete; browser/visual/accessibility and hosted-service acceptance remain unverified as stated above. No commit, push, deployment, hosting credentials, global configuration or files outside this repository were used.
+
+## CHANGELOG — Phase 9 fix-up, including the Phase 7a keyboard regression — 2026-11-09
+
+Shipped against the Phase 9 checkpoint/history/audit acceptance and retained Phase 7a keyboard flow
+
+- Recorded all four failure classifications and root causes in §21 of `plans/admin-plan.md`. Retained the existing uncommitted Phase 9 implementation and its history, restore, audit filtering/pagination/export, permissions and filesystem-store coverage.
+- Fixed checkpoint clicks lost when blur autosave disabled the clicked button. Both checkpoint controls remain operable and queue behind the existing save operation. Publication review uses its existing flush guard rather than disabling the toolbar action during blur. The browser test now holds an autosave pending, activates Checkpoint and waits for that checkpoint's response; it no longer mistakes an ordinary `Saved` message for a sealed checkpoint or dereferences an unchecked missing revision.
+- Fixed audit drawer focus containment with explicit forward/reverse Tab wrapping around visible enabled controls, retaining native modal semantics, Escape and opener-focus restoration. The reported “scroll/export” failure was at focus containment; the recorded CSV count and all-row uniqueness checks already passed and are retained.
+- Removed the passive full-site preview iframe from the editor's sequential Tab path. The keyboard-accessible full-page preview link remains, and inline editing stays interactive. The expanded sidebar had exposed the long route through public-page links before returning to Preview. The 7a browser flow retains its original 100-Tab limit and full create/edit/preview/publish/restore assertions, with better failure diagnostics.
+- Added four component regressions for queued checkpoint clicks, the preview's focus contract and modal boundary traversal. All four failed before the corresponding app fixes and pass afterwards. Existing FS HTTP coverage verifies sealed checkpoints, restoration, publication and complete filtered export. No server, public-site HTML/CSS, goldens, dependencies or global configuration changed in this fix-up.
+
+Verification
+
+- `npm run build` — **PASS**, Vite and both strict TypeScript configurations. The first build caught a test-only VNode/function comparison typing error; corrected it and reran successfully.
+- `npm test` — **PASS: 489 tests**, 17 hosted-service skips. All eight public golden comparisons and the unbundled plain-Node packaging smoke pass.
+- `npm run check-facts` — **PASS: 122 facts**. `git diff --check` — **PASS**.
+- `npm run test:e2e -- --list` — **PASS: 32 tests in nine specs**. Browser execution, actual keyboard/focus and responsive visual verification, and Lighthouse — **not run (sandbox)**. Claude must rerun installed Chrome; component tests do not establish browser acceptance.
+- Real Neon/Postgres and private Blob — **not run (no env)**. Executed application checks use the filesystem driver. No commit, push, deployment, credential acquisition or edits outside the repository were performed.
+
+Open acceptance gates
+
+- The four supplied Chrome failures have app fixes and regression coverage; confirmation in real Chrome is outstanding. The iframe diagnosis is based on code, failure location and the combined focus path, not a browser reproduction in this run. No Phase 10 or later scope was added.
+
+## Phase 9 browser verification (Claude, 2026-11-09)
+- Fixed: filter selects nested inside labels had accessible names that included every option ("CollectionAll collections…"); added explicit aria-labels (History, Audit). Audit e2e assertions now poll one atomic snapshot because the activity list re-renders progressively.
+- Result: 32/32 Playwright passed in 2 of 3 full runs.
+- **Open (flaky ~1 in 3 runs):** admin-slice "full event workflow 1280px" sometimes times out waiting for the "Publish N changes" button in the review dialog (pending list empty/not loaded when the dialog opens?). Investigate as a real UX race, not just a test issue.

@@ -9,7 +9,7 @@ import { type CollectionName } from '../../shared/schema.js';
 import { validate, ValidationError } from '../content/validate.js';
 import { buildSnapshot } from '../content/snapshot.js';
 import { referenceUsage } from '../content/references.js';
-import type { AuditEntry, AuditQuery, CreateDoc, Doc, DocMutation, PublishRecord, PublishTx, Revision, Session, Snapshot, Store, User } from './types.js';
+import type { AuditEntry, AuditQuery, CreateDoc, Doc, DocMutation, PublishRecord, PublishTx, RevisionQuery, Revision, Session, Snapshot, Store, User } from './types.js';
 
 const equal = (a: unknown, b: unknown) => isDeepStrictEqual(JSON.parse(JSON.stringify(a)), JSON.parse(JSON.stringify(b)));
 const pageLimit = (limit: number) => { if (!Number.isInteger(limit) || limit < 1 || limit > 1000) throw new Error('Limit must be 1–1000'); return limit; };
@@ -249,6 +249,20 @@ export class PostgresStore implements Store {
     else if (before) { clause = 'AND at<$4'; values.push(before); }
     return this.all<Revision>('revisions', `WHERE collection=$1 AND doc_id=$2 ${clause} ORDER BY at DESC, doc_version DESC, id COLLATE "C" DESC LIMIT $3`, values);
   }
+  async queryRevisions(q: RevisionQuery): Promise<{ items: Revision[]; cursor?: string }> {
+    const values: unknown[] = [], clauses: string[] = [];
+    if (q.collection) { values.push(q.collection); clauses.push(`collection=$${values.length}`); }
+    if (q.authorId) { values.push(q.authorId); clauses.push(`author_id=$${values.length}`); }
+    if (q.cursor) {
+      const row = await this.read<Revision>('revisions', q.cursor);
+      if (!row) throw new ApiError(422, 'validation', 'Invalid revision cursor');
+      values.push(row.at, row.docVersion, row.id);
+      clauses.push(`(at,doc_version,id COLLATE "C") < ($${values.length-2},$${values.length-1},$${values.length})`);
+    }
+    const limit = pageLimit(q.limit); values.push(limit + 1);
+    const rows = await this.all<Revision>('revisions', `${clauses.length ? 'WHERE ' + clauses.join(' AND ') : ''} ORDER BY at DESC,doc_version DESC,id COLLATE "C" DESC LIMIT $${values.length}`, values);
+    return { items: rows.slice(0, limit), ...(rows.length > limit ? { cursor: rows[limit-1].id } : {}) };
+  }
   async getRevision(docId: string, revId: string): Promise<Revision | null> {
     documentId(docId); keyPart(revId);
     return (await this.all<Revision>('revisions', 'WHERE doc_id=$1 AND id=$2', [docId, revId]))[0] ?? null;
@@ -258,7 +272,11 @@ export class PostgresStore implements Store {
     function filter(column: string, value: string | undefined, operator = '=') {
       if (value !== undefined) { values.push(value); clauses.push(`${column}${operator}$${values.length}`); }
     }
-    filter('actor_id', q.actorId); filter('action', q.action); filter('collection', q.collection); filter('doc_id', q.docId);
+    filter('actor_id', q.actorId); filter('action', q.action);
+    if (q.actionGroup) { values.push(q.actionGroup + '.'); clauses.push(`starts_with(action,$${values.length})`); }
+    for (const [column, key, value] of [['collection', 'collection', q.collection], ['doc_id', 'id', q.docId]] as const) {
+      if (value !== undefined) { values.push(value); clauses.push(`(${column}=$${values.length} OR EXISTS (SELECT 1 FROM jsonb_array_elements(CASE WHEN jsonb_typeof(body->'meta'->'items')='array' THEN body->'meta'->'items' ELSE '[]'::jsonb END) item WHERE item->>'${key}'=$${values.length}))`); }
+    }
     filter('at', q.from, '>='); filter('at', q.to, '<=');
     if (q.text) { values.push(q.text.toLowerCase()); clauses.push(`strpos(lower(body::text),$${values.length})>0`); }
     if (q.cursor) {

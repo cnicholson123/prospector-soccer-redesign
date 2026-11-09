@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'preact/hooks';
 import type { ComponentChildren } from 'preact';
 import { useLocation } from 'preact-iso';
-import { api, message, session, setSession, publicOrigin } from '../api.js';
+import { api, allowed, message, session, setSession, publicOrigin } from '../api.js';
 import { navigationGuard } from '../state/autosave.js';
 import { Dialog } from './ConfirmDialog.js';
 import { Icon } from './Icon.js';
@@ -24,7 +24,7 @@ export function Shell({ children, publish, refresh }: { children: ComponentChild
     { label: 'Club', links: [['Programs & fees', '/admin/pages#programs', 'book', ''], ['Teams & coaches', '/admin/teams', 'user', 'teams'], ['Results', '/admin/results', 'flag', 'results'], ['Board members', '/admin/boardMembers', 'user', 'boardMembers'], ['Sponsors', '/admin/sponsors', 'flag', 'sponsors'], ['Sponsor tiers', '/admin/sponsorTiers', 'flag', 'sponsorTiers']] },
     { label: 'Store', links: [['Products', '/admin/products', 'book', 'products'], ['Bundles', '/admin/bundles', 'book', 'bundles'], ['Categories', '/admin/categories', 'book', 'categories'], ['Store settings', '/admin/store/settings', 'shield', 'storeSettings']] },
     { label: 'Library', links: [['Documents', '/admin/documents', 'book', 'documents'], ['FAQs', '/admin/faqs', 'book', 'faqs']] },
-    { label: 'Settings', links: [['Site settings', '/admin/settings', 'shield', 'site'], ['Profile', '/admin/profile', 'user', '']] },
+    { label: 'Settings', links: [['Site settings', '/admin/settings', 'shield', 'site'], ['History', '/admin/history', 'book', ''], ...(allowed('audit.read') ? [['Audit log', '/admin/audit', 'shield', '']] : []), ['Profile', '/admin/profile', 'user', '']] },
   ];
   const link = ([label, href, icon, count]: string[]) => <a href={href} aria-current={path === href || (!href.includes('#') && href !== '/admin' && path.startsWith(href + '/')) ? 'page' : undefined}><Icon name={icon} /><span>{label}</span>{counts[count] !== undefined && <small class="nav-count" aria-hidden="true">{counts[count]}</small>}</a>;
   const navigation = <>{link(['Dashboard', '/admin', 'dashboard', ''])}{groups.map(group => <section key={group.label}><h2 class="nav-label">{group.label}</h2>{group.links.map(link)}</section>)}</>;
