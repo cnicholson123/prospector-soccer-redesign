@@ -363,5 +363,5 @@ Decisions / open issues
 - No commit, push, deployment, global configuration change or edit outside this repository was made.
 
 ## 7b browser verification (Claude, 2026-11-09)
-- Ran all 22 Playwright specs in real Chrome. Fixed: autosave false 409 after another user's publish bumped the version without changing the draft (editor now rebases silently when `current.draft` equals the base draft); keyboard spec targeted the out-of-order header "Save checkpoint" button (now the footer one). Playwright now runs with `workers: 1` because specs share one server/DATA_DIR.
+- Ran all 22 Playwright specs in real Chrome. Fixed: autosave false 409 after another user's publish bumped the version without changing the draft (editor now rebases silently when `current.draft` equals the base draft); keyboard spec targeted the out-of-order header "Save checkpoint" button (now the footer one). Playwright already runs with `workers: 1` (specs share one server/DATA_DIR); the earlier parallel failures came from a `--workers=3` CLI override.
 - Open for Phase 8: the publish tray must handle a 409 from a concurrent edit gracefully (explain, refresh pending list, let the user retry) instead of leaving the dialog open silently.
