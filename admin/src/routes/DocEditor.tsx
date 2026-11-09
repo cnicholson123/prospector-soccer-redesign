@@ -1,6 +1,6 @@
 import { CheckoutStatus } from '../shop/CheckoutStatus.js';
 import { CatalogTools } from '../shop/CatalogTools.js';
-import { useEffect, useMemo, useState } from 'preact/hooks';
+import { useEffect, useLayoutEffect, useMemo, useState } from 'preact/hooks';
 import { useLocation } from 'preact-iso';
 import { collections, type CollectionName } from '../../../shared/schema.js';
 import { allowed, message } from '../api.js';
@@ -70,14 +70,19 @@ export function DocEditor({ id, collection = 'events', publish, refresh }: { id:
     };
     const timer = setInterval(() => void poll(), 20000); if (refresh) void poll(); return () => clearInterval(timer);
   }, [ready, refresh, id]);
-  useEffect(() => {
+  // Layout effect: register synchronously on mount so a quick second [ or ] after navigating
+  // is not lost in the gap before a normal (post-paint) effect would attach the listener.
+  useLayoutEffect(() => {
     if (singleton || id === 'new') return;
     let moving = false;
     const next = async (event: KeyboardEvent) => {
       if (!['[', ']'].includes(event.key) || event.metaKey || event.ctrlKey || event.altKey || event.shiftKey || typingTarget(event.target) || document.querySelector('dialog[open]') || moving) return;
       event.preventDefault(); moving = true;
       try {
-        if (!await state.flush()) return;
+        // If the address bar already shows another document, this handler belongs to an editor being
+        // replaced: its state is closed, so skip the save and navigate from the visible document.
+        const shownId = (typeof location !== 'undefined' ? decodeURIComponent(location.pathname.split('/').pop() ?? '') : '') || id;
+        if (shownId === id && !await state.flush()) return;
         const listed = (await api<{ docs: EventDoc[] }>(`/docs/${collection}`)).docs;
         // Follow exactly the order the collection list shows by default.
         const docs = listed.filter(d => !d.trashedAt).sort(compareDocs(collections[collection].orderable ? 'order' : 'date') as (a: EventDoc, b: EventDoc) => number);

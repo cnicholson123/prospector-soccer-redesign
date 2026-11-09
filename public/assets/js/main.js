@@ -282,7 +282,21 @@
 
   /* ---------- Instant navigation ----------
      Warm the next page when a visitor hovers or starts to press a link. */
-  if (HTMLScriptElement.supports?.("speculationrules") && !navigator.connection?.saveData) {
+  // Admin preview/edit renders run inside the admin's iframe under a strict CSP: no prerendering there.
+  const inAdminPreview = window.top !== window.self || /[?&](preview|edit)=/.test(location.search);
+
+  /* ---------- Cross-document view transitions: fail quietly ----------
+     The admin and API pages do not opt in, and some navigations abort a transition.
+     Skip transitions into those pages and swallow the aborted-transition promises. */
+  const quiet = (vt) => { if (!vt) return; for (const k of ["ready", "finished", "updateCallbackDone"]) vt[k]?.catch?.(() => {}); };
+  window.addEventListener("pageswap", (e) => {
+    quiet(e.viewTransition);
+    const to = e.activation?.entry?.url;
+    if (e.viewTransition && to && /^\/(admin|api)(\/|$)/.test(new URL(to).pathname)) e.viewTransition.skipTransition();
+  });
+  window.addEventListener("pagereveal", (e) => quiet(e.viewTransition));
+
+  if (!inAdminPreview && HTMLScriptElement.supports?.("speculationrules") && !navigator.connection?.saveData) {
     const internal = { href_matches: "/*" };
     const never = [{ href_matches: "/admin*" }, { href_matches: "/api/*" }, { href_matches: "/media/*" }, { href_matches: "/blobs/*" }, { href_matches: "/assets/*" }, { selector_matches: "[download], [target=_blank], [rel~=nofollow]" }];
     const shop = { href_matches: "/shop*" };

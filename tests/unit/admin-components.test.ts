@@ -19,6 +19,8 @@ vi.mock('preact/hooks', () => ({
     return [hooks.values[index], (value: unknown) => { hooks.values[index] = value; }];
   },
   useEffect: (effect: () => void | (() => void)) => { hooks.effects.push(effect); },
+  // Keyboard shortcuts register in a layout effect; not exercised by these tests.
+  useLayoutEffect: () => {},
 }));
 vi.mock('preact-iso', () => ({ useLocation: () => ({ path: '/admin/events/evt_test', route: vi.fn() }) }));
 function nodes(children: ComponentChildren): VNode<Record<string, unknown>>[] {

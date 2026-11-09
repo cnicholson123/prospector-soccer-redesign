@@ -624,3 +624,10 @@ Deviations / open acceptance gates
 
 - This checkout starts on `main` with no local `admin-cms` branch. Creating `admin-cms` failed because the managed sandbox makes `.git` read-only (`admin-cms.lock: Operation not permitted`). Changes remain uncommitted on `main`; branch placement must be completed outside the sandbox.
 - No requested Phase 11 implementation item is deferred. Instance-local presence is the explicitly permitted tradeoff described above. Real-browser responsiveness/accessibility and E2E acceptance remain unverified until Claude's Chrome run; hosted-service acceptance remains unverified without environment credentials.
+
+## Merge of design-polish-pass-2 + phase 11 browser verification (Claude, 2026-11-09)
+- Merged branch `design-polish-pass-2` (separate session's public-site polish: page transitions, speculation rules, reading progress, shop refinements) into main; no textual conflicts.
+- Compatibility fixes: preview/edit renders opt out of cross-document view transitions; public main.js skips transitions into /admin|/api and swallows aborted-transition promises; no speculation rules inside admin preview iframes (CSP).
+- Phase 11 fixes: palette Enter uses the live input value; shared stable list comparator (date → title → id) for lists and `[`/`]`; bracket shortcuts register in a layout effect, read the visible document from the URL and skip a closing editor's flush.
+- Known minor: pressing `[`/`]` again within milliseconds, before the next editor renders, can be ignored.
+- Result: 755 unit passed; Playwright 50/50 three consecutive runs in real Chrome.

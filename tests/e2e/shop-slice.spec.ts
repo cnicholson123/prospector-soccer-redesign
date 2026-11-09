@@ -51,14 +51,14 @@ for (const width of [390, 820, 1280]) test(`proof-of-concept browsing and disabl
   await page.screenshot({ path: info.outputPath(`concept-hero-${width}.png`), fullPage: true });
   await page.getByRole('link').filter({ has: page.getByRole('heading', { name: 'Crest Hoodie', exact: true }) }).click();
   await banner(page);
-  await page.getByRole('radio', { name: 'Youth M', exact: true }).check();
+  { const radio = page.getByRole('radio', { name: 'Youth M', exact: true }); await page.locator('label', { has: radio }).click(); await expect(radio).toBeChecked(); }
   await page.getByRole('button', { name: 'Add to cart', exact: true }).click();
   const drawer = page.getByRole('dialog', { name: 'Your club gear' });
   await expect(drawer).toBeVisible(); await expect(drawer).toContainText('Youth M');
   await expect(drawer).toContainText(explanation);
   await expect(drawer.getByRole('button', { name: disabledLabel })).toBeDisabled();
   await drawer.getByRole('button', { name: 'Close cart' }).click();
-  await page.getByRole('radio', { name: 'Adult L', exact: true }).check();
+  { const radio = page.getByRole('radio', { name: 'Adult L', exact: true }); await page.locator('label', { has: radio }).click(); await expect(radio).toBeChecked(); }
   await page.getByLabel('Quantity', { exact: true }).fill('2');
   await page.getByRole('button', { name: 'Add to cart', exact: true }).click();
   await expect(drawer).toContainText('Adult L');

@@ -191,6 +191,8 @@ test('presence, adjacent-item shortcuts, health fix links and snapshot rebuild',
     await location.fill('Fields'); await location.press(']'); await expect(location).toHaveValue('Fields]');
     await page.getByRole('heading', { name: docs[0].draft.title, exact: true }).click();
     await page.keyboard.press(']'); await expect(page).toHaveURL(new RegExp(`/events/${docs[1].id}$`));
+    // A person sees the next document before pressing again; wait for its editor heading.
+    await expect(page.getByRole('heading', { name: docs[1].draft.title, exact: true })).toBeVisible();
     await page.keyboard.press('['); await expect(page).toHaveURL(new RegExp(`/events/${docs[0].id}$`));
     await page.goto('/admin');
     const finding = page.locator('.health-list li').filter({ hasText: `Past event: ${docs[0].draft.title}` });
