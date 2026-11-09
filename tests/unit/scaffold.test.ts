@@ -1,3 +1,5 @@
+import { readFile } from 'node:fs/promises';
+import { parseEnv } from 'node:util';
 import { bootstrapEnvironment } from '../helpers/password.js';
 import { describe, expect, it, vi } from 'vitest';
 import { adminApp } from '../../server/http/hono-app.js';
@@ -18,6 +20,13 @@ describe('Phase 0 scaffold', () => {
     expect(config.sessionSecret.length).toBeGreaterThanOrEqual(32);
     expect(warn).toHaveBeenCalledOnce();
     expect(config.tzName).toBe('America/Los_Angeles');
+  });
+  it('keeps the example environment usable with the local filesystem server', async () => {
+    const config = loadConfig(parseEnv(await readFile('.env.example', 'utf8')), () => undefined);
+    expect(config.storeDriver).toBe('fs');
+    expect(config.publicBaseUrl).toBe('http://localhost:3000');
+    expect(config.cookieSecure).toBe(false);
+    expect(config.shopCheckout).toBe('disabled');
   });
   it.each([
     { STORE_DRIVER: 'unknown' }, { STORE_DRIVER: 'postgres' }, { STORE_DRIVER: 'blob' },

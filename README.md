@@ -1,77 +1,202 @@
-<img src="assets/img/crest-sm.png" width="64" alt="">
+<img src="public/assets/img/crest-sm.png" width="64" alt="">
 
-# Prospector Soccer Club — website redesign concept
+# Prospector Soccer Club
 
-A modernized, mobile-first redesign of [prospector.org](https://prospector.org) (Prospector Soccer Club, Cameron Park / Shingle Springs / Rescue, CA). All content from the current site is carried over; imagery is newly generated with GPT Image and is illustrative only.
+A mobile-friendly website and content management system for Prospector Soccer Club in Cameron Park, Shingle Springs and Rescue, California. It includes club/program information, events, teams, sponsors, a document library, and a browsable merchandise proof of concept. The current content identifies the site as a redesign concept. Images are illustrative. Search indexing and checkout are disabled by default.
 
-**This is a redesign concept, not the official club website.**
+## Architecture and source map
 
-## Structure
+Public pages render HTML on request from a published content snapshot. Visitors receive the club content without JavaScript. Small scripts enhance navigation, filters, event dates, the season dial and the shop cart. Publishing updates the snapshot without rebuilding the application.
 
-- `content/content.md` — content inventory captured from prospector.org (source of truth for facts, fees, names, links)
-- `src/layout.html` — shared header, mobile menu and footer
-- `src/pages/*.html` — page bodies (each starts with a `<!--meta {...} -->` JSON header)
-- `assets/` — CSS design system, vanilla JS enhancements, images
-- `build.py` — wraps pages in the layout and writes the static site to `docs/` (served by GitHub Pages)
+| Location | Responsibility |
+| --- | --- |
+| `api/render.ts` | Public HTML, crawler endpoints, authenticated draft previews and private-media delivery |
+| `api/admin.ts` | Hono admin API for authentication, content, publication, media and account management |
+| `api/shop.ts` | Shop catalog/cart API and disabled checkout boundary |
+| `server/render/` | Escaped HTML templates, constrained Markdown, snapshot views and CDN caching |
+| `server/content/`, `server/auth/`, `server/http/` | Content transactions, revisions, authorization, sessions and routes |
+| `server/store/` | Shared `Store` interface, Postgres adapter, filesystem KV adapter and media storage |
+| `shared/` | Content schema, types, permission table and shared diff/validation helpers |
+| `admin/` | Preact + TypeScript SPA, Vite, signals and schema-driven forms |
+| `public/assets/` | Public CSS, scripts, images and private-preview bridge |
+| `public/admin/` | Generated admin build, gitignored |
+| `content/seed/` | Structured initial content and static-media records |
+| `content/content.md` | Original club-facts inventory used by the facts check |
+| `tests/golden/` | Eight retained public HTML reference fixtures |
+| `scripts/` | Local server, seed/bootstrap, migration, runtime and operations commands |
 
-## Build
+All three Vercel functions default-export `{ fetch(Request) }`. Keep explicit `.js` relative imports in TypeScript for unbundled Node ESM deployment. `npm run check:runtime` compiles and exercises isolated function packages with their declared assets.
 
-```sh
-python3 build.py
-open docs/index.html
-```
+Production uses Neon Postgres for documents, users, sessions, revisions, publications and audit. Private Vercel Blob stores verified media binaries. The renderer serves authorized application media URLs, so storage credentials stay server-side. Local development uses the same `Store` contract through filesystem metadata and binaries under `DATA_DIR`. Postgres mutations use transactions and version checks. Filesystem writes use a renewable cross-process lock and replay journals, with the published snapshot committed last. Interrupted writes recover through the Store API.
 
-No dependencies. Upcoming events dim automatically once their date passes, and the season timeline places "today" from the visitor's clock.
+`shared/schema.ts` defines singleton pages/settings and collections such as events, teams, board members, sponsors, documents, FAQs, media, products, bundles and categories. The sponsors page singleton is `sponsorsPage`, distinct from the `sponsors` collection. Fields drive forms and validation, with stable `_key` values in lists. Rich text supports a constrained Markdown subset and escapes HTML.
 
-## Local CMS development
+Each document has a draft, optional published copy, version and status. Autosave updates a working revision. Checkpoints, publication and other editing boundaries seal revisions. Saving requires the version the editor read. A conflict keeps both copies for comparison and explicit Discard mine / Keep mine choices. Publication validates a versioned selection, seals history, appends an audit and publication manifest, and builds a complete snapshot with frozen media references. Scheduled publication freezes the selected content and takes effect at render time, with cron/admin activity recording settlement later.
 
-The admin CMS migration uses Node 22.12 or newer and the filesystem store locally.
+Public responses use ETags and CDN caching. Publishing attempts a content-tag purge. When purge fails, the UI reports the cache delay, and View live uses a versioned URL. Preview/edit responses require a session and use `no-store`. Warm admin reads have query/write budgets in the performance tests. Due schedules, maintenance and cache refreshes can write.
+
+## Local development
+
+Use **Node 22.12+ within Node 22.x**, as selected by `package.json`, and npm. Run from the repository root.
 
 ```sh
 npm ci
+cp .env.example .env
+npm run dev
+```
+
+The example selects `STORE_DRIVER=fs`, `DATA_DIR=.data`, localhost and disabled checkout. No hosted credentials are needed. An absent `SESSION_SECRET` generates an ephemeral development value and a warning. Set a persistent random value of at least 32 bytes locally if signed upload tickets must survive restarts.
+
+`npm run dev` serves public pages and APIs at `http://localhost:3000`, and the hot-reloading admin at `http://localhost:5173/admin/`. The first startup seeds an empty store. Existing initialized content is preserved. A built local run uses the same filesystem driver by default.
+
+```sh
 npm run build
-npm test
-npm run check-facts
 npm run start
 ```
 
-`npm run start` seeds an empty `DATA_DIR` and serves the built app on localhost:3000. `npm run dev` also starts Vite on localhost:5173. See `.env.example` for configuration. Production requires explicitly configured bootstrap credentials and a session secret. Metadata drivers are `fs` and `postgres`, with Postgres implemented in Phase 6. Private Blob storage is reserved for verified media binaries. See [README-deploy.md](README-deploy.md) for setup, migrations, bootstrap, security and rollback.
+Open `http://localhost:3000/admin` for the built admin. **`npm run build` is the single application build path**, producing the SPA and checking both TypeScript projects. Public HTML is rendered from the store on request.
 
-Both Vercel entrypoints default-export an object with a Web-standard `fetch(Request)` method. `api/render.ts` delegates to `renderPublic` and `api/admin.ts` delegates to the Hono app. Local tests dispatch through this same object shape.
+### Create local accounts
 
-Filesystem mutations journal history and audit before the document commit. Publish journals preserve the full intended snapshot and commit it last. After an interrupted publish, `Store.recoverPublish()` resumes the pending transaction idempotently. The filesystem lock recovers dead owners and renews its lease during active writes. Implementation status and phase-specific verification are recorded in `plans/admin-progress.md`.
+For a fresh scratch store, the development fallback is `Phil` / `Phil` when no hashed configuration is supplied. Use your own accounts for ongoing work. Generate each password hash interactively with the existing `scripts/hash-password.ts` command.
 
-## Local admin API (Phases 4–5)
+```sh
+npm run hash-password
+```
 
-Run `npm run bootstrap` to create missing configured accounts. Production requires secret `ADMIN_BOOTSTRAP_USERS` with scrypt hashes for Phil and Chris as Owners. Generate each hash with `npm run hash-password`, which reads hidden stdin. Set `ADMIN_FORCE_PASSWORD_CHANGE=false` in production. The local single-user fallback uses `ADMIN_BOOTSTRAP_USERNAME` (legacy alias `ADMIN_BOOTSTRAP_USER`) and `ADMIN_BOOTSTRAP_PASSWORD`. Bootstrap never replaces an existing user. `POST /api/admin/auth/login` returns `csrfToken`, `passwordWeak`, public user details, and permissions. Retain its `psc_session` cookie and send `X-CSRF-Token` plus the site Origin on writes. Password changes rotate the session; role changes, resets and deactivation revoke sessions.
+It reads hidden stdin and prints a scrypt hash. Put the hashes into the ignored `.env` file, using the following shape and replacing both placeholders with complete generated hashes.
 
-The backend now supports users, sessions, audit CSV/JSON streams, documents, revisions, publish/unpublish, schedules, search, dashboard health, and JSON content export. The admin SPA remains the branded scaffold until Phase 7a; login/profile screens, the prominent weak-password banner, DiffView and the public Admin link are not implemented by Phases 4–5. Their API data and server enforcement are ready.
+```dotenv
+ADMIN_BOOTSTRAP_USERS='[{"username":"Phil","displayName":"Phil","role":"Owner","passwordHash":"<generated hash>"},{"username":"Chris","displayName":"Chris","role":"Owner","passwordHash":"<generated hash>"}]'
+ADMIN_FORCE_PASSWORD_CHANGE=false
+```
 
-Write contracts intentionally require the version the editor saw:
+Then run `npm run bootstrap` against the same `DATA_DIR` and restart the server to load changed environment values. Bootstrap also runs lazily on admin access. It creates missing accounts and audits each creation. Existing passwords, roles, names and active states are preserved. To reset an existing account, use Users while signed in as an authorized administrator. Password changes are optional. New passwords must meet the server's length, username and common-password rules. Generated create/reset passwords appear once in the admin acknowledgement dialog.
 
-- Create: `POST /docs/events` with `{ "draft": { "title": "Club meeting", "date": "2027-01-10" } }`.
-- Save: `PUT /docs/events/:id` with `{ "baseVersion": 1, "draft": { ... }, "checkpoint": true, "summary": "Optional checkpoint note" }`. Omit `checkpoint` for coalesced autosaves.
-- Reorder: `POST /docs/:collection/reorder` with `{ "items": [{ "id": "...", "baseVersion": 1 }, ...] }`, containing every active item. Changed orders commit atomically with one audit record and no new content revisions.
-- Publish/unpublish/schedule: `{ "items": [{ "collection": "events", "id": "...", "expectedVersion": 2 }] }`; schedule also requires an ISO `at` with timezone. `all: true` still requires the complete versioned selection, preventing blind publication of intervening edits.
-- Trash, untrash, review, cancel schedule, and revision restore require `baseVersion`. Revision restore also accepts `publish: true`; supply `?docId=...` for direct revision lookup.
-- A 409 returns `error.details.current` and “Someone else saved this. Reload and compare”. The Phase 7a client must show the local/server diff. “Discard mine” uses the server copy; “Keep mine” resubmits against that copy’s version with `checkpoint: true`, producing a new revision. No automatic field merge is used.
+### Choose the right seed command
 
-Schedules freeze the selected draft and order. Public renders apply due schedules before cron settlement, and disable SWR around the next due boundary. Settlement retains later draft edits and records `effectiveAt`. `GET` (Vercel cron) and `POST /api/admin/cron/settle` require `Authorization: Bearer <CRON_SECRET>`; Editor+ requests also settle due items. Canceling, unpublishing, restoring and rebuilding all create kind-tagged site records through `Store.publish`. Interrupted transactions recover through `Store.recoverPublish`.
+| Command | Use |
+| --- | --- |
+| `npm run seed` | Initialize a new empty store with all repository content and an initial publication |
+| `npm run seed:store` | Add missing merchandise showcase records to an initialized store |
+| `npm run seed:media` | Register missing shipped static images in an initialized store's media library |
+| `npm run bootstrap` | Add missing configured users, independently of content seeding |
 
-The FS adapter additionally serializes account changes, bootstrap, maintenance claims and lockout counters. `mutateDoc` has `relatedOrder` and `guardVersions` metadata options so multi-item reorder uses its existing durable journal. `publishedOrder` retains the live order until the reordered document is explicitly published. The Postgres adapter implements the same contract with SQL transactions and cross-instance serialization.
+The general seed can reset repository-owned content. Its edited-version guard is helpful but does not make it an upgrade command. **Do not run general `seed` or `seed -- --force` as a deployment step against an edited/live store.** The additive commands preserve existing content, drafts, trash, users, sessions and history, publish only their own new records, accept no force option, and can be rerun after interruption. Static media registration does not upload files. Details and expected counts are in the deployment runbook.
 
-`npm run test:e2e -- --list` lists the browser specs without launching Chrome. Browser execution is not supported inside the Codex sandbox; run `npm run test:e2e` outside it. The Phase 4/5 spec tests API authentication plus responsive preview at 390 and 1280 pixels. The full keyboard/login/editor flow belongs to Phase 7a.
+## Testing
 
-## Phase 11 administration
+```sh
+npm run build
+npm test
+npm run check-facts
+npm run test:e2e -- --list
+```
 
-`/admin/users` manages accounts for Owners and Admins. Admins can manage Viewer, Contributor and Editor accounts; only Owners can manage other Owners or Admins. An account cannot change its own role, and the last active Owner cannot be deactivated. Generated passwords appear only in the create/reset response and the acknowledgement dialog: copy them before closing. Password hashes are never returned. Account mutations, password changes, session revocations, review decisions and snapshot rebuilds are audited. Password changes are optional, including for legacy accounts carrying a `mustChangePassword` flag; the weak-password reminder remains available.
+`npm test` runs the plain-Node function packaging smoke, then Vitest unit, HTTP, Store contract, golden, shop and performance tests. Filesystem tests always run. Postgres and private Blob checks print **not run (no env)** when their environment variables are absent. Unit tests use isolated temporary stores.
 
-`/admin/profile` shows your active sessions and offers password changes and session revocation. Changing a password rotates the current session and invalidates older sessions. The displayed strength meter is guidance; the server enforces the length, username and common-password rules.
+Goldens live only in `tests/golden/`. The tests compare all eight club pages after URL/entity/whitespace normalization, the authorized Admin link exclusion and the merchandise navigation addition. Keep these fixtures as reviewed references. Any intentional fixture edit must be reviewed independently of the renderer change. The facts check verifies 122 inventory facts. No legacy build or golden-export step is required.
 
-Contributors request review from the editor or review tray. Editors, Admins and Owners see the dashboard's **Awaiting review** queue. Approval publishes the reviewed version, using the existing optimistic version check. Returning an item requires a note, recorded in history/audit and shown in the document editor. Resubmission replaces the previous note; successful publication clears review flags and notes. `GET /api/admin/reviews` is read-only and restricted to publishers. `POST /api/admin/rebuild` is restricted to Owners/Admins and creates an audited `rebuild` site version from published content.
+### Local PostgreSQL through Docker
 
-Use **⌘K / Ctrl+K** for screen, collection, document-title and settings-section search, new items, Review changes and Publish all. Publish all flushes open editors and submits a freshly read, versioned pending selection. **?** opens shortcut help; **[ / ]** moves through the current collection in stored order after saving. Single-character shortcuts do not intercept input fields or dialogs. The palette also opens the current editor's iPad preview.
+For adapter and SQL performance verification, use a disposable PostgreSQL 17 database and the Neon driver's local WebSocket proxy. Docker must be running. This adds no application dependency. Set `WS_PORT` to the port printed by `docker port`.
 
-**Editing presence tradeoff:** `POST /api/admin/docs/:collection/:id/presence` is a dedicated authenticated, CSRF-protected heartbeat. Each browser sends at most once per 30 seconds per document, including remounts, while its page is visible. Entries expire after 75 seconds and are held only in a bounded map in the current server instance. GETs never create presence writes, and heartbeats write nothing to the database. This is an advisory indication: separate instances do not share it, restarts clear it, and someone who closes a document may remain visible until expiry. It is not a lock or a substitute for optimistic concurrency checks. No session identifiers are exposed by the heartbeat response.
+```sh
+docker run --name psc-pg --rm -e POSTGRES_PASSWORD=local-test-only -p 127.0.0.1::5432 -d postgres:17
+docker run --name psc-ws --rm --link psc-pg:postgres -e APPEND_PORT=5432 -e ALLOW_ADDR_REGEX='.*' -p 127.0.0.1::80 -d ghcr.io/neondatabase/wsproxy:latest
+docker port psc-ws 80
+WS_PORT=<printed-port>
+DATABASE_URL='postgresql://postgres:local-test-only@postgres:5432/postgres?sslmode=disable' POSTGRES_TEST_WS_PROXY="127.0.0.1:${WS_PORT}/v1" npm test -- --maxWorkers=1
+docker stop psc-ws psc-pg
+```
 
-`tests/e2e/admin-phase11.spec.ts` covers the contributor/owner review loop, Admin ceilings, account actions, palette publication, phone/desktop Users screens, a keyboard-only account flow, presence, adjacent-item navigation and health/rebuild actions. Run with the installed Chrome outside the sandbox; no browser or Lighthouse/axe result is claimed from the sandbox.
+Tests create and remove isolated schemas. The database user needs schema-creation privileges. `POSTGRES_TEST_WS_PROXY` is strictly for disposable local tests. Real Neon uses its secure default transport. Local PostgreSQL coverage does not verify the hosted Neon or Blob services.
+
+### Playwright with installed Chrome
+
+```sh
+npm run build
+npm run test:e2e
+```
+
+Playwright defaults to installed Google Chrome (`PW_CHANNEL=chrome`), starts the built app with generated credentials in a fresh `.cache/e2e-*` filesystem store, and runs serially because specs share that server. Stop any existing server on port 3000 first. Keep `workers: 1`. Browser execution in the Codex sandbox is **not run (sandbox)**. Run it from an unrestricted terminal for the 390px/1280px, keyboard, media, publishing and permissions flows. Lighthouse/manual accessibility checks also require a real browser.
+
+For required form fields, use exact role/name locators such as `page.getByRole('textbox', { name: 'Title', exact: true })`. The visible required-field asterisk is hidden from the simple field's accessible name. Use `getByRole('combobox', { name: 'Category', exact: true })` for a labelled select and the exact `Create <thing>` button name. Avoid broad label/text matches that can include fieldsets, helper text or option lists.
+
+## Roles and permissions
+
+The server enforces the shared permission matrix. Hiding a control in the SPA is an additional UI behavior.
+
+| Capability | Viewer | Contributor | Editor | Admin | Owner |
+| --- | --- | --- | --- | --- | --- |
+| Read content/history and preview drafts | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Create/edit content and catalog drafts, request review | — | ✓ | ✓ | ✓ | ✓ |
+| Upload media, edit own uploads | — | ✓ | ✓ | ✓ | ✓ |
+| Edit others' media, delete unused media | — | — | ✓ | ✓ | ✓ |
+| Publish, unpublish, schedule, approve/return review | — | — | ✓ | ✓ | ✓ |
+| Trash, restore trash, reorder, run link checks | — | — | ✓ | ✓ | ✓ |
+| Edit site/store settings | — | — | ✓ | ✓ | ✓ |
+| Read/export audit and export content | — | — | — | ✓ | ✓ |
+| Manage Viewer–Editor accounts | — | — | — | ✓ | ✓ |
+| Manage Admin/Owner accounts | — | — | — | — | ✓ |
+| Rebuild published snapshot | — | — | — | ✓ | ✓ |
+| Restore a whole site version | — | — | — | — | ✓ |
+
+Contributors request review of ordinary content through the editor/tray, and publishers approve or return it with a note. Pending media is published by a publisher. Accounts cannot change their own role, and the last active Owner is protected. Every user can manage their own profile/password/sessions.
+
+## Merchandise proof of concept
+
+The seeded showcase has ten products, three bundles and five categories, with product/category/bundle pages, a cart and admin catalog tools. Prices are illustrative and no orders are accepted. `storeSettings.enabled` controls showcase visibility.
+
+Keep **`SHOP_CHECKOUT=disabled`** in every deployed environment. It is also the default when unset. Checkout/order/payment/webhook requests return HTTP 403 with `checkout_disabled` before processing, and the checkout page has no form. Content settings cannot override this boundary. `enabled` is accepted only with `NODE_ENV=development` or `test`, and production configuration rejects it. Payment integration and operational order processing remain future work.
+
+## Operations
+
+### Deploy and migrate
+
+Follow [README-deploy.md](README-deploy.md) for the account-neutral Vercel checklist, complete environment table, private Blob setup, migrations, additive seeds and validation steps. Set production secrets and `ADMIN_BOOTSTRAP_USERS` before the first admin request. Run `npm run db:migrate` with the target `DATABASE_URL` before initial seeding/startup and whenever a release introduces SQL changes. It is transactional and idempotent. HTTP requests do not run migrations. Normal code releases need no general reseed.
+
+### Back up and restore the database
+
+Before a schema change, record the source revision/schema version and take a full database backup using a trusted operator environment. Verify the target database before running these commands. Use a PostgreSQL client compatible with the server version and supply `DATABASE_URL` securely.
+
+```sh
+pg_dump --format=custom --no-owner --no-acl --file=prospector-backup.dump "$DATABASE_URL"
+# Point RESTORE_DATABASE_URL at a NEW empty recovery database.
+pg_restore --no-owner --no-acl --dbname="$RESTORE_DATABASE_URL" prospector-backup.dump
+```
+
+Protect backups as secrets because they contain password hashes, sessions and audit data. Keep retention and test restores. Preserve the private Blob store/binaries separately, including historic versions. Admin content JSON exports are useful for inspection but omit account/session/history data required for complete recovery.
+
+For an incident, stop editor writes, preserve the affected database, restore into a new database/Neon branch, and validate a compatible app against it. Check sign-in, snapshots, history and retained media. Point the deployment at the recovery database and redeploy only after review. For a code regression, a compatible prior deployment can be selected in Vercel, with database compatibility checked separately. See the deployment runbook for these distinct recovery paths.
+
+### Restore a site version in the admin
+
+Sign in as Owner. Open **History → Site versions**, find the desired version, and choose **Compare with current**. Review draft/live changes, order, later documents and schedule effects. Choose **Restore site to this version**, add a note and confirm. A concurrent change requires a fresh comparison.
+
+Restoration creates a new published version and new revisions, preserves prior history, unpublishes later-created documents while retaining their drafts, and cancels schedules. Use View live to verify the result. For a single document, open its History, restore the desired revision to a draft, then publish it. A failed publication after a draft restore is reported separately so the saved draft can be reviewed again.
+
+### Unlock an account
+
+Load the intended store environment and run `npm run unlock -- <username>`. It clears the user's pair locks and username throttle through an audited lock-generation change. The shared IP login limit remains in force. Use Users to reset a forgotten password or reactivate an account as appropriate. Bootstrap does not replace existing credentials.
+
+### Rotate secrets
+
+- Change passwords through Profile or an authorized Users reset. Credential changes revoke older sessions. Use Sign out everywhere for an immediate account session revocation. Update any retained bootstrap hash to match your intended future bootstrap configuration.
+- Generate a new random `SESSION_SECRET` of at least 32 bytes, update the environment and restart/redeploy. Existing signed upload tickets must be retried. Session authentication uses stored opaque tokens, so use the account session-revocation controls when session invalidation is required.
+- Replace `CRON_SECRET` in the deployment environment and in any external scheduler using it, then verify authorized settlement.
+- Rotate Neon credentials and the private Blob token with their provider. Install the replacement environment values, restart/redeploy, verify DB reads/writes and media upload/delivery, then revoke superseded credentials. Preserve access to existing media and backups throughout the change.
+
+### Go live
+
+Indexing is fail-closed. `seo.indexable` defaults to `false` in the schema and seed, and missing values also render `noindex`. Before adoption, keep that value. At approved go-live, open **Site settings → Search engines**, enable **Indexable**, then review and publish the site settings. Verify the public HTML's robots meta, `/robots.txt` and `/sitemap.xml` on the configured `PUBLIC_BASE_URL`.
+
+In **Site settings → Utility bar**, replace the **Pill text** containing `Redesign concept` and edit **Message** / **Message long** as needed, then publish. Keeping the utility bar enabled retains its Admin entry link. This changes content through the CMS. The checkout boundary is a separate environment control.
+
+## Known issues and maintenance notes
+
+- Very fast repeated `[` / `]` presses before the next editor renders can be ignored. The shortcuts save before changing documents and leave text input alone.
+- Editing presence is per warm server instance. Visible editors send a heartbeat at most every 30 seconds, and entries expire after 75 seconds. Other instances have separate presence maps, restarts clear them, and closed editors can linger until expiry. Version checks enforce write concurrency.
+- Constrained Markdown, explicit reload-and-compare conflicts and administrator-performed password resets are the current supported workflows. Email resets, full FS-history import, verified-binary garbage collection and automatic backup scheduling need separate implementation. Media validation checks signatures/dimensions, with retained originals and still-image WebP previews for animated inputs.
+
+The implementation plan, decisions and phase verification history live in [plans/admin-plan.md](plans/admin-plan.md) and [plans/admin-progress.md](plans/admin-progress.md).

@@ -16,7 +16,6 @@
     "seed": "tsx --env-file-if-exists=.env scripts/seed.ts",
     "seed:media": "tsx --env-file-if-exists=.env scripts/seed-media.ts",
     "seed:store": "tsx --env-file-if-exists=.env scripts/seed-store.ts",
-    "export:golden": "tsx scripts/export-golden.ts",
     "check-facts": "tsx scripts/check-facts.ts",
     "db:migrate": "tsx --env-file-if-exists=.env scripts/db-migrate.ts",
     "hash-password": "tsx scripts/hash-password.ts",

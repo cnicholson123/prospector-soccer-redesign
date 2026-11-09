@@ -162,6 +162,18 @@ describe('filesystem seed and HTTP entry point', () => {
     expect(await (await handler(new Request('http://localhost/robots.txt'))).text()).toContain('Disallow: /');
     expect(await (await handler(new Request('http://localhost/sitemap.xml'))).text()).not.toContain('<url>');
   });
+  it('keeps pages and crawler endpoints non-indexable when older site data omits seo', async () => {
+    const snapshot = structuredClone(seed);
+    const site = snapshot.docs.site![0].data as { seo?: { indexable: boolean } };
+    delete site.seo;
+    const read = vi.spyOn(store, 'getSnapshot').mockResolvedValue(snapshot);
+    try {
+      const handler = createRenderHandler(store, config, () => date);
+      expect(await (await handler(new Request('http://localhost/'))).text()).toContain('<meta name="robots" content="noindex">');
+      expect(await (await handler(new Request('http://localhost/robots.txt'))).text()).toContain('Disallow: /');
+      expect(await (await handler(new Request('http://localhost/sitemap.xml'))).text()).not.toContain('<url>');
+    } finally { read.mockRestore(); }
+  });
   it('caps TTL at callout windows and changes ETags when time changes the representation', async () => {
     const snapshot = structuredClone(seed);
     update(snapshot, 'callouts', 'cal_1', { startsAt: '2026-11-09T12:00:05Z' });

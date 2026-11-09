@@ -631,3 +631,32 @@ Deviations / open acceptance gates
 - Phase 11 fixes: palette Enter uses the live input value; shared stable list comparator (date → title → id) for lists and `[`/`]`; bracket shortcuts register in a layout effect, read the visible document from the URL and skip a closing editor's flush.
 - Known minor: pressing `[`/`]` again within milliseconds, before the next editor renders, can be ignored.
 - Result: 755 unit passed; Playwright 50/50 three consecutive runs in real Chrome.
+
+## CHANGELOG — Phase 12 — Cut-over and cleanup — 2026-11-09
+
+Shipped against §14, with the §17–§19 decisions and current merged implementation
+
+- Removed `build.py`, root `src/`, the generated `docs/` tree and its duplicate assets, plus `scripts/export-golden.ts` and `export:golden`. Root `assets/` was already absent. The eight original fixtures stay in `tests/golden/`. The application has one build command, `npm run build`, and public requests use the Store-backed renderer.
+- Audited filesystem reads, scripts, tests, package scripts, function packaging and `vercel.json`. The deployment configuration already targets `public`, uses the single npm build and routes to the current render/admin/shop functions with their password-list runtime asset. Its redirects, headers, cron and existing region remain in place. Remaining `docs/` strings in application code are content API routes or filesystem Store keys. Historical plans retain the migration history.
+- Rewrote README for a new maintainer with the site purpose, architecture/source map, schema and revision/publication/audit model, Node 22 local setup, FS storage, hashed bootstrap accounts, seed selection, test/Chrome guidance, actual role ceilings, merchandise showcase and disabled-checkout boundary. Added deployment/migration, full database backup/recovery, admin site restore, account unlock, secret rotation and go-live procedures, plus the rapid bracket-shortcut and per-instance presence limitations.
+- Generalized README-deploy for any Vercel account/team and project. Retained the environment variables and provisioning/migration/bootstrap/deployment steps, replaced account-specific CLI/origin assumptions with the linked-project workflow and placeholders, and documented `SHOP_CHECKOUT` in the table. Updated the three-function architecture, completed admin capabilities and current performance/session behavior. Initial general seeding and additive store/media upgrades are explicitly separated.
+- Fixed `.env.example` having a second, active production `PUBLIC_BASE_URL` that overrode localhost when copied for local development. Added a regression that loads the actual example and checks the FS driver, localhost origin, insecure local cookie setting and disabled checkout.
+- Confirmed schema and seed `seo.indexable=false` plus renderer fallback to `noindex`. Added an older-data regression with missing SEO settings and retained the existing indexing opt-in tests. Documented **Site settings → Search engines → Indexable**, followed by publication, for approved go-live. Documented replacing `Redesign concept` through **Site settings → Utility bar → Pill text** and publishing the settings.
+- Added a cut-over regression for the retired paths and current build/function configuration. Expanded the existing HTTP golden Playwright case to all eight club pages, including the home page and its legacy redirect. Existing admin login, publication, role and media browser coverage remains available.
+
+Verification
+
+- Node **22.12.0**, npm **10.9.0**. `npm ci` — PASS, zero reported vulnerabilities. Dependency manifest versions and lockfile are unchanged.
+- `npm run build` — PASS after clean installation, including Vite and both strict TypeScript projects.
+- `npm test -- --reporter=verbose` — PASS, **758 tests, 40 service-dependent skips**. Includes `check:runtime` for all three isolated plain-Node function packages, all eight public golden comparisons, filesystem query/write performance budgets, checkout-disabled coverage and the new cut-over/default-env/SEO regressions. An earlier ordinary `npm test` passed 757 tests before the final example-env regression was added.
+- `npm run check-facts` — PASS, **122 facts**. `npm run test:e2e -- --list` — PASS, **50 tests in 13 files**.
+- Built local HTTP smoke using `scripts/dev.ts --built`, a fresh isolated FS store and generated Owner credentials — PASS. Eight public page responses match retained goldens, the built admin shell is no-store, login succeeds, checkout returns 403 and removed source/build paths return 404. The temporary server and data were cleaned up.
+- SHA-256 comparison — PASS for all **50 existing public asset and golden files**, byte-for-byte unchanged. `git diff --check` — PASS. No public template, CSS, JS, seed, shared schema, dependency version or hosting configuration changed.
+
+Deviations and open acceptance gates
+
+- Work remains uncommitted on the supplied `main` checkout. The initial request also names `admin-cms`, but the checkout and prior progress identify `main` as the merged starting point. Branch placement was retained.
+- The example-env correction is an additional local-development fix discovered while checking the requested setup instructions. The existing `vercel.json` needed no changes after review.
+- Playwright execution, browser visual/accessibility checks and Lighthouse — **not run (sandbox)**. Claude must run the installed Chrome suite after this cleanup to close browser acceptance. No browser pass is claimed from discovery or the HTTP smoke.
+- Real Neon/Postgres, private Blob and database backup/restore execution — **not run (no env)**. Docker PostgreSQL commands are documented but were not executed in this phase. Every executed application test used the filesystem driver. Hosted public parity, admin login, purge and cron delivery remain deployment acceptance gates.
+- No commit, push, deployment, hosting credential acquisition, GitHub Pages setting change, global configuration edit or file edit outside this repository was performed.

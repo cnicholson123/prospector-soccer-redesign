@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, it } from 'vitest';
-import { readFile } from 'node:fs/promises';
+import { access, readFile } from 'node:fs/promises';
 import { loadSeed, seedSnapshot } from '../scripts/seed.js';
 import { renderPage } from '../server/render/handler.js';
 import { pageNames } from '../shared/schema.js';
@@ -15,4 +15,16 @@ describe('published seed matches all legacy pages plus concept navigation', () =
     expect(rendered.split(conceptLink)).toHaveLength(3); // Desktop and mobile only.
     expect(normalizeHtml(rendered.replaceAll(conceptLink, ''))).toBe(normalizeHtml(golden));
   });
+});
+
+it('uses the CMS build with the retired static pipeline absent', async () => {
+  for (const path of ['build.py', 'src', 'docs', 'assets', 'scripts/export-golden.ts']) {
+    await expect(access(path)).rejects.toMatchObject({ code: 'ENOENT' });
+  }
+  const pkg = JSON.parse(await readFile('package.json', 'utf8'));
+  const deployment = JSON.parse(await readFile('vercel.json', 'utf8'));
+  expect(pkg.scripts['export:golden']).toBeUndefined();
+  expect(deployment.buildCommand).toBe('npm run build');
+  expect(deployment.outputDirectory).toBe('public');
+  expect(Object.keys(deployment.functions).sort()).toEqual(['api/admin.ts', 'api/render.ts', 'api/shop.ts']);
 });
