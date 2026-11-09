@@ -21,7 +21,12 @@ export interface PublishTx {
   docs: { expectedVersion: number; nextDoc: Doc }[];
   snapshot: Snapshot; record: PublishRecord; revisions?: Revision[]; audit?: AuditEntry[];
 }
+export interface AdminCounts { counts: Record<string, number>; pendingCount: number; reviewCount: number; scheduledCount: number }
+export interface SessionContext { session: Session; user: User | null; scheduleVersion: number; nextDueAt: string | null; counts?: AdminCounts }
 export interface Store {
+  getSessionContext(hash: string, includeCounts?: boolean): Promise<SessionContext | null>;
+  listAllDocs(): Promise<Doc[]>;
+  adminCounts(): Promise<AdminCounts>;
   getDoc(collection: CollectionName, id: string): Promise<Doc | null>;
   listDocs(collection: CollectionName, opts?: { includeTrashed?: boolean }): Promise<Doc[]>;
   createDoc(input: CreateDoc): Promise<Doc>;
@@ -59,6 +64,7 @@ export interface Store {
   deleteExpiredSessions(now: string): Promise<number>;
   rateLimitHit(key: string, windowSec: number): Promise<{ count: number; resetAt: string }>;
   rateLimitReset(key: string): Promise<void>;
+  setScheduleError(error: { at: string } | null): Promise<void>;
   getMeta(key: string): Promise<unknown>;
   setMeta(key: string, value: unknown): Promise<void>;
 }

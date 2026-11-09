@@ -3,7 +3,7 @@ import type { Doc, ValidationIssue } from '../../../shared/types.js';
 import { collections, type CollectionName } from '../../../shared/schema.js';
 import { validate } from '../../../server/content/validate.js';
 import { defaults, changed } from './content.js';
-import { api, ApiError, message, session } from '../api.js';
+import { api, cachedApi, ApiError, message, session } from '../api.js';
 export type EventDoc = Doc<Record<string, unknown>>;
 export class EditorState {
   doc = signal<EventDoc | null>(null);
@@ -26,7 +26,9 @@ export class EditorState {
   }
   async load() {
     if (this.id !== 'new') {
-      const { doc } = await api<{ doc: EventDoc }>(`/docs/${this.collection}/${this.id}`);
+      const { doc } = await cachedApi<{ doc: EventDoc }>(`/docs/${this.collection}/${this.id}`, ({ doc: fresh }) => {
+        if (!this.disposed && !this.saving.value && !this.dirty.value && !this.recovery.value && !this.conflict.value && fresh.version > (this.doc.value?.version ?? 0)) this.accept(fresh);
+      });
       this.doc.value = doc; this.draft.value = doc.draft; this.status.value = 'Saved';
     }
     try {

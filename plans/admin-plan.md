@@ -663,3 +663,31 @@ Reviewed the complete plan (including §17 and its §18 overrides), prior progre
 | `admin-slice.spec.ts:57`, keyboard-only Preview activation | **App keyboard-navigation burden exposed by Phase 9's additional History/Audit links.** From Location, forward Tab traverses the remainder of the form and the embedded full public home page before cycling back to Preview. That frame contains dozens of its own links/controls; the combined route exceeds the helper's 100-Tab budget. The failure is at Preview, not at login or Events navigation. | Remove the passive embedded preview from sequential focus with `tabIndex=-1`; its existing “Open preview in a new tab” link remains keyboard-accessible for full-page exploration, and inline editing keeps its separate interactive frame. Component coverage checks this focus contract. The complete 7a keyboard create/edit/preview/publish/restore flow and original 100-Tab limit remain; its error now identifies the target and actual focused element. No public markup, CSS or links were changed. |
 
 All four new component regression cases fail against the pre-fix components and pass with the fixes. `npm run build` and `npm test` pass (489 passed, 17 hosted-service skips), including all eight public goldens and the plain-Node packaging smoke. `npm run check-facts` passes 122 facts; `npm run test:e2e -- --list` discovers all 32 tests across nine specs. Browser execution, actual focus/visual verification and Lighthouse remain **not run (sandbox)**; Claude must rerun real Chrome to confirm the keyboard-path diagnosis and browser acceptance. Real Neon and Blob remain **not run (no env)**. No dependency, public-design, storage-architecture, commit, push or deployment changes were made.
+
+## 22. Admin performance pass (2026-11-09)
+
+Implemented under Chris's performance request. This supersedes the hourly sliding-session refresh and store-backed general API rate limiter in §6: sliding refresh is conditional at 15 minutes; general authenticated API traffic uses a 600-request/5-minute limiter per warm function instance. Login, password, upload limits and login lockouts remain durable. Revision maintenance makes at most one database claim per instance per ten minutes. Exceptional bootstrap/recovery, due schedules, periodic session refresh, maintenance and an expired/missing health cache can write; steady-state authenticated GET/HEAD requests do not.
+
+Postgres uses `neon().query()` over HTTP for non-transactional statements and a warm shared Pool for transactions. Session/user/schedule-index reads share one statement. The `/counts` aggregate is folded into that statement, so the entire steady-state authenticated endpoint costs one SQL statement. `Store.adminCounts()` also independently executes one aggregate. Content/user transactions retain a schema-scoped advisory lock; sessions, counters, meta and maintenance use conditional row updates/upserts or row locks. `capturePublication` is one MVCC statement.
+
+`GET /dashboard?section=counts|activity|health` supports independent loading; the original combined response is retained. `/counts` supplies navigation and dashboard badges. Computed content health is cached in meta for five minutes, with atomic mutation invalidation and a generation check against concurrent stale computations. Role-sensitive Owner findings and schedule errors are read live. Link checks still require their explicit POST. The client retains one session validation per page lifetime, prefetches page data alongside it, uses bounded in-memory document/list stale-while-revalidate caches, guards delayed responses and invalidates on writes/account changes. Navigation hover/focus prefetches data. Hashed admin assets are immutable for a year; the shell is no-store.
+
+### Measured query/write counts
+
+Owner session, warm application, current 145-document seed, no due schedules, no refresh/maintenance/cache expiry. Actual statements include BEGIN/COMMIT/advisory-lock SELECTs; writes count INSERT/UPDATE/DELETE statements. Before is the unmodified `admin-cms` HEAD; after is this pass. Both ran locally against disposable PostgreSQL 17 through the Neon driver. These are query counts, not production latency measurements.
+
+| Endpoint (GET) | Before SQL / writes | After SQL / writes |
+|---|---:|---:|
+| `/api/admin/healthz` | 0 / 0 | 0 / 0 |
+| `/api/admin/auth/me` | 11 / 1 | 1 / 0 |
+| `/api/admin/docs/events` | 22 / 2 | 2 / 0 |
+| `/api/admin/docs/home/home` | 22 / 2 | 2 / 0 |
+| `/api/admin/pending` | 45 / 2 | 2 / 0 |
+| `/api/admin/dashboard` (combined compatibility response) | 74 / 2 | 10 / 0 |
+| `/api/admin/counts` | Not previously available; badges used dashboard | 1 / 0 |
+| `/api/admin/dashboard?section=activity` | Not independently available | 2 / 0 |
+| `/api/admin/dashboard?section=health` (cache hit) | Not independently available | 6 / 0 |
+
+The FS acceptance tests independently count primitive writes and assert zero for warm me/docs/counts/pending/dashboard and HEAD. These figures exclude cold initialization and the explicitly periodic work above. Other history, search, export and mutation routes retain their contracts; mutation query counts vary with selected documents/revisions and are not benchmarked by this table. Database telemetry is available via `server/store/metrics.ts` and the `Server-Timing` auth, ratelimit, settle, handler, db, db_count and db_writes fields. DB duration sums SQL execution time, including overlap; it is not wall-clock handler duration.
+
+Run `npm exec tsx scripts/bench-admin.ts -- http://localhost:3000` with `ADMIN_BENCH_USERNAME` and `ADMIN_BENCH_PASSWORD` in the environment, or set `ADMIN_BENCH_BASE_URL`. It performs one login, warms each endpoint, reports p50/p95 and timing headers, then revokes its own session. `ADMIN_BENCH_ITERATIONS` defaults to 20 (maximum 50). No credentials are embedded or printed. Use local/authorized preview targets; this pass did not benchmark production.

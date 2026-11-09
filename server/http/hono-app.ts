@@ -6,7 +6,7 @@ import { createMediaBlobs, createStore } from '../store/index.js';
 import type { MediaStorage, Store } from '../store/types.js';
 import { loadConfig, type Config } from '../config.js';
 import { bootstrap } from '../auth/bootstrap.js';
-import { authenticate, type AdminEnv } from './middleware/auth.js';
+import { createAuthenticate, type AdminEnv } from './middleware/auth.js';
 import { ApiError } from './middleware/errors.js';
 import { authRoutes } from './routes/auth.js';
 import { userRoutes } from './routes/users.js';
@@ -14,10 +14,20 @@ import { auditRoutes } from './routes/audit.js';
 import { docRoutes } from './routes/docs.js';
 import { contentRoutes, cronRoutes } from './routes/content.js';
 import { requirePermission } from './middleware/permission.js';
+import { dbMetrics, newDbMetrics } from '../store/metrics.js';
 import { audit } from '../audit.js';
 
 export function createAdminApp(storeFactory: () => Store = createStore, options: { config?: Config; now?: () => Date; media?: MediaStorage } = {}) {
   const app = new Hono<AdminEnv>();
+  const authenticate = createAuthenticate();
+  let nextMaintenanceAt = 0;
+  app.use('/api/admin/*', async (c, next) => {
+    const metrics = newDbMetrics();
+    const started = performance.now();
+    await dbMetrics.run(metrics, next);
+    metrics.stages.handler ??= Math.max(0, performance.now() - started - Object.values(metrics.stages).reduce((a,b) => a+b,0));
+    c.header('Server-Timing', [...['auth', 'ratelimit', 'settle', 'handler'].map(name => `${name};dur=${(metrics.stages[name] ?? 0).toFixed(2)}`), `db;dur=${metrics.time.toFixed(2)}`, `db_count;desc="${metrics.count}"`, `db_writes;desc="${metrics.writes}"`].join(', '));
+  });
   let needsRecovery = true, store: Store | undefined, config = options.config;
   let blobs = options.media;
   let initializing: Promise<unknown> | undefined;
@@ -42,8 +52,11 @@ export function createAdminApp(storeFactory: () => Store = createStore, options:
     if (!initializing) initializing = bootstrap(store, config, c.get('now')).catch(error => { initializing = undefined; throw error; });
     await initializing;
     if (needsRecovery) { await store.recoverPublish(); needsRecovery = false; }
-    if (await store.claimMaintenance('revision-gc-at', 60000, c.get('now').toISOString())) {
-      await store.sealWorkingRevisions('*', new Date(c.get('now').getTime() - 600000).toISOString(), audit({ id: 'system', displayName: 'System' }, 'history.seal_expired', {}, c.get('now')));
+    if (c.get('now').getTime() >= nextMaintenanceAt) {
+      nextMaintenanceAt = c.get('now').getTime() + 600000;
+      if (await store.claimMaintenance('revision-gc-at', 600000, c.get('now').toISOString())) {
+        await store.sealWorkingRevisions('*', new Date(c.get('now').getTime() - 600000).toISOString(), audit({ id: 'system', displayName: 'System' }, 'history.seal_expired', {}, c.get('now')));
+      }
     }
     await next();
     if (c.res.status >= 500) needsRecovery = true;

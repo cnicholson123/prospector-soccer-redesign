@@ -66,9 +66,9 @@ describe('Phase 1b config and runtime dispatch', () => {
     const login = await app.request('/api/admin/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: 'Phil', password: 'Phil' }) });
     const headers = { Cookie: login.headers.get('set-cookie')!.split(';')[0] };
     expect(recover).toHaveBeenCalledTimes(1);
-    await app.request('/api/admin/test-read', { headers }); expect(recover).toHaveBeenCalledTimes(2);
+    await app.request('/api/admin/test-read', { headers }); expect(recover).toHaveBeenCalledTimes(1);
     await app.request('/api/admin/test-failure', { headers });
-    await app.request('/api/admin/test-read', { headers }); expect(recover).toHaveBeenCalledTimes(5);
+    await app.request('/api/admin/test-read', { headers }); expect(recover).toHaveBeenCalledTimes(2);
   });
   it('caps actual streamed bytes as well as declared content-length', async () => {
     const large = 'a'.repeat(1024 * 1024 + 1);

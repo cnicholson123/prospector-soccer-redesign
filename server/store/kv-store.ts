@@ -1,5 +1,6 @@
 import { keyPart, documentId, username } from './identifiers.js';
 import { loginGenerationKey, usernameRateKey } from '../auth/ratelimit.js';
+import { countsFromDocs } from './counts.js';
 import { ApiError } from '../http/middleware/errors.js';
 import { can } from '../permissions.js';
 import { isDeepStrictEqual } from 'node:util';
@@ -47,6 +48,8 @@ export class KvStore implements Store {
     const values = await Promise.all((await this.kv.list(prefix)).map(key => this.read<T>(key)));
     return values.filter((value): value is Awaited<T> => value !== null);
   }
+  async listAllDocs() { return this.allDocs(); }
+  async adminCounts() { return countsFromDocs(await this.allDocs()); }
   private async allDocs(): Promise<Doc[]> { return (await Promise.all(collectionNames.map(name => this.listDocs(name, { includeTrashed: true })))).flat(); }
   async getDoc(collection: CollectionName, id: string) { return this.read<Doc>(docKey(collection, id)); }
   async listDocs(collection: CollectionName, opts: { includeTrashed?: boolean } = {}): Promise<Doc[]> {
@@ -88,7 +91,8 @@ export class KvStore implements Store {
   private async commitMutation(doc: Doc, revisions: Revision[], audit: AuditEntry): Promise<Doc> {
     await this.checkAudit(audit);
     if (await this.kv.get(auditKey(audit))) throw new Error('Audit entry already exists');
-    const writes = [...revisions.map(value => ({ key: revKey(value), value })), { key: auditKey(audit), value: audit }];
+    const writes: MutationJournal['writes'] = [...revisions.map(value => ({ key: revKey(value), value })), { key: auditKey(audit), value: audit }];
+    writes.push({ key: 'meta/health-cache.json', value: null }, { key: 'meta/health-generation.json', value: audit.id });
     await this.kv.put(mutationKey, { writes, doc } satisfies MutationJournal);
     await this.resumeMutation();
     return structuredClone(doc);
@@ -146,7 +150,7 @@ export class KvStore implements Store {
           siblings.push({ ...sibling, status: sibling.status === 'published' ? 'changed' : sibling.status, publishedOrder: sibling.publishedOrder ?? (sibling.published !== undefined ? sibling.order ?? 0 : undefined), order: item.order, version: sibling.version + 1, updatedAt: doc.updatedAt, updatedBy: doc.updatedBy });
         }
         await this.checkAudit(audit);
-        await this.kv.put(mutationKey, { writes: [{ key: auditKey(audit), value: audit }], docs: siblings } satisfies MutationJournal);
+        await this.kv.put(mutationKey, { writes: [{ key: auditKey(audit), value: audit }, { key: 'meta/health-cache.json', value: null }, { key: 'meta/health-generation.json', value: audit.id }], docs: siblings } satisfies MutationJournal);
         await this.resumeMutation();
         return structuredClone(doc);
       }
@@ -166,6 +170,8 @@ export class KvStore implements Store {
     for (const rev of tx.revisions ?? []) await this.kv.put(revKey(rev), rev);
     for (const entry of tx.audit ?? []) await this.kv.put(auditKey(entry), entry);
     await this.kv.put(publishKey(tx.record.siteVersion), tx.record);
+    await this.setMeta('health-cache', null);
+    await this.setMeta('health-generation', tx.record.siteVersion);
     await this.kv.put('snapshot/published.json', tx.snapshot);
     await this.kv.delete(pendingPublishKey);
   }
@@ -493,11 +499,17 @@ export class KvStore implements Store {
     return this.exclusive(async () => {
       const session = await this.getSession(hash), time = Date.parse(now);
       if (!session || Date.parse(session.expiresAt) <= time || Date.parse(session.createdAt) + 30 * 86400000 <= time) return null;
-      if (time - Date.parse(session.lastSeenAt) < 3600000) return { session, refreshed: false };
+      if (time - Date.parse(session.lastSeenAt) < 900000) return { session, refreshed: false };
       const next = { ...session, lastSeenAt: now, expiresAt: new Date(Math.min(time + 14 * 86400000, Date.parse(session.createdAt) + 30 * 86400000)).toISOString() };
       await this.kv.put(`sessions/${part(hash)}.json`, next);
       return { session: next, refreshed: true };
     });
+  }
+  async getSessionContext(hash: string, includeCounts = false) {
+    const session = await this.getSession(hash);
+    if (!session) return null;
+    const [user, snapshot] = await Promise.all([this.getUser(session.userId), this.getSnapshot()]);
+    return { session, user, scheduleVersion: snapshot?.siteVersion ?? 0, nextDueAt: snapshot?.scheduled.map(item => item.at).sort()[0] ?? null, ...(includeCounts ? { counts: await this.adminCounts() } : {}) };
   }
   async getSession(hash: string): Promise<Session | null> {
     const session = await this.read<Session>(`sessions/${part(hash)}.json`);
@@ -531,6 +543,11 @@ export class KvStore implements Store {
     });
   }
   async rateLimitReset(key: string) { await this.exclusive(() => this.kv.delete(`ratelimit/${part(key)}.json`)); }
+  async setScheduleError(error: { at: string } | null): Promise<void> {
+    await this.exclusive(async () => {
+      if (!!await this.getMeta('schedule-error') !== !!error) await this.setMeta('schedule-error', error);
+    });
+  }
   async getMeta(key: string) { return this.kv.get(`meta/${part(key)}.json`); }
   async setMeta(key: string, value: unknown) {
     if (key === 'pending-mutation' || key === 'pending-publish') throw new Error('Reserved transaction metadata key');

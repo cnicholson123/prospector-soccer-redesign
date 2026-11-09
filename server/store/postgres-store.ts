@@ -1,3 +1,5 @@
+import { completeCounts } from './counts.js';
+import { measureQuery } from './metrics.js';
 import { keyPart, documentId, username } from './identifiers.js';
 import { loginGenerationKey, usernameRateKey } from '../auth/ratelimit.js';
 import { AsyncLocalStorage } from 'node:async_hooks';
@@ -9,22 +11,31 @@ import { type CollectionName } from '../../shared/schema.js';
 import { validate, ValidationError } from '../content/validate.js';
 import { buildSnapshot } from '../content/snapshot.js';
 import { referenceUsage } from '../content/references.js';
-import type { AuditEntry, AuditQuery, CreateDoc, Doc, DocMutation, PublishRecord, PublishTx, RevisionQuery, Revision, Session, Snapshot, Store, User } from './types.js';
+import type { AuditEntry, AuditQuery, CreateDoc, Doc, DocMutation, PublishRecord, PublishTx, RevisionQuery, Revision, Session, Snapshot, Store, User, AdminCounts, SessionContext } from './types.js';
 
+type CountRow = { collection: string; total: number; pending: number; review: number; scheduled: number };
+const countSql = `SELECT collection,
+      count(*) FILTER (WHERE body->>'trashedAt' IS NULL)::int AS total,
+      count(*) FILTER (WHERE CASE WHEN body->>'trashedAt' IS NOT NULL THEN published IS NOT NULL ELSE published IS NULL OR draft IS DISTINCT FROM published OR version IS DISTINCT FROM published_version END)::int AS pending,
+      count(*) FILTER (WHERE body->>'reviewRequestedBy' IS NOT NULL)::int AS review,
+      count(*) FILTER (WHERE body->>'scheduledAt' IS NOT NULL)::int AS scheduled FROM docs GROUP BY collection`;
 const equal = (a: unknown, b: unknown) => isDeepStrictEqual(JSON.parse(JSON.stringify(a)), JSON.parse(JSON.stringify(b)));
 const pageLimit = (limit: number) => { if (!Number.isInteger(limit) || limit < 1 || limit > 1000) throw new Error('Limit must be 1–1000'); return limit; };
 type Table = 'docs' | 'revisions' | 'publishes' | 'snapshots' | 'audit' | 'users' | 'sessions' | 'rate_limits' | 'meta';
-export interface PostgresOptions { now?: () => Date; afterWrite?: (table: Table) => void }
-/** Relational storage. One transaction-scoped advisory lock serializes CMS
- * writers across processes, including reference and last-Owner checks.
+export interface PostgresOptions { now?: () => Date; afterWrite?: (table: Table) => void; readQuery?: (sql: string, values: unknown[]) => Promise<unknown[]> }
+/** Relational storage. The advisory lock serializes content and user mutations
+ * for reference and last-Owner checks. Operational rows use conditional writes.
  * Readers use MVCC and never observe a partially committed transaction. */
 export class PostgresStore implements Store {
   private transaction = new AsyncLocalStorage<PoolClient>();
   private now: () => Date;
   constructor(readonly pool: Pool, private options: PostgresOptions = {}) { this.now = options.now ?? (() => new Date()); }
   private async rows<T>(sql: string, values: unknown[] = []): Promise<T[]> {
-    const result = await (this.transaction.getStore() ?? this.pool).query(sql, values);
-    return result.rows as T[];
+    return measureQuery(sql, async () => {
+      const client = this.transaction.getStore();
+      if (!client && this.options.readQuery) return await this.options.readQuery(sql, values) as T[];
+      return (await (client ?? this.pool).query(sql, values)).rows as T[];
+    });
   }
   private async read<T>(table: Table, id: string): Promise<T | null> {
     keyPart(id);
@@ -34,7 +45,7 @@ export class PostgresStore implements Store {
     return (await this.rows<{ body: T }>(`SELECT body FROM ${table} ${where}`, values)).map(row => row.body);
   }
   private async write(table: Table, id: string, value: unknown, expectedVersion?: number): Promise<void> {
-    if (!this.transaction.getStore()) throw new Error('Write requires a transaction');
+    if (!this.transaction.getStore() && !['sessions', 'rate_limits', 'meta'].includes(table)) throw new Error('Content and user writes require a transaction');
     keyPart(id);
     if (table === 'docs') documentId(id);
     const body = JSON.stringify(value);
@@ -51,18 +62,25 @@ export class PostgresStore implements Store {
   private async remove(table: Table, id: string): Promise<void> {
     await this.rows(`DELETE FROM ${table} WHERE id=$1`, [id]); this.options.afterWrite?.(table);
   }
-  private async exclusive<T>(operation: () => Promise<T>): Promise<T> {
+  private async exclusive<T>(operation: () => Promise<T>, global = true): Promise<T> {
     if (this.transaction.getStore()) return operation();
     const client = await this.pool.connect();
     try {
-      await client.query('BEGIN');
-      await client.query('SELECT pg_advisory_xact_lock(734215906)');
+      await measureQuery('BEGIN', () => client.query('BEGIN'));
+      if (global) await measureQuery('SELECT pg_advisory_xact_lock(734215906, hashtext(current_schema()))', () => client.query('SELECT pg_advisory_xact_lock(734215906, hashtext(current_schema()))'));
       const result = await this.transaction.run(client, operation);
-      await client.query('COMMIT'); return result;
-    } catch (error) { await client.query('ROLLBACK'); throw error; }
+      await measureQuery('COMMIT', () => client.query('COMMIT')); return result;
+    } catch (error) { await measureQuery('ROLLBACK', () => client.query('ROLLBACK')); throw error; }
     finally { client.release(); }
   }
-  private allDocs() { return this.all<Doc>('docs'); }
+  private allDocs() { return this.listAllDocs(); }
+  listAllDocs() { return this.all<Doc>('docs'); }
+  async adminCounts(): Promise<AdminCounts> {
+    return this.counts(await this.rows<CountRow>(countSql));
+  }
+  private counts(rows: CountRow[]): AdminCounts {
+    return completeCounts({ counts: Object.fromEntries(rows.map(r => [r.collection, r.total])), pendingCount: rows.reduce((n,r) => n+r.pending,0), reviewCount: rows.reduce((n,r) => n+r.review,0), scheduledCount: rows.reduce((n,r) => n+r.scheduled,0) });
+  }
   async getDoc(collection: CollectionName, id: string): Promise<Doc | null> {
     documentId(id);
     const doc = await this.read<Doc>('docs', id); return doc?.collection === collection ? doc : null;
@@ -88,6 +106,8 @@ export class PostgresStore implements Store {
     for (const rev of revisions) await this.write('revisions', rev.id, rev);
     await this.write('audit', audit.id, audit);
     await this.write('docs', doc.id, doc, expectedVersion);
+    await this.setMeta('health-cache', null);
+    await this.setMeta('health-generation', audit.id);
     return structuredClone(doc);
   }
   createDoc({ doc, revision, audit }: CreateDoc): Promise<Doc> {
@@ -132,6 +152,8 @@ export class PostgresStore implements Store {
         revisions.push(rev);
       }
       if (mutation.relatedOrder) {
+        await this.setMeta('health-cache', null);
+        await this.setMeta('health-generation', audit.id);
         if (mutation.revision || mutation.seal?.length || Object.keys(patch).some(key => !['order', 'updatedAt', 'updatedBy'].includes(key))) throw new Error('Reorder is metadata only');
         const siblings: Doc[] = [doc];
         for (const item of mutation.relatedOrder) {
@@ -151,9 +173,7 @@ export class PostgresStore implements Store {
   }
   getSnapshot() { return this.read<Snapshot>('snapshots', 'published'); }
   capturePublication(): Promise<{ docs: Doc[]; snapshot: Snapshot | null }> {
-    return this.exclusive(async () => {
-      return { docs: await this.allDocs(), snapshot: await this.getSnapshot() };
-    });
+    return this.rows<{ docs: Doc[]; snapshot: Snapshot | null }>(`SELECT COALESCE((SELECT jsonb_agg(body) FROM docs), '[]'::jsonb) AS docs, (SELECT body FROM snapshots WHERE id='published') AS snapshot`).then(rows => rows[0]);
   }
   publish(tx: PublishTx): Promise<{ siteVersion: number }> {
     return this.exclusive(async () => {
@@ -227,6 +247,8 @@ export class PostgresStore implements Store {
       for (const entry of tx.audit ?? []) await this.write('audit', entry.id, entry);
       await this.write('publishes', String(siteVersion), tx.record);
       await this.write('snapshots', 'published', tx.snapshot);
+      await this.setMeta('health-cache', null);
+      await this.setMeta('health-generation', tx.record.siteVersion);
       return { siteVersion };
     });
   }
@@ -288,12 +310,12 @@ export class PostgresStore implements Store {
     const rows = await this.all<AuditEntry>('audit', `${clauses.length ? 'WHERE '+clauses.join(' AND ') : ''} ORDER BY at DESC,id COLLATE "C" DESC LIMIT $${values.length}`, values);
     return { items: rows.slice(0,limit), ...(rows.length>limit ? {cursor:rows[limit-1].id} : {}) };
   }
-  claimMaintenance(key: string, intervalMs: number, now: string): Promise<boolean> {
-    return this.exclusive(async () => {
-      const at = await this.getMeta(key);
-      if (typeof at === 'string' && Date.parse(now) - Date.parse(at) < intervalMs) return false;
-      await this.setMeta(key, now); return true;
-    });
+  async claimMaintenance(key: string, intervalMs: number, now: string): Promise<boolean> {
+    keyPart(key);
+    const rows = await this.rows(`INSERT INTO meta(id,body) VALUES($1,to_jsonb($2::text)) ON CONFLICT(id) DO UPDATE SET body=excluded.body
+      WHERE (meta.body #>> '{}')::timestamptz <= $2::timestamptz - ($3 * interval '1 millisecond') RETURNING id`, [key, now, intervalMs]);
+    if (rows.length) this.options.afterWrite?.('meta');
+    return rows.length > 0;
   }
   recordLogin(userId: string, expectedHash: string, weak: boolean, entry: AuditEntry): Promise<User | null> {
     return this.exclusive(async () => {
@@ -316,26 +338,31 @@ export class PostgresStore implements Store {
   unlockLogin(name: string, entry: AuditEntry): Promise<void> {
     return this.exclusive(async () => {
       const key = loginGenerationKey(username(name));
+      await this.rows("INSERT INTO meta(id,body) VALUES($1,'0'::jsonb) ON CONFLICT DO NOTHING", [key]);
+      await this.rows('SELECT id FROM meta WHERE id=$1 FOR UPDATE', [key]);
       const generation = Number(await this.getMeta(key) ?? 0) + 1;
       await this.checkAudit(entry);
       await this.write('audit', entry.id, entry);
       await this.setMeta(key, generation);
       await this.remove('rate_limits', usernameRateKey(name));
-    });
+    }, false);
   }
   revokeSessions(userId: string, entry: AuditEntry, options: { hash?: string; except?: string; seal?: boolean } = {}): Promise<boolean> {
     return this.exclusive(async () => {
-      const sessions = (await this.listSessions(userId)).filter(s => s.hash !== options.except && (!options.hash || s.hash === options.hash));
+      const sessions = (await this.all<Session>('sessions', 'WHERE user_id=$1 ORDER BY id FOR UPDATE', [userId])).filter(s => s.hash !== options.except && (!options.hash || s.hash === options.hash));
       if (options.hash && !sessions.length) return false;
       await this.checkAudit(entry);
       await this.write('audit', entry.id, entry);
       if (options.seal) for (const rev of await this.all<Revision>('revisions')) if (!rev.sealedAt && rev.authorId === userId) await this.write('revisions', rev.id, { ...rev, sealedAt: entry.at });
       for (const session of sessions) await this.remove('sessions', session.hash);
       return true;
-    });
+    }, false);
   }
   loginFailure(key: string, now: string): Promise<{ failures: number; locks: number; until?: string }> {
     return this.exclusive(async () => {
+      keyPart(key);
+      await this.rows(`INSERT INTO meta(id,body) VALUES($1,'{"failures":0,"locks":0}'::jsonb) ON CONFLICT DO NOTHING`, [key]);
+      await this.rows('SELECT id FROM meta WHERE id=$1 FOR UPDATE', [key]);
       const state = await this.getMeta(key) as { failures: number; locks: number; until?: string } | null ?? { failures: 0, locks: 0 };
       if (state.until && Date.parse(state.until) > Date.parse(now)) return state;
       const window = state as typeof state & { windowStart?: string; count?: number };
@@ -344,10 +371,10 @@ export class PostgresStore implements Store {
       state.failures++;
       if (state.failures >= 5) { state.failures = 0; state.until = new Date(Date.parse(now) + Math.min(86400, 900 * 2 ** state.locks) * 1000).toISOString(); state.locks++; }
       await this.setMeta(key, state); return state;
-    });
+    }, false);
   }
   recordAudit(entry: AuditEntry): Promise<void> {
-    return this.exclusive(async () => { await this.checkAudit(entry); await this.write('audit', entry.id, entry); });
+    return this.exclusive(async () => { await this.checkAudit(entry); await this.write('audit', entry.id, entry); }, false);
   }
   bootstrapUsers(entries: { user: User; audit: AuditEntry }[]): Promise<number> {
     return this.exclusive(async () => {
@@ -392,10 +419,10 @@ export class PostgresStore implements Store {
   sealWorkingRevisions(authorId: string, before: string, entry: AuditEntry): Promise<void> {
     return this.exclusive(async () => {
       await this.checkAudit(entry);
-      let changed = false;
-      for (const rev of await this.all<Revision>('revisions')) if (!rev.sealedAt && (authorId === '*' || rev.authorId === authorId) && rev.at <= before) { await this.write('revisions', rev.id, { ...rev, sealedAt: entry.at }); changed = true; }
-      if (changed || authorId !== '*') await this.write('audit', entry.id, entry);
-    });
+      const rows = await this.rows(`UPDATE revisions SET body=jsonb_set(body,'{sealedAt}',to_jsonb($3::text)) WHERE sealed_at IS NULL AND ($1='*' OR author_id=$1) AND at<=$2 RETURNING id`, [authorId, before, entry.at]);
+      if (rows.length) this.options.afterWrite?.('revisions');
+      if (rows.length || authorId !== '*') await this.write('audit', entry.id, entry);
+    }, false);
   }
   listUsers() { return this.all<User>('users'); }
   getUser(id: string) { return this.read<User>('users', id); }
@@ -412,42 +439,54 @@ export class PostgresStore implements Store {
     if (owner && owner.id !== user.id) throw new Error('Username already exists');
     await this.write('users', user.id, user);
   }
-  refreshSession(hash: string, now: string): Promise<{ session: Session; refreshed: boolean } | null> {
-    return this.exclusive(async () => {
-      const session = await this.getSession(hash), time = Date.parse(now);
-      if (!session || Date.parse(session.expiresAt) <= time || Date.parse(session.createdAt) + 30 * 86400000 <= time) return null;
-      if (time - Date.parse(session.lastSeenAt) < 3600000) return { session, refreshed: false };
-      const next = { ...session, lastSeenAt: now, expiresAt: new Date(Math.min(time + 14 * 86400000, Date.parse(session.createdAt) + 30 * 86400000)).toISOString() };
-      await this.write('sessions', hash, next);
-      return { session: next, refreshed: true };
-    });
+  async refreshSession(hash: string, now: string): Promise<{ session: Session; refreshed: boolean } | null> {
+    keyPart(hash);
+    const time = Date.parse(now);
+    const rows = await this.rows<{ body: Session }>(`UPDATE sessions SET body=body || jsonb_build_object('lastSeenAt',$2::text,'expiresAt',
+      to_char(LEAST($2::timestamptz + interval '14 days', (body->>'createdAt')::timestamptz + interval '30 days') AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'))
+      WHERE id=$1 AND expires_at>$2 AND (body->>'createdAt')::timestamptz + interval '30 days'>$2::timestamptz
+      AND (body->>'lastSeenAt')::timestamptz <= $2::timestamptz - interval '15 minutes' RETURNING body`, [hash, now]);
+    if (rows[0]) { this.options.afterWrite?.('sessions'); return { session: rows[0].body, refreshed: true }; }
+    const session = await this.getSession(hash);
+    return session && Date.parse(session.expiresAt)>time && Date.parse(session.createdAt)+30*86400000>time ? { session, refreshed: false } : null;
+  }
+  async getSessionContext(hash: string, includeCounts = false): Promise<SessionContext | null> {
+    keyPart(hash);
+    const row = (await this.rows<SessionContext & { countRows?: CountRow[] }>(`SELECT s.body AS session, u.body AS user, COALESCE(p.site_version,0) AS "scheduleVersion",
+      (SELECT min(item->>'at') FROM jsonb_array_elements(COALESCE(p.body->'scheduled','[]'::jsonb)) item) AS "nextDueAt"${includeCounts ? `, (SELECT COALESCE(jsonb_agg(c), '[]'::jsonb) FROM (${countSql}) c) AS "countRows"` : ''}
+      FROM sessions s LEFT JOIN users u ON u.id=s.user_id LEFT JOIN snapshots p ON p.id='published' WHERE s.id=$1`, [hash]))[0];
+    if (!row) return null;
+    const { countRows, ...context } = row;
+    return { ...context, ...(includeCounts ? { counts: this.counts(countRows ?? []) } : {}) };
   }
   getSession(hash: string) { return this.read<Session>('sessions', hash); }
-  async putSession(session: Session) { await this.exclusive(() => this.write('sessions', session.hash, session)); }
-  async deleteSession(hash: string) { await this.exclusive(() => this.remove('sessions', hash)); }
-  async listSessions(userId: string) { return (await this.all<Session>('sessions')).filter(session => session.userId === userId); }
-  deleteExpiredSessions(now: string): Promise<number> {
-    const cutoff = Date.parse(now);
-    if (!Number.isFinite(cutoff)) return Promise.reject(new Error('Invalid session expiry cutoff'));
-    return this.exclusive(async () => {
-      const expired = (await this.all<Session>('sessions')).filter(session => Date.parse(session.expiresAt) <= cutoff || Date.parse(session.createdAt) + 30 * 86400000 <= cutoff);
-      for (const session of expired) await this.remove('sessions', session.hash);
-      return expired.length;
-    });
+  async putSession(session: Session) { await this.write('sessions', session.hash, session); }
+  async deleteSession(hash: string) { keyPart(hash); await this.remove('sessions', hash); }
+  async listSessions(userId: string) { return this.all<Session>('sessions', 'WHERE user_id=$1', [userId]); }
+  async deleteExpiredSessions(now: string): Promise<number> {
+    if (!Number.isFinite(Date.parse(now))) throw new Error('Invalid session expiry cutoff');
+    const rows = await this.rows(`DELETE FROM sessions WHERE expires_at<=$1 OR (body->>'createdAt')::timestamptz + interval '30 days'<=$1::timestamptz RETURNING id`, [now]);
+    if (rows.length) this.options.afterWrite?.('sessions');
+    return rows.length;
   }
-  rateLimitHit(key: string, windowSec: number): Promise<{ count: number; resetAt: string }> {
-    if (!Number.isFinite(windowSec) || windowSec <= 0) return Promise.reject(new Error('Window must be positive'));
-    return this.exclusive(async () => {
-      const current = await this.read<{ count: number; resetAt: string }>('rate_limits', key);
-      const now = this.now().getTime();
-      const next = current && Date.parse(current.resetAt) > now ? { ...current, count: current.count + 1 } : { count: 1, resetAt: new Date(now + windowSec * 1000).toISOString() };
-      await this.write('rate_limits', key, next); return next;
-    });
+  async rateLimitHit(key: string, windowSec: number): Promise<{ count: number; resetAt: string }> {
+    keyPart(key);
+    if (!Number.isFinite(windowSec) || windowSec <= 0) throw new Error('Window must be positive');
+    const now = this.now(), reset = new Date(now.getTime()+windowSec*1000).toISOString();
+    const rows = await this.rows<{ body: { count: number; resetAt: string } }>(`INSERT INTO rate_limits(id,body) VALUES($1,jsonb_build_object('count',1,'resetAt',$3::text))
+      ON CONFLICT(id) DO UPDATE SET body=CASE WHEN rate_limits.body->>'resetAt'>$2 THEN jsonb_set(rate_limits.body,'{count}',to_jsonb((rate_limits.body->>'count')::int+1)) ELSE excluded.body END RETURNING body`, [key, now.toISOString(), reset]);
+    this.options.afterWrite?.('rate_limits'); return rows[0].body;
   }
-  async rateLimitReset(key: string) { await this.exclusive(() => this.remove('rate_limits', key)); }
+  async rateLimitReset(key: string) { keyPart(key); await this.remove('rate_limits', key); }
+  async setScheduleError(error: { at: string } | null): Promise<void> {
+    const rows = error
+      ? await this.rows("INSERT INTO meta(id,body) VALUES('schedule-error',$1::jsonb) ON CONFLICT(id) DO UPDATE SET body=excluded.body WHERE meta.body='null'::jsonb RETURNING id", [JSON.stringify(error)])
+      : await this.rows("UPDATE meta SET body='null'::jsonb WHERE id='schedule-error' AND body IS DISTINCT FROM 'null'::jsonb RETURNING id");
+    if (rows.length) this.options.afterWrite?.('meta');
+  }
   async getMeta(key: string) { return this.read('meta', key); }
   async setMeta(key: string, value: unknown) {
     if (key === 'pending-mutation' || key === 'pending-publish') throw new Error('Reserved transaction metadata key');
-    await this.exclusive(() => this.write('meta', key, value));
+    await this.write('meta', key, value);
   }
 }

@@ -7,7 +7,7 @@ import { allDocs, pending, publishDocuments, title, commitSnapshot, type Item } 
 import { diff } from '../../content/diff.js';
 import { scheduleDocuments, settleSchedules } from '../../content/schedule.js';
 import { findRevision, restoreRevision, restoreSite, compareSite } from '../../content/restore.js';
-import { health } from '../../content/health.js';
+import { cachedHealth } from '../../content/health.js';
 import { search } from '../../content/search.js';
 import { checkLinks } from '../../content/links.js';
 import { audit } from '../../audit.js';
@@ -86,9 +86,22 @@ export function contentRoutes(app: Hono<AdminEnv>) {
   });
   app.post('/api/admin/rebuild', requirePermission('content.publish'), async c => c.json(await commitSnapshot(c.get('store'), await c.get('store').capturePublication(), [], actor(c), c.get('now'), { kind: 'rebuild' })));
   app.get('/api/admin/search', requirePermission('content.read'), async c => c.json({ results: await search(c.get('store'), c.req.query('q') ?? '') }));
+  app.get('/api/admin/counts', requirePermission('content.read'), async c => c.json(c.get('counts') ?? await c.get('store').adminCounts()));
   app.get('/api/admin/dashboard', requirePermission('content.read'), async c => {
-    const docs = await allDocs(c.get('store'));
-    return c.json({ counts: Object.fromEntries([...collectionNames.map(name => [name, docs.filter(d => d.collection === name && !d.trashedAt).length]), ['pages', collectionNames.filter(name => collections[name].kind === 'singleton' && !['site', 'storeSettings'].includes(name)).length]]), pendingCount: pending(docs).length, reviewCount: docs.filter(d => d.reviewRequestedBy).length, scheduled: (await c.get('store').getSnapshot())?.scheduled ?? [], linkChecks: await c.get('store').getMeta('link-checks'), health: await health(c.get('store'), c.get('now'), c.get('config').tzName, c.get('user')), recent: can(c.get('user'), 'audit.read') ? (await c.get('store').queryAudit({ limit: 15 })).items : [], titles: docs.map(d => ({ id: d.id, title: title(d) })) });
+    const section = c.req.query('section');
+    if (section && !['counts', 'activity', 'health'].includes(section)) throw new ApiError(422, 'validation', 'Invalid dashboard section');
+    const store = c.get('store');
+    const counts = async () => ({ ...await store.adminCounts(), scheduled: (await store.getSnapshot())?.scheduled ?? [] });
+    const activity = async () => ({ recent: can(c.get('user'), 'audit.read') ? (await store.queryAudit({ limit: 15 })).items : [] });
+    const health = async () => {
+      const [issues, linkChecks] = await Promise.all([cachedHealth(store, c.get('now'), c.get('config').tzName, c.get('user')), store.getMeta('link-checks')]);
+      return { health: issues, linkChecks };
+    };
+    if (section === 'counts') return c.json(await counts());
+    if (section === 'activity') return c.json(await activity());
+    if (section === 'health') return c.json(await health());
+    const [a,b,d,docs] = await Promise.all([counts(), activity(), health(), allDocs(store)]);
+    return c.json({ ...a, ...b, ...d, titles: docs.map(doc => ({ id: doc.id, title: title(doc) })) });
   });
   app.get('/api/admin/export/content', requirePermission('site.export'), async c => {
     c.header('Content-Disposition', 'attachment; filename="content.json"'); return c.json({ docs: await allDocs(c.get('store')), snapshot: await c.get('store').getSnapshot() });

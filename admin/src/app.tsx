@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { LocationProvider, Router, Route, useLocation } from 'preact-iso';
-import { api, session, setSession, type Session } from './api.js';
+import { loadSession, session } from './api.js';
 import { navigationGuard } from './state/autosave.js';
 import { toast } from './state/toasts.js';
 import { Shell } from './components/Shell.js';
@@ -12,6 +12,7 @@ import { CollectionList } from './routes/CollectionList.js';
 import { DocEditor } from './routes/DocEditor.js';
 import { Login } from './routes/Login.js';
 import { collections, type CollectionName } from '../../shared/schema.js';
+import { prefetchRoute } from './state/prefetch.js';
 import { contentChanged } from './state/content.js';
 import { PageEditor } from './routes/PageEditor.js';
 import { Pages } from './routes/Pages.js';
@@ -25,7 +26,12 @@ function Workspace() {
   const [loading, setLoading] = useState(true), [publish, setPublish] = useState<string[] | null>(null), [refresh, setRefresh] = useState(0), [leave, setLeave] = useState<string | null>(null);
   const [publishMode, setPublishMode] = useState<PublishMode>('publish');
   function openPublish(ids: string[] = [], mode: PublishMode = 'publish') { setPublishMode(mode); setPublish(ids); }
-  useEffect(() => { api<Session>('/auth/me').then(setSession).catch(() => setSession(null)).finally(() => setLoading(false)); }, []);
+  useEffect(() => { prefetchRoute(location.href); void loadSession().finally(() => setLoading(false)); }, []);
+  useEffect(() => {
+    const prefetch = (event: Event) => { const link = (event.target as Element).closest<HTMLAnchorElement>('a[href]'); if (link) prefetchRoute(link.href); };
+    document.addEventListener('pointerover', prefetch); document.addEventListener('focusin', prefetch);
+    return () => { document.removeEventListener('pointerover', prefetch); document.removeEventListener('focusin', prefetch); };
+  }, []);
   useEffect(() => {
     if (loading) return;
     if (!session.value && path !== '/admin/login') route('/admin/login', true);

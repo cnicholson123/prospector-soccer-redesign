@@ -11,7 +11,7 @@ import { references } from './references.js';
 import { documentTitle as title } from './documents.js';
 export { documentTitle as title } from './documents.js';
 export interface Item { collection: CollectionName; id: string; expectedVersion: number }
-export const allDocs = async (store: Store) => (await Promise.all(collectionNames.map(c => store.listDocs(c, { includeTrashed: true })))).flat();
+export const allDocs = (store: Store) => store.listAllDocs();
 export const pending = (docs: Doc[]) => docs.filter(doc => doc.trashedAt ? doc.published !== undefined : doc.published === undefined || !isDeepStrictEqual(doc.draft, doc.published) || doc.version !== doc.publishedVersion);
 export function select(docs: Doc[], items: Item[]) {
   const seen = new Set<string>();

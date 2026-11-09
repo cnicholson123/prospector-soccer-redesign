@@ -50,6 +50,7 @@ const server = createServer(async (req, res) => {
     else response = await renderPublic(request);
     response ??= new Response('Not found', { status: 404 });
     if ((url.pathname === '/admin' || url.pathname.startsWith('/admin/')) && !url.pathname.startsWith('/admin/assets/')) response.headers.set('Cache-Control', 'no-store');
+    if (built && url.pathname.startsWith('/admin/assets/') && response.ok && !response.headers.get('content-type')?.includes('text/html')) response.headers.set('Cache-Control', 'public, max-age=31536000, immutable');
     res.writeHead(response.status, Object.fromEntries(response.headers));
     if (method === 'HEAD' || !response.body) { res.end(); return; }
     const reader = response.body.getReader();

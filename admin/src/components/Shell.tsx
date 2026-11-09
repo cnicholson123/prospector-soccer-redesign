@@ -17,7 +17,7 @@ export function Shell({ children, publish, refresh }: { children: ComponentChild
     catch (error) { notify(message(error)); } finally { setBusy(false); }
   }
   const [menu, setMenu] = useState(false), [counts, setCounts] = useState<Record<string, number>>({});
-  useEffect(() => { api<{ counts: Record<string, number> }>('/dashboard').then(data => setCounts(data.counts)).catch(() => {}); }, [refresh]);
+  useEffect(() => { api<{ counts: Record<string, number> }>('/counts').then(data => setCounts(data.counts)).catch(() => {}); }, [refresh]);
   useEffect(() => { setMenu(false); }, [path]);
   const groups = [
     { label: 'Content', links: [['Pages', '/admin/pages', 'book', 'pages'], ['Home page', '/admin/pages/home', 'book', 'home'], ['Events', '/admin/events', 'calendar', 'events'], ['Callouts & announcements', '/admin/callouts', 'calendar', 'callouts']] },

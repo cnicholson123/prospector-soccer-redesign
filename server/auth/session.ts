@@ -17,15 +17,15 @@ export async function readSession(store: Store, request: Request, now = new Date
   const name = production ? '__Host-psc_session' : 'psc_session';
   const token = (request.headers.get('cookie') ?? '').split(';').map(value => value.trim()).find(value => value.startsWith(name + '='))?.slice(name.length + 1);
   if (!token || !/^[A-Za-z0-9_-]{43}$/.test(token)) return null;
-  const session = await store.getSession(tokenHash(token));
-  if (!session) return null;
-  const user = await store.getUser(session.userId);
+  const context = await store.getSessionContext(tokenHash(token), new URL(request.url).pathname === '/api/admin/counts');
+  if (!context) return null;
+  const { session, user, scheduleVersion, nextDueAt, counts } = context;
   if (!user?.active || (session.authVersion ?? 0) !== (user.authVersion ?? 0) || Date.parse(session.expiresAt) <= now.getTime() || Date.parse(session.createdAt) + 30 * DAY <= now.getTime()) {
-    await store.deleteSession(session.hash); return null;
+    return null; // Expired/revoked rows are removed by login/cron GC, never by a read.
   }
-  if (now.getTime() - Date.parse(session.lastSeenAt) >= 3600000) {
+  if (now.getTime() - Date.parse(session.lastSeenAt) >= 900000) {
     const result = await store.refreshSession(session.hash, now.toISOString());
-    return result ? { user, session: result.session, token, refreshed: result.refreshed } : null;
+    return result ? { user, session: result.session, token, refreshed: result.refreshed, scheduleVersion, nextDueAt, counts } : null;
   }
-  return { user, session, token, refreshed: false };
+  return { user, session, token, refreshed: false, scheduleVersion, nextDueAt, counts };
 }

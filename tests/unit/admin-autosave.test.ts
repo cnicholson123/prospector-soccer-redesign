@@ -1,12 +1,13 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { EditorState } from '../../admin/src/state/autosave.js';
 import type { EventDoc } from '../../admin/src/state/autosave.js';
-import { session } from '../../admin/src/api.js';
+import { session, invalidateCache } from '../../admin/src/api.js';
 import { eventDiff } from '../../admin/src/components/DiffView.js';
 const original: EventDoc = { id: 'evt_sample', collection: 'events', draft: { title: 'Original', date: '2099-01-01', showOnHome: true }, version: 1, status: 'draft', createdAt: '', createdBy: 'a', updatedAt: '', updatedBy: 'a' };
 let storage: Map<string, string>;
 const reply = (value: unknown, status = 200) => new Response(JSON.stringify(value), { status, headers: { 'Content-Type': 'application/json' } });
 beforeEach(() => {
+  invalidateCache();
   storage = new Map();
   vi.stubGlobal('localStorage', { getItem: (key: string) => storage.get(key) ?? null, setItem: (key: string, value: string) => storage.set(key, value), removeItem: (key: string) => storage.delete(key) });
   session.value = { user: { id: 'usr_test' } as never, csrfToken: 'csrf', permissions: ['content.edit'], passwordWeak: false };

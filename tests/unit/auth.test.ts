@@ -46,15 +46,15 @@ describe('bootstrap, sessions and CSRF', () => {
     const users = await f.store.listUsers(); expect(users).toHaveLength(1); expect(users[0].role).toBe('Owner');
     expect((await f.store.queryAudit({ action: 'system.bootstrap', limit: 100 })).items).toHaveLength(1);
   });
-  it('hashes session IDs, refreshes at most hourly and enforces absolute expiry', async () => {
+  it('hashes session IDs, refreshes at most every fifteen minutes and enforces absolute expiry', async () => {
     const f = await fixture(); await bootstrap(f.store, f.config); const u = (await f.store.listUsers())[0];
     const now = new Date('2030-01-01T00:00:00Z'), { token, session } = await newSession(f.store, u, {}, now);
     expect(session.hash).not.toBe(token); expect(session.hash).toHaveLength(64);
     expect(cookie(token, { ...f.config, cookieSecure: true })).toContain('HttpOnly; SameSite=Lax');
     expect(cookie(token, { ...f.config, cookieSecure: true })).toContain('Secure');
     const request = new Request('http://localhost/?preview=1', { headers: { cookie: 'psc_session=' + token } });
-    expect((await readSession(f.store, request, new Date(now.getTime() + 1000)))?.refreshed).toBe(false);
-    const refreshed = await Promise.all(Array.from({ length: 5 }, () => readSession(f.store, request, new Date(now.getTime() + 3600000))));
+    expect((await readSession(f.store, request, new Date(now.getTime() + 899999)))?.refreshed).toBe(false);
+    const refreshed = await Promise.all(Array.from({ length: 5 }, () => readSession(f.store, request, new Date(now.getTime() + 900000))));
     expect(refreshed.filter(result => result?.refreshed)).toHaveLength(1);
     for (let day = 1; day < 30; day++) expect(await readSession(f.store, request, new Date(now.getTime() + day * DAY))).not.toBeNull();
     expect(await readSession(f.store, request, new Date(now.getTime() + 30 * DAY))).toBeNull();

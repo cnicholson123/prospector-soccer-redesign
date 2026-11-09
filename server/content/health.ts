@@ -8,7 +8,7 @@ import type { Store } from '../store/types.js';
 export function isNonContentMedia(data: Record<string, unknown>): boolean {
   return data.source === 'static' && /^(?:favicon(?:[-.].*)?|apple-touch-icon(?:[-.].*)?|touch-icon(?:[-.].*)?|crest(?:[-.].*)?)$/i.test(String(data.filename ?? ''));
 }
-export async function health(store: Store, now = new Date(), timeZone = 'America/Los_Angeles', viewer?: User) {
+export async function health(store: Store, now = new Date(), timeZone = 'America/Los_Angeles', viewer?: User, contentOnly = false) {
   const docs = await allDocs(store), issues: { code: string; message: string; collection?: string; id?: string; path?: string; href: string }[] = [];
   const day = new Intl.DateTimeFormat('en-CA', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(now);
   for (const doc of docs.filter(d => !d.trashedAt)) {
@@ -19,7 +19,19 @@ export async function health(store: Store, now = new Date(), timeZone = 'America
       if (!docs.some(d => d.collection === ref.collection && d.id === ref.id && !d.trashedAt)) issues.push({ code: 'broken_reference', message: `Broken reference: ${title(doc)} (${state})`, collection: doc.collection, id: doc.id, path: ref.path, href });
     }
   }
-  if ((await store.listUsers()).some(u => u.active && u.role === 'Owner' && u.passwordWeak !== false && (!viewer || can(viewer, 'users.manage') || viewer.id === u.id))) issues.push({ code: 'weak_owner_password', message: 'Owner password is weak', href: '/admin/profile#password' });
-  if (await store.getMeta('schedule-error')) issues.push({ code: 'schedule_failed', message: 'Scheduled publication failed. Review or cancel the schedule.', href: '/admin/history' });
+  if (!contentOnly && (await store.listUsers()).some(u => u.active && u.role === 'Owner' && u.passwordWeak !== false && (!viewer || can(viewer, 'users.manage') || viewer.id === u.id))) issues.push({ code: 'weak_owner_password', message: 'Owner password is weak', href: '/admin/profile#password' });
+  if (!contentOnly && await store.getMeta('schedule-error')) issues.push({ code: 'schedule_failed', message: 'Scheduled publication failed. Review or cancel the schedule.', href: '/admin/history' });
+  return issues;
+}
+
+export async function cachedHealth(store: Store, now: Date, timeZone: string, viewer: User) {
+  type Cache = { at: string; timeZone: string; generation: unknown; issues: Awaited<ReturnType<typeof health>> };
+  const [raw, users, scheduleError, generation] = await Promise.all([store.getMeta('health-cache'), store.listUsers(), store.getMeta('schedule-error'), store.getMeta('health-generation')]);
+  const cached = raw as Cache | null;
+  const valid = cached && cached.generation === generation && cached.timeZone === timeZone && Date.parse(cached.at) <= now.getTime() && now.getTime() - Date.parse(cached.at) < 300000;
+  const issues = valid ? [...cached.issues] : await health(store, now, timeZone, undefined, true);
+  if (!valid) await store.setMeta('health-cache', { at: now.toISOString(), timeZone, generation, issues });
+  if (users.some(u => u.active && u.role === 'Owner' && u.passwordWeak !== false && (can(viewer, 'users.manage') || viewer.id === u.id))) issues.push({ code: 'weak_owner_password', message: 'Owner password is weak', href: '/admin/profile#password' });
+  if (scheduleError) issues.push({ code: 'schedule_failed', message: 'Scheduled publication failed. Review or cancel the schedule.', href: '/admin/history' });
   return issues;
 }

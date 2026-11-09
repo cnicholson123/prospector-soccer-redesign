@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import { collections, type CollectionName } from '../../../shared/schema.js';
-import { api, allowed } from '../api.js';
+import { api, cachedApi, peek, allowed } from '../api.js';
 import { changed, docTitle, editorPath, getPath, moveItem, record, type ContentDoc } from '../state/content.js';
 import { notify } from '../state/toasts.js';
 import { Icon } from '../components/Icon.js';
@@ -10,11 +10,26 @@ import { Preview } from '../components/Preview.js';
 import { Failure, actionFailure, trashDoc, type ActionFailure } from '../components/ContentActions.js';
 export function CollectionList({ collection = 'events', refresh, publish }: { collection?: CollectionName; refresh: number; publish: (ids?: string[]) => void }) {
   const definition = collections[collection];
-  const [mediaDocs, setMediaDocs] = useState<ContentDoc[]>([]), [docs, setDocs] = useState<ContentDoc[]>([]), [query, setQuery] = useState(''), [status, setStatus] = useState(''), [filter, setFilter] = useState(''), [sort, setSort] = useState(definition.orderable ? 'order' : 'date'), [trash, setTrash] = useState(false);
-  const [failure, setFailure] = useState<ActionFailure | null>(null), [loading, setLoading] = useState(true), [busy, setBusy] = useState(false), [selected, setSelected] = useState<string[]>([]), [confirm, setConfirm] = useState<ContentDoc[] | null>(null), [preview, setPreview] = useState<ContentDoc | null>(null);
-  async function load() { try { setDocs((await api<{ docs: ContentDoc[] }>(`/docs/${collection}?trashed=1`)).docs); } catch (e) { setFailure(actionFailure(e)); } finally { setLoading(false); } }
+  const [mediaDocs, setMediaDocs] = useState<ContentDoc[]>([]), [docs, setDocs] = useState<ContentDoc[]>(() => peek<{ docs: ContentDoc[] }>(`/docs/${collection}?trashed=1`)?.docs ?? []), [query, setQuery] = useState(''), [status, setStatus] = useState(''), [filter, setFilter] = useState(''), [sort, setSort] = useState(definition.orderable ? 'order' : 'date'), [trash, setTrash] = useState(false);
+  const [failure, setFailure] = useState<ActionFailure | null>(null), [loading, setLoading] = useState(!peek(`/docs/${collection}?trashed=1`)), [busy, setBusy] = useState(false), [selected, setSelected] = useState<string[]>([]), [confirm, setConfirm] = useState<ContentDoc[] | null>(null), [preview, setPreview] = useState<ContentDoc | null>(null);
+  const generation = useRef(0);
+  async function load() {
+    const current = ++generation.current;
+    const update = (value: { docs: ContentDoc[] }) => { if (current === generation.current) setDocs(value.docs); };
+    try { update(await cachedApi<{ docs: ContentDoc[] }>(`/docs/${collection}?trashed=1`, update)); }
+    catch (e) { if (current === generation.current) setFailure(actionFailure(e)); }
+    finally { if (current === generation.current) setLoading(false); }
+  }
   useEffect(() => { if (collection === 'sponsors') void api<{ docs: ContentDoc[] }>('/docs/media').then(r => setMediaDocs(r.docs)).catch(e => setFailure(actionFailure(e))); }, [collection]);
-  useEffect(() => { void load(); }, [collection, refresh]);
+  // A failure belongs to the collection it happened in; a background refresh
+  // (e.g. the one a refused trash triggers) must not erase the explanation.
+  useEffect(() => { setFailure(null); }, [collection]);
+  useEffect(() => {
+    const saved = peek<{ docs: ContentDoc[] }>(`/docs/${collection}?trashed=1`);
+    setDocs(saved?.docs ?? []); setLoading(!saved);
+    void load();
+    return () => { generation.current++; };
+  }, [collection, refresh]);
   const active = docs.filter(d => !d.trashedAt), trashed = docs.filter(d => d.trashedAt), base = trash ? trashed : active;
   const filterEntry = Object.entries(definition.fields).find(([key, field]) => field.type === 'select' && ['type', 'category', 'page', 'level', 'program'].includes(key));
   const filterField = filterEntry?.[1];
