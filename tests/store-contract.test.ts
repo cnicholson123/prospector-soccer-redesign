@@ -1,3 +1,4 @@
+import { postgresFixture } from './helpers/postgres';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
@@ -31,7 +32,7 @@ export function storeContract(name: string, setup: () => Promise<{ store: Store;
   describe(name, () => {
     let store: Store; let reopen: () => Store; let cleanup: () => Promise<void>; let advance: (ms: number) => void;
     beforeEach(async () => { ({ store, reopen, cleanup, advance } = await setup()); });
-    afterEach(async () => { await cleanup(); });
+    afterEach(async () => { await cleanup?.(); });
     it('creates with history and audit, orders, trashes and persists documents', async () => {
       const first = creation(doc('evt_b', 2));
       await store.createDoc(first); await store.createDoc(creation(doc('evt_a', 1)));
@@ -140,6 +141,33 @@ export function storeContract(name: string, setup: () => Promise<{ store: Store;
       expect(hits.map(hit => hit.count).sort((a, b) => a - b)).toEqual(Array.from({ length: 12 }, (_, i) => i + 1));
       advance(60_000); expect((await store.rateLimitHit('login:127.0.0.1', 60)).count).toBe(1);
       await store.rateLimitReset('login:127.0.0.1'); expect((await store.rateLimitHit('login:127.0.0.1', 60)).count).toBe(1);
+    });
+    it('serializes maintenance claims, session refresh and account bookkeeping', async () => {
+      expect((await Promise.all([store.claimMaintenance('gc', 3600000, at), reopen().claimMaintenance('gc', 3600000, at)])).filter(Boolean)).toHaveLength(1);
+      expect(await store.claimMaintenance('gc', 3600000, '2026-11-09T19:00:00.000Z')).toBe(true);
+      expect((await Promise.all([store.bootstrapOwner(user(),audit()),reopen().bootstrapOwner(user('other','Other'),audit())])).filter(Boolean)).toHaveLength(1);
+      const owner=(await store.listUsers())[0];
+      expect(await store.recordLogin(owner.id,'wrong',false,audit())).toBeNull();
+      const logged=await store.recordLogin(owner.id,owner.passwordHash,true,audit());expect(logged?.passwordWeak).toBe(true);
+      const changed=await store.changePassword(owner.id,owner.passwordHash,'new-hash',audit());expect(changed?.authVersion).toBe(1);
+      expect(await store.changePassword(owner.id,owner.passwordHash,'stale',audit())).toBeNull();
+      const session={hash:'refresh',userId:owner.id,createdAt:at,lastSeenAt:at,expiresAt:'2026-11-20T00:00:00.000Z',csrfToken:'csrf'};
+      await store.putSession(session);
+      const refreshes=await Promise.all([store.refreshSession('refresh','2026-11-09T19:00:00.000Z'),reopen().refreshSession('refresh','2026-11-09T19:00:00.000Z')]);
+      expect(refreshes.filter(s=>s?.refreshed)).toHaveLength(1);
+      const failures=await Promise.all(Array.from({length:5},()=>reopen().loginFailure('username',at)));
+      expect(failures.some(f=>f.locks===1&&f.until==='2026-11-09T18:15:00.000Z')).toBe(true);
+      await expect(store.changeUser({...changed!,active:false},owner.id,audit(),changed!)).rejects.toThrow('last active Owner');
+    });
+    it('reorders siblings atomically and seals working revisions without changing their data', async () => {
+      const first=creation(doc('evt_a',0)),second=creation(doc('evt_b',1));await store.createDoc(first);await store.createDoc(second);
+      const request:DocMutation={collection:'events',id:'evt_a',expectedVersion:1,patch:{order:1},guardVersions:[{id:'evt_b',expectedVersion:2}],relatedOrder:[{id:'evt_b',expectedVersion:1,order:0}],audit:audit()};
+      expect(await store.mutateDoc(request)).toBe('conflict');expect((await store.getDoc('events','evt_a'))?.version).toBe(1);
+      request.guardVersions=[{id:'evt_b',expectedVersion:1}];await store.mutateDoc(request);
+      expect((await store.listDocs('events')).map(d=>[d.id,d.version])).toEqual([['evt_b',2],['evt_a',2]]);
+      await store.sealWorkingRevisions('usr_a',at,audit());
+      expect((await store.getRevision('evt_a',first.revision.id))?.sealedAt).toBeDefined();
+      expect((await store.getRevision('evt_b',second.revision.id))?.data).toEqual(second.doc.draft);
     });
     it('round-trips JSON metadata', async () => {
       expect(await store.getMeta('missing')).toBeNull(); await store.setMeta('link/check', { ok: [true, 2] });
@@ -263,7 +291,7 @@ describe('KV failure recovery, compatibility and bounded reads', () => {
     const config = loadConfig({ STORE_DRIVER: 'fs', DATA_DIR: root }, () => undefined);
     expect(createStore(config)).toBeInstanceOf(KvStore);
     expect(() => loadConfig({ STORE_DRIVER: 'blob' })).toThrow('fs | postgres');
-    expect(() => createStore({ ...config, storeDriver: 'postgres' })).toThrow('Phase 6');
+    expect(() => createStore({ ...config, storeDriver: 'postgres' })).toThrow('DATABASE_URL');
   });
 });
 describe('Filesystem primitives and media', () => {
@@ -298,9 +326,13 @@ describe('Filesystem primitives and media', () => {
     await expect(blobs.put('../escape', bytes, { contentType: 'image/jpeg' })).rejects.toThrow();
   });
 });
-// Hosted implementations belong to Phase 6. Never pretend an FS run tested a service.
-for (const [name, env] of [['Neon', 'DATABASE_URL'], ['Blob', 'BLOB_READ_WRITE_TOKEN']] as const) {
-  const reason = process.env[env] ? 'not run (adapter scheduled for Phase 6)' : 'not run (no env)';
-  console.info(`${name} contract tests: ${reason}`);
-  it.skip(`${name} contract tests: ${reason}`, () => {});
+if (process.env.DATABASE_URL) {
+  storeContract('Store contract: Postgres', async () => {
+    let now = Date.parse(at);
+    const fixture = await postgresFixture({ now: () => new Date(now) });
+    return { ...fixture, advance: ms => { now += ms; } };
+  });
+} else {
+  console.info('Postgres contract tests: not run (no env)');
+  it.skip('Postgres contract tests: not run (no env)', () => {});
 }

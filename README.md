@@ -35,7 +35,7 @@ npm run check-facts
 npm run start
 ```
 
-`npm run start` seeds an empty `DATA_DIR` and serves the built app on localhost:3000. `npm run dev` also starts Vite on localhost:5173. See `.env.example` for configuration. Production requires explicitly configured bootstrap credentials and a session secret. Metadata drivers are `fs` and `postgres`, with the Postgres implementation scheduled for Phase 6. Blob storage is reserved for media.
+`npm run start` seeds an empty `DATA_DIR` and serves the built app on localhost:3000. `npm run dev` also starts Vite on localhost:5173. See `.env.example` for configuration. Production requires explicitly configured bootstrap credentials and a session secret. Metadata drivers are `fs` and `postgres`, with Postgres implemented in Phase 6. Private Blob storage is reserved for verified media binaries. See [README-deploy.md](README-deploy.md) for setup, migrations, bootstrap, security and rollback.
 
 Both Vercel entrypoints default-export an object with a Web-standard `fetch(Request)` method. `api/render.ts` delegates to `renderPublic` and `api/admin.ts` delegates to the Hono app. Local tests dispatch through this same object shape.
 
@@ -58,6 +58,6 @@ Write contracts intentionally require the version the editor saw:
 
 Schedules freeze the selected draft and order. Public renders apply due schedules before cron settlement, and disable SWR around the next due boundary. Settlement retains later draft edits and records `effectiveAt`. `GET` (Vercel cron) and `POST /api/admin/cron/settle` require `Authorization: Bearer <CRON_SECRET>`; Editor+ requests also settle due items. Canceling, unpublishing, restoring and rebuilding all create kind-tagged site records through `Store.publish`. Interrupted transactions recover through `Store.recoverPublish`.
 
-The FS adapter additionally serializes account changes, bootstrap, maintenance claims and lockout counters. `mutateDoc` has `relatedOrder` and `guardVersions` metadata options so multi-item reorder uses its existing durable journal. `publishedOrder` retains the live order until the reordered document is explicitly published. Phase 6's Postgres adapter must implement these additions to the Store contract.
+The FS adapter additionally serializes account changes, bootstrap, maintenance claims and lockout counters. `mutateDoc` has `relatedOrder` and `guardVersions` metadata options so multi-item reorder uses its existing durable journal. `publishedOrder` retains the live order until the reordered document is explicitly published. The Postgres adapter implements the same contract with SQL transactions and cross-instance serialization.
 
 `npm run test:e2e -- --list` lists the browser specs without launching Chrome. Browser execution is not supported inside the Codex sandbox; run `npm run test:e2e` outside it. The Phase 4/5 spec tests API authentication plus responsive preview at 390 and 1280 pixels. The full keyboard/login/editor flow belongs to Phase 7a.

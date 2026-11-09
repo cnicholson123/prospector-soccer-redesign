@@ -1,7 +1,8 @@
+import { mediaCallbacks, mediaRoutes } from './routes/media';
 import { Hono } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
-import { createStore } from '../store';
-import type { Store } from '../store/types';
+import { createMediaBlobs, createStore } from '../store';
+import type { MediaStorage, Store } from '../store/types';
 import { loadConfig, type Config } from '../config';
 import { bootstrap } from '../auth/bootstrap';
 import { authenticate, type AdminEnv } from './middleware/auth';
@@ -13,9 +14,10 @@ import { docRoutes } from './routes/docs';
 import { contentRoutes, cronRoutes } from './routes/content';
 import { audit } from '../audit';
 
-export function createAdminApp(storeFactory: () => Store = createStore, options: { config?: Config; now?: () => Date } = {}) {
+export function createAdminApp(storeFactory: () => Store = createStore, options: { config?: Config; now?: () => Date; media?: MediaStorage } = {}) {
   const app = new Hono<AdminEnv>();
   let needsRecovery = true, store: Store | undefined, config = options.config;
+  let blobs = options.media;
   let initializing: Promise<unknown> | undefined;
   app.use('/api/admin/*', async (c, next) => {
     c.header('Cache-Control', 'no-store'); c.header('X-Content-Type-Options', 'nosniff');
@@ -25,10 +27,14 @@ export function createAdminApp(storeFactory: () => Store = createStore, options:
     }
     await next();
   });
-  app.use('/api/admin/*', bodyLimit({ maxSize: 1024 * 1024, onError: c => c.json({ error: { code: 'payload_too_large', message: 'JSON body exceeds 1 MB' } }, 413) }));
+  app.use('/api/admin/*', async (c, next) => {
+    const maxSize = c.req.path === '/api/admin/media/local-upload' ? (config ?? loadConfig()).maxFileBytes : 1024 * 1024;
+    return bodyLimit({ maxSize, onError: c => c.json({ error: { code: 'payload_too_large', message: 'Request exceeds size limit' } }, 413) })(c, next);
+  });
   app.get('/api/admin/healthz', c => c.json({ ok: true }));
   app.use('/api/admin/*', async (c, next) => {
     config ??= loadConfig(); store ??= storeFactory();
+    if (c.req.path.startsWith('/api/admin/media') || c.req.path.startsWith('/api/admin/cron')) { blobs ??= createMediaBlobs(config, store); c.set('blobs', blobs); }
     c.set('config', config); c.set('store', store); c.set('now', options.now?.() ?? new Date());
     if (!initializing) initializing = bootstrap(store, config, c.get('now')).catch(error => { initializing = undefined; throw error; });
     await initializing;
@@ -39,13 +45,22 @@ export function createAdminApp(storeFactory: () => Store = createStore, options:
     await next();
     if (c.res.status >= 500) needsRecovery = true;
   });
+  mediaCallbacks(app);
   authRoutes(app);
   cronRoutes(app);
-  for (const path of ['docs', 'users', 'audit', 'publish', 'unpublish', 'schedule', 'pending', 'revisions', 'publishes', 'dashboard', 'search', 'health', 'export', 'rebuild']) {
+  for (const path of ['media', 'docs', 'users', 'audit', 'publish', 'unpublish', 'schedule', 'pending', 'revisions', 'publishes', 'dashboard', 'search', 'health', 'export', 'rebuild']) {
     app.use(`/api/admin/${path}`, authenticate);
     app.use(`/api/admin/${path}/*`, authenticate);
   }
-  userRoutes(app); auditRoutes(app); docRoutes(app); contentRoutes(app);
+  app.use('/api/admin/docs/media', async (c, next) => {
+    if (!['GET','HEAD'].includes(c.req.method)) throw new ApiError(403,'forbidden','Use the verified media upload routes');
+    await next();
+  });
+  app.use('/api/admin/docs/media/*', async (c, next) => {
+    if (!['GET','HEAD'].includes(c.req.method)) throw new ApiError(403,'forbidden','Use the media routes');
+    await next();
+  });
+  mediaRoutes(app); userRoutes(app); auditRoutes(app); docRoutes(app); contentRoutes(app);
   app.onError((error, c) => {
     if (error instanceof ApiError) {
       if (error.retryAfter) c.header('Retry-After', String(error.retryAfter));

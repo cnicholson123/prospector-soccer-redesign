@@ -1,3 +1,4 @@
+import { collectIncoming } from '../../media';
 import type { Hono } from 'hono';
 import { timingSafeEqual } from 'node:crypto';
 import { collectionNames, type CollectionName } from '../../../shared/schema';
@@ -111,6 +112,7 @@ export function cronRoutes(app: Hono<AdminEnv>) {
     const secret = c.get('config').cronSecret, authorization = c.req.header('authorization') ?? '';
     const expected = `Bearer ${secret}`;
     if (!secret || authorization.length !== expected.length || !timingSafeEqual(Buffer.from(authorization), Buffer.from(expected))) throw new ApiError(401, 'unauthenticated', 'Invalid cron credential');
+    await collectIncoming(c.get('blobs'), c.get('now'));
     await c.get('store').deleteExpiredSessions(c.get('now').toISOString());
     return c.json(await settleSchedules(c.get('store'), c.get('now')));
   });

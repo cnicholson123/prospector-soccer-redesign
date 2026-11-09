@@ -1,6 +1,6 @@
 import type { Context, MiddlewareHandler } from 'hono';
 import type { Config } from '../../config';
-import type { Store } from '../../store/types';
+import type { MediaStorage, Store } from '../../store/types';
 import type { Session, User } from '../../../shared/types';
 import { readSession, cookie } from '../../auth/session';
 import { rateLimit } from '../../auth/ratelimit';
@@ -8,7 +8,7 @@ import { checkCsrf } from '../../auth/csrf';
 import { can } from '../../permissions';
 import { settleSchedules } from '../../content/schedule';
 import { ApiError } from './errors';
-export type AdminEnv = { Variables: { user: User; session: Session; store: Store; config: Config; now: Date } };
+export type AdminEnv = { Variables: { blobs: MediaStorage; user: User; session: Session; store: Store; config: Config; now: Date } };
 export type AdminContext = Context<AdminEnv>;
 export const actor = (c: AdminContext) => ({ id: c.get('user').id, displayName: c.get('user').displayName, ip: c.req.header('x-forwarded-for')?.split(',')[0].trim() ?? 'unknown', userAgent: c.req.header('user-agent') ?? '' });
 export const authenticate: MiddlewareHandler<AdminEnv> = async (c, next) => {

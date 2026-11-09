@@ -67,3 +67,11 @@ export interface KvPrimitives {
   delete(key: string): Promise<void>;
 }
 export type RunExclusive = <T>(operation: () => Promise<T>) => Promise<T>;
+
+export interface MediaStorage extends MediaBlobs {
+  url(path: string): string;
+  read(path: string): Promise<{ stream: ReadableStream<Uint8Array>; size: number; contentType: string } | null>;
+  /** Only incoming quarantine objects; verified assets have no binary GC. */
+  incoming(): Promise<{ path: string; uploadedAt: string }[]>;
+  clientUpload(request: Request, body: unknown, grant?: { path: string; mime: string; size: number; expires: number }): Promise<unknown>;
+}

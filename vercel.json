@@ -8,6 +8,7 @@
     { "source": "/:page.html", "destination": "/:page", "permanent": true }
   ],
   "rewrites": [
+    { "source": "/media/:path*", "destination": "/api/render?media=:path*" },
     { "source": "/api/admin/:path*", "destination": "/api/admin" },
     { "source": "/admin", "destination": "/admin/index.html" },
     { "source": "/admin/:path*", "destination": "/admin/index.html" },
@@ -22,7 +23,7 @@
       { "key": "Content-Security-Policy", "value": "frame-ancestors 'self'" }
     ] },
     { "source": "/admin/:path*", "headers": [
-      { "key": "Content-Security-Policy", "value": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://*.public.blob.vercel-storage.com; connect-src 'self' https://*.public.blob.vercel-storage.com; frame-src 'self'; frame-ancestors 'none'" }
+      { "key": "Content-Security-Policy", "value": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://*.public.blob.vercel-storage.com; connect-src 'self' https://vercel.com https://*.private.blob.vercel-storage.com https://*.public.blob.vercel-storage.com; frame-src 'self'; frame-ancestors 'none'" }
     ] },
     { "source": "/admin/((?!assets/).*)", "headers": [{ "key": "Cache-Control", "value": "no-store" }] },
     { "source": "/admin", "headers": [{ "key": "Cache-Control", "value": "no-store" }] }

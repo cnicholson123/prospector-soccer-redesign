@@ -1,4 +1,5 @@
-import { createStore } from '../server/store';
+import { serveMedia } from '../server/media';
+import { createMediaBlobs, createStore } from '../server/store';
 import { seedStore } from './seed';
 import { createServer } from 'node:http';
 import { once } from 'node:events';
@@ -31,7 +32,7 @@ const server = createServer(async (req, res) => {
     let size = 0;
     for await (const chunk of req) {
       const bytes = Buffer.from(chunk as Uint8Array); size += bytes.length;
-      if (size > (url.pathname.startsWith('/api/admin') ? 1024 * 1024 : config.maxFileBytes)) { res.writeHead(413); res.end('Request too large'); return; }
+      if (size > (url.pathname.startsWith('/api/admin') && url.pathname !== '/api/admin/media/local-upload' ? 1024 * 1024 : config.maxFileBytes)) { res.writeHead(413); res.end('Request too large'); return; }
       chunks.push(bytes);
     }
     const request = new Request(url, { method, headers, ...(method === 'GET' || method === 'HEAD' ? {} : { body: Buffer.concat(chunks) }) });
@@ -40,7 +41,8 @@ const server = createServer(async (req, res) => {
     else if (method !== 'GET' && method !== 'HEAD') response = new Response('Method not allowed', { status: 405 });
     else if (url.pathname === '/admin' || url.pathname.startsWith('/admin/')) {
       response = built ? await staticFile('public', url.pathname.slice(1)) ?? await staticFile('public/admin', 'index.html') : Response.redirect('http://localhost:5173' + url.pathname + url.search, 307);
-    } else if (url.pathname.startsWith('/blobs/')) response = await staticFile(join(config.dataDir, 'blobs'), decodeURIComponent(url.pathname.slice(7)));
+    } else if (url.pathname.startsWith('/media/') || url.pathname.startsWith('/blobs/media/')) response = await serveMedia(request, store, createMediaBlobs(config, store));
+    else if (url.pathname.startsWith('/blobs/')) response = await staticFile(join(config.dataDir, 'blobs'), decodeURIComponent(url.pathname.slice(7)));
     else if (url.pathname.startsWith('/assets/')) response = await staticFile('public', decodeURIComponent(url.pathname.slice(1)));
     else response = await renderPublic(request);
     response ??= new Response('Not found', { status: 404 });

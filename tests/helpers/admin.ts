@@ -1,3 +1,7 @@
+import { afterEach } from 'vitest';
+import { postgresFixture } from './postgres';
+const postgresCleanups: (()=>Promise<void>)[] = [];
+afterEach(async () => { for (const cleanup of postgresCleanups.splice(0)) await cleanup(); });
 import { mkdir, mkdtemp } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { loadConfig } from '../../server/config';
@@ -11,7 +15,9 @@ export async function adminFixture(seed = false) {
   const config = loadConfig({ DATA_DIR: root, SESSION_SECRET: 'x'.repeat(32), CRON_SECRET: 'test-cron' }, () => undefined);
   let time = new Date('2030-01-01T12:00:00Z');
   const primitives = new FsPrimitives(root);
-  const store = new KvStore(primitives, { exclusive: primitives.exclusive, now: () => time });
+  const pg = process.env.POSTGRES_HTTP_TESTS === '1' ? await postgresFixture({ now: () => time }) : undefined;
+  if (pg) postgresCleanups.push(pg.cleanup);
+  const store = pg?.store ?? new KvStore(primitives, { exclusive: primitives.exclusive, now: () => time });
   if (seed) await seedStore(store);
   const app = createAdminApp(() => store, { config, now: () => time });
   let cookie = '', csrf = '';
