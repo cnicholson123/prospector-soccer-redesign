@@ -103,6 +103,7 @@ export function createRenderHandler(store: Store, config: Config, now: () => Dat
     const scheduleNear = until <= config.cacheSmaxage + config.cacheSwr;
     const seconds = Math.min(cacheSeconds(view, config.cacheSmaxage), Math.max(0, Math.floor(until)));
     const responseHeaders = { ...headers, 'Content-Type': contentType, ETag: etag,
+      ...(url.searchParams.has('edit') ? { 'Content-Security-Policy': "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://*.public.blob.vercel-storage.com; connect-src 'self'; frame-ancestors 'self'; base-uri 'self'; form-action 'none'", 'X-Frame-Options': 'SAMEORIGIN' } : {}),
       'Cache-Control': preview ? 'no-store' : `public, max-age=0, s-maxage=${seconds}, stale-while-revalidate=${scheduleNear ? 0 : config.cacheSwr}` };
     if (!preview) tagContent();
     const matches = (request.headers.get('If-None-Match') ?? '').split(',').map(value => value.trim().replace(/^W\//, ''));

@@ -46,7 +46,7 @@ export async function commitSnapshot(store: Store, capture: { docs: Doc[]; snaps
     const changed = changes.some(d => d.id === doc.id && d.collection === doc.collection);
     if (changed) {
       for (const old of await store.listRevisions(doc.collection, doc.id, 1000)) if (!old.sealedAt) revisions.push({ ...old, sealedAt: now.toISOString() });
-      if (options.kind === 'schedule') revisions.push(revision(doc, actor, 'scheduled', now, { sealedAt: now.toISOString(), publishSiteVersion: siteVersion }));
+      if (options.kind === 'schedule') revisions.push(revision(doc, actor, 'scheduled', now, { sealedAt: now.toISOString(), publishSiteVersion: siteVersion, summary: options.summary }));
       else if (doc.published === undefined) revisions.push(revision(doc, actor, 'unpublished', now, { sealedAt: now.toISOString(), publishSiteVersion: siteVersion, summary: options.summary }));
     }
     if (doc.published === undefined) continue;

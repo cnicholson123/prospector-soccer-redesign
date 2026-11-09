@@ -1,0 +1,14 @@
+import { createRequire } from 'module';
+const require = createRequire('/opt/homebrew/lib/node_modules/');
+const { chromium } = require('playwright');
+const [src, out, shotDir] = process.argv.slice(2);
+const b = await chromium.launch({ channel: 'chrome' });
+const p = await b.newPage();
+await p.setViewportSize({ width: 816, height: 1056 });
+await p.goto('file://' + src, { waitUntil: 'networkidle' });
+await p.evaluate(() => document.fonts.ready);
+await p.pdf({ path: out, format: 'Letter', printBackground: true, preferCSSPageSize: true });
+const pages = await p.$$('.page');
+for (const i of [0, 1, 2, 7, pages.length - 2, pages.length - 1]) await pages[i].screenshot({ path: `${shotDir}/page-${i + 1}.png` });
+console.log('pages', pages.length);
+await b.close();

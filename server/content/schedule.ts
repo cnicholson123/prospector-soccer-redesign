@@ -3,7 +3,7 @@ import type { Actor } from '../audit.js';
 import { commitSnapshot, select, type Item } from './publish.js';
 import { validateFields } from './validate.js';
 import { ApiError } from '../http/middleware/errors.js';
-export async function scheduleDocuments(store: Store, items: Item[], at: string | null, actor: Actor, now: Date) {
+export async function scheduleDocuments(store: Store, items: Item[], at: string | null, actor: Actor, now: Date, summary?: string) {
   if (at !== null && (!validateFields({ at: { type: 'datetime', required: true } }, { at }).valid || Date.parse(at) <= now.getTime())) throw new ApiError(422, 'validation', 'Choose a future datetime with timezone');
   await store.recoverPublish();
   const capture = await store.capturePublication(), { docs, snapshot: current } = capture, selected = select(docs, items);
@@ -11,7 +11,7 @@ export async function scheduleDocuments(store: Store, items: Item[], at: string 
   const scheduled = (current?.scheduled ?? []).filter(s => !selected.some(d => d.collection === s.collection && d.id === s.id));
   if (at) scheduled.push(...selected.map(d => ({ collection: d.collection, id: d.id, at: new Date(at).toISOString(), data: structuredClone(d.draft), version: d.version + 1, order: d.order ?? 0 })));
   const changes = selected.map(d => ({ ...d, scheduledAt: at ?? undefined, status: at ? 'scheduled' as const : d.published === undefined ? 'draft' as const : d.publishedVersion === d.version ? 'published' as const : 'changed' as const }));
-  return commitSnapshot(store, capture, changes, actor, now, { kind: 'schedule', action: at ? 'content.schedule' : 'content.schedule_cancel', scheduled });
+  return commitSnapshot(store, capture, changes, actor, now, { kind: 'schedule', action: at ? 'content.schedule' : 'content.schedule_cancel', scheduled, summary });
 }
 export async function settleSchedules(store: Store, now: Date, actor: Actor = { id: 'system', displayName: 'Scheduler' }) {
   await store.recoverPublish();

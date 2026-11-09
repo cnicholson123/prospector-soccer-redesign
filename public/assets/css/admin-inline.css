@@ -1,0 +1,5 @@
+.admin-inline-enabled .admin-inline-field { cursor: text; }
+.admin-inline-enabled .admin-inline-field:hover, .admin-inline-enabled .admin-inline-field:focus-visible { outline: 2px dashed #F2B705; outline-offset: 4px; }
+.admin-inline-enabled .admin-inline-field.admin-inline-active { outline: 3px solid #F2B705; outline-offset: 5px; min-height: 1em; cursor: text; }
+.admin-inline-standalone { padding: 16px; background: #0B2A5B; color: #fff; text-align: center; font-family: Manrope, sans-serif; }
+.admin-inline-standalone a { color: #F2B705; }

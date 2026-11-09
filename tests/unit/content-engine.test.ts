@@ -15,6 +15,9 @@ async function fixture() { const f = await adminFixture(true); roots.push(f.root
 const event = (title: string) => ({ title, date: '2030-01-03', showOnHome: true });
 const item = (doc: { id: string; collection: string; version: number }) => ({ collection: doc.collection, id: doc.id, expectedVersion: doc.version });
 const contents = (snapshot: Snapshot) => Object.fromEntries(Object.entries(snapshot.docs).map(([key, docs]) => [key, docs?.map(d => ({ id: d.id, data: d.data, order: d.order }))]));
+// These complete lifecycles rewrite a 111-document FS snapshot several times.
+// Leave room for concurrent suite I/O without weakening their assertions.
+const lifecycleTimeout = process.env.DATABASE_URL ? 60000 : 15000;
 describe('Phase 5 HTTP content lifecycle', () => {
   it('creates, coalesces, checkpoints, conflicts, publishes and restores forward', async () => {
     const f = await fixture(), original = (await f.store.getSnapshot())!;
@@ -39,7 +42,7 @@ describe('Phase 5 HTTP content lifecycle', () => {
     expect(final.docs.events!.some(d => d.id === doc.id)).toBe(false);
     expect((await f.req('/search?q=New')).status).toBe(200);
     expect((await f.req('/publishes/1?diff=1')).status).toBe(200);
-  });
+  }, lifecycleTimeout);
   it('seals a working revision when another author saves or ten minutes elapse', async () => {
     const f = await fixture();
     let doc = (await (await f.req('/docs/events', 'POST', { draft: event('Original') })).json()).doc;
@@ -112,7 +115,7 @@ describe('schedules and cache boundaries', () => {
     const final = await f.store.getDoc('events', doc.id); expect(final?.draft).toMatchObject({ title: 'Newer private draft' }); expect(final?.published).toMatchObject({ title: 'Frozen scheduled title' }); expect(final?.status).toBe('changed');
     expect((await f.store.getSnapshot())?.effectiveAt).toBe(at.replace('Z', '.000Z'));
     expect(renderPage((await f.store.getSnapshot())!, 'home', { now: time })).toContain('Frozen scheduled title');
-  });
+  }, lifecycleTimeout);
   it('records schedule cancellation, rejects unauthenticated cron, and accepts GET/POST bearer cron', async () => {
     const f = await fixture(); let doc = (await (await f.req('/docs/events', 'POST', { draft: event('Cancelled') })).json()).doc;
     await f.req('/schedule', 'POST', { items: [item(doc)], at: '2030-01-02T12:00:00Z' });

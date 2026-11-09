@@ -36,7 +36,7 @@ export function contentRoutes(app: Hono<AdminEnv>) {
   });
   app.post('/api/admin/schedule', requirePermission('content.publish'), async c => {
     const input = object(await c.req.json());
-    return c.json(await scheduleDocuments(c.get('store'), items(input.items), string(input.at, 'at'), actor(c), c.get('now')));
+    return c.json(await scheduleDocuments(c.get('store'), items(input.items), string(input.at, 'at'), actor(c), c.get('now'), input.summary === undefined ? undefined : string(input.summary, 'summary', 1000)));
   });
   app.delete('/api/admin/schedule/:collection/:id', requirePermission('content.publish'), async c => {
     const input = object(await c.req.json());
