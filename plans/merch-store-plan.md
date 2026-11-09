@@ -582,3 +582,9 @@ Review cadence: Fable reviews every phase diff before the next run; phases 3, 5 
 - Retention: keep orders indefinitely with manual redaction. Bundles: fixed price regardless of youth/adult picks.
 - Pickup volunteers: use existing Editor role for v1.
 - Do NOT enable the store on the production deployment: Vercel Hobby's terms are non-commercial; Chris must decide on Pro (or another host) first.
+
+## Scope decision (Chris, 2026-11-09): proof of concept only
+
+The merch store is a **proof of concept for the local non-profit**. It will **not** go live on the current Vercel (Hobby) plan.
+- The `merch-store` branch is never merged into `admin-cms` and never handed to ChrisBot for deployment. Demo it locally (`npm run start`) with screenshots/recordings.
+- Build phases 1–4 (vertical slice), 6 (pre-order ops + production report) and 7 (pickup fulfillment; notifier stays `log`). Phase 5 Stripe: implement only the adapter shape + a mocked provider for the demo; no live/test Stripe account. **Skip** phase 8 (discounts/tax/retention). Phase 9: only the hardening items needed for a credible demo.
