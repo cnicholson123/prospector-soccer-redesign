@@ -1,0 +1,284 @@
+[
+  {
+    "id": "competitive",
+    "data": {
+      "meta": {
+        "title": "Competitive soccer · Prospector Soccer Club",
+        "description": "Explore PSC competitive soccer: 2026–27 teams, tournament results, annual costs, coach opportunities and FAQs.",
+        "ogImage": {
+          "mediaId": "med_comp",
+          "alt": ""
+        }
+      },
+      "hero": {
+        "eyebrow": "Take your game further",
+        "lead": "Longer training, tournament play and room to grow for players ready for the next challenge.",
+        "title": "Competitive soccer",
+        "image": {
+          "mediaId": "med_comp",
+          "alt": "Competitive youth soccer players contesting the ball on the field"
+        },
+        "chips": [
+          {
+            "_key": "24ba22a2",
+            "text": "U9–U19 · Girls & boys"
+          },
+          {
+            "_key": "c8e2fc1f",
+            "text": "Fall 2026 / Spring 2027"
+          },
+          {
+            "_key": "e929ae86",
+            "text": "Volunteer head coaches"
+          }
+        ]
+      },
+      "subnav": [
+        {
+          "_key": "88c89c1b",
+          "label": "Overview",
+          "anchor": "#overview"
+        },
+        {
+          "_key": "7d05f532",
+          "label": "Results",
+          "anchor": "#results"
+        },
+        {
+          "_key": "9841529d",
+          "label": "Teams",
+          "anchor": "#teams"
+        },
+        {
+          "_key": "d1d3f93b",
+          "label": "Costs",
+          "anchor": "#costs"
+        },
+        {
+          "_key": "2c517bc4",
+          "label": "Coaches wanted",
+          "anchor": "#coaches-wanted"
+        },
+        {
+          "_key": "a9dcb455",
+          "label": "FAQ",
+          "anchor": "#faq"
+        }
+      ],
+      "actionBar": {
+        "buttons": [
+          {
+            "_key": "ca7766c8",
+            "label": "Meet the teams",
+            "href": "#teams",
+            "external": false
+          },
+          {
+            "_key": "c516a5a3",
+            "label": "Email us",
+            "href": "mailto:compdirector@prospector.org",
+            "external": false
+          }
+        ]
+      },
+      "overview": {
+        "eyebrow": "The competitive program",
+        "title": "More time on the ball",
+        "cards": [
+          {
+            "_key": "4608b324",
+            "title": "The playing year",
+            "text": "Typically April through December, with spring and post-league cup options. Two or three 2-hour practices each week.",
+            "icon": "calendar"
+          },
+          {
+            "_key": "bd5af268",
+            "title": "Fall league",
+            "text": "10 games: 5 home and 5 away, from late August to mid-November. Teams play cup games in addition to fall league.",
+            "icon": "ball"
+          },
+          {
+            "_key": "61340c74",
+            "title": "Age groups",
+            "text": "Boys and girls, U9 through U19. 7v7 at U9, 9v9 at U11, and 11v11 at U13 and older.",
+            "icon": "users"
+          },
+          {
+            "_key": "7c2ead47",
+            "title": "Coaching",
+            "text": "Volunteer head coaches are appointed through an application. Some teams add professional coaches or trainers.",
+            "icon": "waving-flag"
+          }
+        ],
+        "columns": [
+          {
+            "_key": "c9b61e94",
+            "title": "Finding your team",
+            "bullets": [
+              {
+                "_key": "8a1ae1e4",
+                "text": "Team selection is by tryouts in January, February or May, depending on age group. Players must attend tryouts."
+              },
+              {
+                "_key": "2d60f71b",
+                "text": "A second team may form depending on tryout numbers and coach availability."
+              },
+              {
+                "_key": "25a09607",
+                "text": "Teams train longer and usually play 4+ tournaments a year."
+              }
+            ]
+          },
+          {
+            "_key": "22b93141",
+            "title": "Beyond the home field",
+            "bullets": [
+              {
+                "_key": "8a1ae1e4",
+                "text": "Teams typically enter 4–5 tournaments, including at least one overnight travel tournament, such as the Bay Area or Santa Cruz."
+              },
+              {
+                "_key": "2d60f71b",
+                "text": "Non-CYSA options include sand soccer and small-sided games."
+              },
+              {
+                "_key": "25a09607",
+                "text": "League games are mostly in the Sacramento region, extending north to Chico and south to Modesto."
+              }
+            ]
+          }
+        ]
+      },
+      "resultsSection": {
+        "eyebrow": "On the podium",
+        "title": "2026 CUFA Tournament",
+        "resultIds": [
+          "res_1",
+          "res_2",
+          "res_3"
+        ]
+      },
+      "teamsSection": {
+        "title": "Meet the teams",
+        "lead": "11 teams, with girls and boys competing across four levels.",
+        "seasonLabel": "Fall 2026 / Spring 2027"
+      },
+      "costs": {
+        "eyebrow": "Competitive costs",
+        "title": "Plan for the year",
+        "total": {
+          "label": "About $790–$880 for a full year",
+          "note": "Estimated total including a uniform purchase"
+        },
+        "items": [
+          {
+            "_key": "ad945f4d",
+            "price": {
+              "amount": 330
+            },
+            "label": "Registration",
+            "note": "For the fall season, once accepted onto a comp team.",
+            "color": "c1"
+          },
+          {
+            "_key": "d6431052",
+            "price": {
+              "amount": 200
+            },
+            "label": "Suggested team fee",
+            "note": "Covers at least two tournaments per year.",
+            "color": "c2"
+          },
+          {
+            "_key": "d0838599",
+            "price": {
+              "amount": 100,
+              "max": 150
+            },
+            "label": "Spring",
+            "note": "A separate fee for the optional spring season.",
+            "color": "c3"
+          },
+          {
+            "_key": "86a66f0b",
+            "price": {
+              "amount": 160,
+              "max": 200
+            },
+            "label": "Uniforms",
+            "note": "Usually last 2–3 years.",
+            "color": "c4"
+          }
+        ],
+        "estimateNote": "Estimate: $330 + $200 + $100–$150 + $160–$200. Actual costs depend on spring participation and whether a new uniform is needed.",
+        "documentIds": [
+          "doc_25"
+        ]
+      },
+      "coaches": {
+        "eyebrow": "Coach with PSC",
+        "title": "Help players reach further",
+        "image": {
+          "mediaId": "med_coach",
+          "alt": "A volunteer coach explaining a drill to players on the grass"
+        },
+        "benefitsTitle": "Competitive coaches wanted",
+        "newTitle": "New this year",
+        "benefits": [
+          {
+            "_key": "5875aa3b",
+            "text": "Choose your own roster."
+          },
+          {
+            "_key": "a7894b60",
+            "text": "Better practice fields, usually granted based on availability."
+          },
+          {
+            "_key": "8fc4ba4a",
+            "text": "Give back through player enrichment."
+          }
+        ],
+        "newItems": [
+          {
+            "_key": "0efc82d4",
+            "text": "Partnership with The Coaching Manual for coach education and training."
+          },
+          {
+            "_key": "964052c7",
+            "text": "VEO cameras to record some home games."
+          },
+          {
+            "_key": "fca3232a",
+            "text": "Competition soccer balls."
+          },
+          {
+            "_key": "673ecb74",
+            "text": "Goalie training."
+          }
+        ],
+        "applyCard": {
+          "title": "Apply and keep learning",
+          "body": "Submit a filled-out application. A Grassroots course for your age group is suggested. Coaches are encouraged to take U.S. Soccer Learning Center courses: the introduction course is free; Grassroots courses are 2 hours and $25, reimbursed by the club once the certificate is received.",
+          "buttons": [
+            {
+              "_key": "0be832ca",
+              "label": "2026 Comp Coach Application PDF",
+              "href": "https://prospector.org/wp-content/uploads/sites/206/2026/01/2026-Comp-Coach-Application.pdf",
+              "external": true
+            },
+            {
+              "_key": "11e5eeb4",
+              "label": "U.S. Soccer Learning Center",
+              "href": "https://learning.ussoccer.com/coach",
+              "external": true
+            }
+          ]
+        }
+      },
+      "faqSection": {
+        "eyebrow": "Good to know",
+        "title": "Competitive questions"
+      }
+    }
+  }
+]

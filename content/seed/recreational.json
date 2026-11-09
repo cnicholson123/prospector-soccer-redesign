@@ -1,0 +1,298 @@
+[
+  {
+    "id": "recreational",
+    "data": {
+      "meta": {
+        "title": "Recreational soccer · Prospector Soccer Club",
+        "description": "Recreational youth soccer, U6–U19: season dates, registration fees, equipment and coaching resources at Prospector Soccer Club.",
+        "ogImage": {
+          "mediaId": "med_rec",
+          "alt": ""
+        }
+      },
+      "hero": {
+        "eyebrow": "First kicks. Lasting friendships.",
+        "lead": "Room to learn the game, play as a team and enjoy soccer from U6 through U19.",
+        "title": "Recreational soccer",
+        "image": {
+          "mediaId": "med_rec",
+          "alt": "Young soccer players practicing together on a grass field"
+        },
+        "chips": [
+          {
+            "_key": "83d2e41d",
+            "text": "U6–U19"
+          },
+          {
+            "_key": "662b9399",
+            "text": "Practices from mid-July"
+          },
+          {
+            "_key": "6bc606b2",
+            "text": "8–10 games"
+          }
+        ]
+      },
+      "subnav": [
+        {
+          "_key": "bf01f54e",
+          "label": "Overview",
+          "anchor": "#overview"
+        },
+        {
+          "_key": "366e27bd",
+          "label": "Season",
+          "anchor": "#season"
+        },
+        {
+          "_key": "56729312",
+          "label": "Costs",
+          "anchor": "#costs"
+        },
+        {
+          "_key": "b5559865",
+          "label": "Register",
+          "anchor": "#register"
+        },
+        {
+          "_key": "917119e4",
+          "label": "Equipment",
+          "anchor": "#equipment"
+        },
+        {
+          "_key": "7f4e8674",
+          "label": "Coaching resources",
+          "anchor": "#coaching"
+        },
+        {
+          "_key": "0d7ab14b",
+          "label": "Policies & FAQ",
+          "anchor": "#policies"
+        }
+      ],
+      "actionBar": {
+        "buttons": [
+          {
+            "_key": "4b8e5357",
+            "label": "Register info",
+            "href": "#register",
+            "external": false
+          },
+          {
+            "_key": "53705c95",
+            "label": "Email us",
+            "href": "mailto:recdirector@prospector.org",
+            "external": false
+          }
+        ]
+      },
+      "overview": {
+        "eyebrow": "Play with PSC",
+        "title": "A season to grow",
+        "lead": "Recreational soccer for players from U6 to U19.",
+        "body": "Prospector Soccer Club is a non-profit, 100% volunteer-run youth soccer club serving Cameron Park, Shingle Springs and Rescue in the El Dorado County foothills."
+      },
+      "season": {
+        "eyebrow": "From practice to game day",
+        "title": "Your season at a glance",
+        "cards": [
+          {
+            "_key": "e78d6308",
+            "title": "Practices",
+            "text": "Typically begin mid-July, once or twice a week. Your coach sets the schedule and practice duration.",
+            "icon": "calendar"
+          },
+          {
+            "_key": "d3197fb2",
+            "title": "Games",
+            "text": "8–10 games, typically starting mid-August. Games are usually once a week on Saturdays; game length depends on age level.",
+            "icon": "ball"
+          }
+        ]
+      },
+      "fees": {
+        "eyebrow": "Plan your season",
+        "title": "Recreational registration",
+        "lead": "On-time registration runs April 1 – June 15.",
+        "windows": [
+          {
+            "_key": "7d4c9806",
+            "ages": "U6–U12",
+            "grades": "PreKinder–6th grade",
+            "price": {
+              "amount": 170
+            },
+            "window": "April 1 – June 15",
+            "latePrice": {
+              "amount": 185
+            },
+            "lateLabel": "After June 15 (waitlist):",
+            "featured": true
+          },
+          {
+            "_key": "1fc84fba",
+            "ages": "U14–U19",
+            "grades": "7th–12th grade",
+            "price": {
+              "amount": 185
+            },
+            "window": "April 1 – June 15",
+            "latePrice": {
+              "amount": 195
+            },
+            "lateLabel": "After June 15 (waitlist):",
+            "featured": false
+          }
+        ],
+        "note": "Uniform kit: $55. Capelli uniforms are required."
+      },
+      "register": {
+        "eyebrow": "April 1 – June 15",
+        "title": "Get ready to register",
+        "note": "**Registration runs April 1 – June 15.** Registration after June 15 is by waitlist. Contact the Registrar or Rec Director for registration information.",
+        "buttons": [
+          {
+            "_key": "1478c5bd",
+            "label": "Email the Registrar",
+            "href": "mailto:registrar@prospector.org",
+            "external": false
+          },
+          {
+            "_key": "8f31b330",
+            "label": "Email the Rec Director",
+            "href": "mailto:recdirector@prospector.org",
+            "external": false
+          }
+        ]
+      },
+      "equipment": {
+        "eyebrow": "Equipment",
+        "title": "Ready for the field",
+        "image": {
+          "mediaId": "med_equipment",
+          "alt": "Soccer cleats, shin guards and a ball ready for practice"
+        },
+        "items": [
+          {
+            "_key": "b6406667",
+            "title": "Uniform kit",
+            "text": "$55 · Capelli uniforms required",
+            "icon": "users"
+          },
+          {
+            "_key": "5e7b5bf5",
+            "title": "Shin guards",
+            "text": "For practices and games",
+            "icon": "check"
+          },
+          {
+            "_key": "f8f156b3",
+            "title": "Soccer cleats",
+            "text": "Bring your cleats",
+            "icon": "check"
+          },
+          {
+            "_key": "18138017",
+            "title": "Water bottle",
+            "text": "Bring water to the field",
+            "icon": "check"
+          },
+          {
+            "_key": "d9f6e991",
+            "title": "Practice ball",
+            "text": "Choose the size for your age group",
+            "icon": "ball"
+          }
+        ],
+        "ballSizes": [
+          {
+            "_key": "b26ea3e8",
+            "size": 3,
+            "ages": "U6–U8"
+          },
+          {
+            "_key": "ebac1532",
+            "size": 4,
+            "ages": "U10–U12"
+          },
+          {
+            "_key": "20a7984a",
+            "size": 5,
+            "ages": "U14–U19"
+          }
+        ]
+      },
+      "coaching": {
+        "eyebrow": "Coaching resources",
+        "title": "A plan for every practice",
+        "lead": "Session plans and age-specific modified rules, ready to open as PDFs.",
+        "documentIds": [
+          "doc_13",
+          "doc_14",
+          "doc_15",
+          "doc_16",
+          "doc_17",
+          "doc_18",
+          "doc_19"
+        ]
+      },
+      "policies": {
+        "eyebrow": "Policies & FAQ",
+        "title": "Our shared sideline standards",
+        "lead": "Codes of conduct and answers for families.",
+        "documentIds": [
+          "doc_21",
+          "doc_22",
+          "doc_23",
+          "doc_6",
+          "doc_24"
+        ]
+      },
+      "glance": {
+        "title": "At a glance",
+        "facts": [
+          {
+            "_key": "abda8b79",
+            "label": "Ages",
+            "value": "U6–U19"
+          },
+          {
+            "_key": "7221616e",
+            "label": "Practices",
+            "value": "1–2 per week"
+          },
+          {
+            "_key": "305d6abc",
+            "label": "Games",
+            "value": "8–10 · Saturdays"
+          },
+          {
+            "_key": "06d68aad",
+            "label": "Fees",
+            "value": "From $170"
+          },
+          {
+            "_key": "1a58e4e9",
+            "label": "Uniform",
+            "value": "$55 · Capelli"
+          }
+        ],
+        "buttons": [
+          {
+            "_key": "4b81f18a",
+            "label": "Registration info",
+            "href": "#register",
+            "external": false
+          },
+          {
+            "_key": "925e6560",
+            "label": "Email the Registrar",
+            "href": "mailto:registrar@prospector.org",
+            "external": false
+          }
+        ],
+        "note": "Practice timing and duration are set by your coach. Fees vary by age and registration date."
+      }
+    }
+  }
+]

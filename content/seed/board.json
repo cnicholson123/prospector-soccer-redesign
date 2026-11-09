@@ -1,0 +1,51 @@
+[
+  {
+    "id": "board",
+    "data": {
+      "meta": {
+        "title": "Board members · Prospector Soccer Club",
+        "description": "Meet the 2026 Prospector Soccer Club board, find role contacts and find upcoming board meetings and the Annual General Meeting.",
+        "ogImage": {
+          "mediaId": "med_board",
+          "alt": ""
+        }
+      },
+      "hero": {
+        "eyebrow": "Neighbors behind the club",
+        "lead": "Meet the volunteers who help run Prospector Soccer Club.",
+        "title": "Board members",
+        "image": {
+          "mediaId": "med_board",
+          "alt": "Club volunteers gathered beside a soccer field at dusk"
+        },
+        "chips": [
+          {
+            "_key": "14d60a9b",
+            "text": "2026 board"
+          },
+          {
+            "_key": "0faf9b81",
+            "text": "100% volunteer-run"
+          },
+          {
+            "_key": "28debe6f",
+            "text": "14 board roles"
+          }
+        ]
+      },
+      "members": {
+        "eyebrow": "Your club contacts",
+        "title": "2026 Board Members"
+      },
+      "meetings": {
+        "eyebrow": "Club calendar",
+        "title": "Board meetings & AGM",
+        "note": "**Next board meeting: November 12, 6:30pm at Mountain Mike’s.** See all upcoming club events on the [home page](/#events).",
+        "agmCard": {
+          "title": "Annual General Meeting",
+          "text": "December 10, 2026 · 5:30pm · Los Pinos"
+        }
+      }
+    }
+  }
+]

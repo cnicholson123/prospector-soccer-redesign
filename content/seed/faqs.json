@@ -1,0 +1,42 @@
+[
+  {
+    "id": "faq_1",
+    "data": {
+      "page": "competitive",
+      "question": "Is comp year-round?",
+      "answer": "Only depending on the coach. At minimum, there is a fall season and two tournaments. Some coaches play indoor/futsal in winter; spring is optional."
+    }
+  },
+  {
+    "id": "faq_2",
+    "data": {
+      "page": "competitive",
+      "question": "How far do we travel?",
+      "answer": "Mostly locally: Sacramento, Folsom and El Dorado Hills, with some games in Roseville, Yuba City, Chico and Truckee. Not every division has teams in the farther locations. League play can extend south to Modesto; teams typically also enter at least one overnight travel tournament."
+    }
+  },
+  {
+    "id": "faq_3",
+    "data": {
+      "page": "competitive",
+      "question": "How do tryouts work?",
+      "answer": "Players must attend tryouts, held in January, February or May depending on age group. A second team may form depending on tryout numbers and coach availability."
+    }
+  },
+  {
+    "id": "faq_4",
+    "data": {
+      "page": "competitive",
+      "question": "What is the team size by age?",
+      "answer": "Playing formats are 7v7 at U9, 9v9 at U11, and 11v11 at U13 and older."
+    }
+  },
+  {
+    "id": "faq_5",
+    "data": {
+      "page": "competitive",
+      "question": "Is coach education reimbursed?",
+      "answer": "The U.S. Soccer Learning Center introduction course is free. Grassroots courses are 2 hours and $25; the club reimburses the course fee once the certificate is received."
+    }
+  }
+]

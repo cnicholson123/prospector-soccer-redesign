@@ -1,12 +1,17 @@
+import { createStore } from '../server/store';
+import { seedStore } from './seed';
 import { createServer } from 'node:http';
 import { loadConfig } from '../server/config';
 import { adminApp } from '../server/http/hono-app';
 import { staticFile } from '../server/http/static';
-import { renderPublic } from '../server/render/handler';
+import { createRenderHandler } from '../server/render/handler';
 import { join } from 'node:path';
 import type { ViteDevServer } from 'vite';
 
 const config = loadConfig();
+const store = createStore(config);
+if (!await store.getSnapshot()) await seedStore(store);
+const renderPublic = createRenderHandler(store, config);
 const built = process.argv.includes('--built');
 let vite: ViteDevServer | undefined;
 const server = createServer(async (req, res) => {

@@ -1,0 +1,28 @@
+[
+  {
+    "id": "cal_1",
+    "data": {
+      "pillText": "New for 2026–27",
+      "pillStyle": "soft-gold",
+      "title": "New age group guidelines",
+      "text": "US Club Soccer has updated its age-group cut-offs. See where your player lands this season.",
+      "href": "https://usclubsoccer.org/age-group-cut-off-update-for-2026-27-season/",
+      "external": true,
+      "icon": "calendar-date",
+      "active": true
+    }
+  },
+  {
+    "id": "cal_2",
+    "data": {
+      "pillText": "Now recruiting",
+      "pillStyle": "green",
+      "title": "Referees needed — age 13+",
+      "text": "Learn the Laws of the Game and help every match run safely and fairly.",
+      "href": "/referees",
+      "external": false,
+      "icon": "flag",
+      "active": true
+    }
+  }
+]

@@ -1,0 +1,157 @@
+[
+  {
+    "id": "mem_1",
+    "data": {
+      "role": "Board President",
+      "name": "Ashlee Powers",
+      "email": "president@prospector.org",
+      "vacantLabel": "Open position",
+      "isPresident": true,
+      "volunteerLink": false
+    }
+  },
+  {
+    "id": "mem_2",
+    "data": {
+      "role": "VP / Rec Director",
+      "name": "Ali Arellano",
+      "email": "recdirector@prospector.org",
+      "vacantLabel": "Open position",
+      "isPresident": false,
+      "volunteerLink": false
+    }
+  },
+  {
+    "id": "mem_3",
+    "data": {
+      "role": "DOC / Comp Director",
+      "name": "",
+      "email": "compdirector@prospector.org",
+      "vacantLabel": "Open position",
+      "isPresident": false,
+      "volunteerLink": true
+    }
+  },
+  {
+    "id": "mem_4",
+    "data": {
+      "role": "Communications Director",
+      "name": "Travis Howard",
+      "email": "communicationsdirector@prospector.org",
+      "vacantLabel": "Open position",
+      "isPresident": false,
+      "volunteerLink": false
+    }
+  },
+  {
+    "id": "mem_5",
+    "data": {
+      "role": "Field Director",
+      "name": "Jason Yager",
+      "email": "fielddirector@prospector.org",
+      "vacantLabel": "Open position",
+      "isPresident": false,
+      "volunteerLink": false
+    }
+  },
+  {
+    "id": "mem_6",
+    "data": {
+      "role": "Equipment Director",
+      "name": "Ryan West",
+      "email": "equipmentdirector@prospector.org",
+      "vacantLabel": "Open position",
+      "isPresident": false,
+      "volunteerLink": false
+    }
+  },
+  {
+    "id": "mem_7",
+    "data": {
+      "role": "Referee Director",
+      "name": "Matthew Hamedian",
+      "email": "refereedirector@prospector.org",
+      "vacantLabel": "Open position",
+      "isPresident": false,
+      "volunteerLink": false
+    }
+  },
+  {
+    "id": "mem_8",
+    "data": {
+      "role": "Secretary",
+      "name": "Melissa Randall",
+      "email": "secretary@prospector.org",
+      "vacantLabel": "Open position",
+      "isPresident": false,
+      "volunteerLink": false
+    }
+  },
+  {
+    "id": "mem_9",
+    "data": {
+      "role": "Registrar",
+      "name": "Ashley Moritz",
+      "email": "registrar@prospector.org",
+      "vacantLabel": "Open position",
+      "isPresident": false,
+      "volunteerLink": false
+    }
+  },
+  {
+    "id": "mem_10",
+    "data": {
+      "role": "Fundraising & Sponsorship Director",
+      "name": "Rayshaun Smith",
+      "email": "fundraisingandsponsorship@prospector.org",
+      "vacantLabel": "Open position",
+      "isPresident": false,
+      "volunteerLink": false
+    }
+  },
+  {
+    "id": "mem_11",
+    "data": {
+      "role": "Uniform Coordinator",
+      "name": "Natasha Benedet",
+      "email": "uniformcoordinator@prospector.org",
+      "vacantLabel": "Open position",
+      "isPresident": false,
+      "volunteerLink": false
+    }
+  },
+  {
+    "id": "mem_12",
+    "data": {
+      "role": "Treasurer",
+      "name": "Michaela Freeman",
+      "email": "treasurer@prospector.org",
+      "vacantLabel": "Open position",
+      "isPresident": false,
+      "volunteerLink": false
+    }
+  },
+  {
+    "id": "mem_13",
+    "data": {
+      "role": "Rec Scheduler",
+      "name": "Amy Burse",
+      "email": "websitecoordinator@prospector.org",
+      "vacantLabel": "Open position",
+      "isPresident": false,
+      "volunteerLink": false,
+      "note": "This role currently routes to the website coordinator."
+    }
+  },
+  {
+    "id": "mem_14",
+    "data": {
+      "role": "Website Coordinator",
+      "name": "Cindy Peil",
+      "email": "websitecoordinator@prospector.org",
+      "vacantLabel": "Open position",
+      "isPresident": false,
+      "volunteerLink": false
+    }
+  }
+]

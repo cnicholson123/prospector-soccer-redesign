@@ -1,0 +1,204 @@
+[
+  {
+    "id": "site",
+    "data": {
+      "name": "Prospector Soccer Club",
+      "shortName": "PSC",
+      "tagline": "Soccer Club",
+      "areasServed": [
+        {
+          "_key": "area0000",
+          "text": "Cameron Park"
+        },
+        {
+          "_key": "area0001",
+          "text": "Shingle Springs"
+        },
+        {
+          "_key": "area0002",
+          "text": "Rescue"
+        }
+      ],
+      "contact": {
+        "name": "Travis Howard",
+        "role": "Communications Director",
+        "email": "communicationsdirector@prospector.org"
+      },
+      "events": {
+        "hidePastAfterDays": 60
+      },
+      "banner": {
+        "enabled": false,
+        "text": "",
+        "style": "gold"
+      },
+      "seo": {
+        "indexable": false,
+        "defaultOgImage": {
+          "mediaId": "med_hero",
+          "alt": ""
+        }
+      },
+      "utilityBar": {
+        "pillText": "Redesign concept",
+        "messageLong": "A modernized preview of prospector.org —",
+        "message": "not the official site.",
+        "enabled": true
+      },
+      "socials": {
+        "facebook": "https://www.facebook.com/Prospector-Soccer-Club-108383495868117",
+        "instagram": "https://www.instagram.com/prospector_soccer_club/",
+        "tiktok": "https://www.tiktok.com/@prospector.soccer"
+      },
+      "headerCta": {
+        "label": "Join a team",
+        "href": "/recreational#register",
+        "external": false
+      },
+      "footer": {
+        "blurb": "A non-profit, volunteer-run youth soccer club serving Cameron Park, Shingle Springs and Rescue in California's Gold Country.",
+        "columns": [
+          {
+            "_key": "1f70bbf0",
+            "heading": "Play",
+            "links": [
+              {
+                "_key": "72231d9e",
+                "label": "Recreational (U6–U19)",
+                "href": "/recreational",
+                "external": false
+              },
+              {
+                "_key": "e83d7d9c",
+                "label": "Competitive (U9–U19)",
+                "href": "/competitive",
+                "external": false
+              },
+              {
+                "_key": "e326d4f8",
+                "label": "Become a referee",
+                "href": "/referees",
+                "external": false
+              },
+              {
+                "_key": "45299756",
+                "label": "Coach with us",
+                "href": "/competitive#coaches-wanted",
+                "external": false
+              }
+            ]
+          },
+          {
+            "_key": "3488dd3b",
+            "heading": "Club",
+            "links": [
+              {
+                "_key": "72231d9e",
+                "label": "About PSC",
+                "href": "/about",
+                "external": false
+              },
+              {
+                "_key": "e83d7d9c",
+                "label": "Board members",
+                "href": "/board",
+                "external": false
+              },
+              {
+                "_key": "e326d4f8",
+                "label": "Sponsors",
+                "href": "/sponsors",
+                "external": false
+              },
+              {
+                "_key": "45299756",
+                "label": "Resources & forms",
+                "href": "/resources",
+                "external": false
+              }
+            ]
+          },
+          {
+            "_key": "c9eb4f25",
+            "heading": "Follow",
+            "links": [
+              {
+                "_key": "72231d9e",
+                "label": "Facebook",
+                "href": "https://www.facebook.com/Prospector-Soccer-Club-108383495868117",
+                "external": true
+              },
+              {
+                "_key": "e83d7d9c",
+                "label": "Instagram",
+                "href": "https://www.instagram.com/prospector_soccer_club/",
+                "external": true
+              },
+              {
+                "_key": "e326d4f8",
+                "label": "TikTok",
+                "href": "https://www.tiktok.com/@prospector.soccer",
+                "external": true
+              },
+              {
+                "_key": "45299756",
+                "label": "Spare the Air (AQI)",
+                "href": "https://www.iqair.com/us/profile/spare-the-air",
+                "external": true
+              }
+            ]
+          }
+        ]
+      },
+      "links": {
+        "spareTheAir": "https://www.iqair.com/us/profile/spare-the-air",
+        "privacyPolicy": "https://prospector.teamsnapsites.com/wp-content/uploads/sites/206/2023/02/privacy_policy.pdf"
+      },
+      "copyright": "© 2026 Prospector Soccer Club",
+      "nav": [
+        {
+          "_key": "nav00000",
+          "label": "Recreational",
+          "page": "recreational",
+          "visible": true
+        },
+        {
+          "_key": "nav00001",
+          "label": "Competitive",
+          "page": "competitive",
+          "visible": true
+        },
+        {
+          "_key": "nav00002",
+          "label": "Referees",
+          "page": "referees",
+          "visible": true
+        },
+        {
+          "_key": "nav00003",
+          "label": "Sponsors",
+          "page": "sponsors",
+          "visible": true
+        },
+        {
+          "_key": "nav00004",
+          "label": "Board",
+          "page": "board",
+          "visible": true
+        },
+        {
+          "_key": "nav00005",
+          "label": "Resources",
+          "page": "resources",
+          "visible": true
+        },
+        {
+          "_key": "nav00006",
+          "label": "About",
+          "page": "about",
+          "visible": true
+        }
+      ]
+    }
+  }
+]

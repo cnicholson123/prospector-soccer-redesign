@@ -1,0 +1,99 @@
+[
+  {
+    "id": "sponsorsPage",
+    "data": {
+      "meta": {
+        "title": "Sponsors · Prospector Soccer Club",
+        "description": "Meet PSC gold and team sponsors. Explore recreational sponsorship levels, rec and comp sponsorship forms, and scholarship giving.",
+        "ogImage": {
+          "mediaId": "med_sponsors",
+          "alt": ""
+        }
+      },
+      "hero": {
+        "eyebrow": "Local support. Shared purpose.",
+        "lead": "Meet the businesses supporting Prospector Soccer Club, and find a way to take part.",
+        "title": "Our sponsors",
+        "image": {
+          "mediaId": "med_sponsors",
+          "alt": "Volunteers offering oranges and water under a blue canopy beside the field"
+        },
+        "chips": [
+          {
+            "_key": "70e63a1a",
+            "text": "Gold sponsors"
+          },
+          {
+            "_key": "a0dd02a6",
+            "text": "Team sponsors"
+          },
+          {
+            "_key": "f1065d58",
+            "text": "Scholarship giving"
+          }
+        ]
+      },
+      "goldSection": {
+        "eyebrow": "Thank you",
+        "title": "Gold sponsors"
+      },
+      "teamSection": {
+        "eyebrow": "Our community",
+        "title": "Team sponsors"
+      },
+      "tiersSection": {
+        "eyebrow": "Recreational sponsorship",
+        "title": "Choose your level"
+      },
+      "how": {
+        "eyebrow": "Two ways to get involved",
+        "title": "How to sponsor",
+        "steps": [
+          {
+            "_key": "3660a970",
+            "title": "Download and mail",
+            "text": "For rec or comp, download the sponsorship information PDF, fill it out and mail it with a check to the address in the letter."
+          },
+          {
+            "_key": "06cb2751",
+            "title": "Or sign up online",
+            "text": "Use the GotSport Sponsorship Link to sign up online."
+          }
+        ],
+        "buttons": [
+          {
+            "_key": "427e1f9b",
+            "label": "Rec sponsorship PDF",
+            "href": "https://www.prospector.org/wp-content/uploads/sites/206/2023/08/PSC-Recreational-Sponsorship-Information.pdf",
+            "external": true
+          },
+          {
+            "_key": "01f84102",
+            "label": "Comp sponsorship PDF",
+            "href": "https://www.prospector.org/wp-content/uploads/sites/206/2023/08/PSC-Comp-Sponsorship-Information.pdf",
+            "external": true
+          },
+          {
+            "_key": "e3d5f246",
+            "label": "Sponsor through GotSport",
+            "href": "https://system.gotsport.com/programs/G24261772?reg_role=manager",
+            "external": true
+          }
+        ]
+      },
+      "scholarship": {
+        "eyebrow": "Support a player",
+        "title": "Give toward the scholarship fund",
+        "card": {
+          "title": "Assistance League – Sierra Foothills",
+          "text": "For scholarship fund giving, visit Assistance League – Sierra Foothills.",
+          "button": {
+            "label": "Explore scholarship giving",
+            "href": "https://www.assistanceleague.org/sierra-foothills/",
+            "external": true
+          }
+        }
+      }
+    }
+  }
+]

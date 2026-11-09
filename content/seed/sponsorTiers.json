@@ -1,0 +1,70 @@
+[
+  {
+    "id": "tier_gold",
+    "data": {
+      "name": "Gold Level Sponsor",
+      "program": "rec",
+      "price": {
+        "amount": 1000
+      },
+      "benefits": [
+        {
+          "_key": "benef000",
+          "text": "Logo, scrolling banner and quick link on the website."
+        },
+        {
+          "_key": "benef001",
+          "text": "Logo and mention on all social media."
+        },
+        {
+          "_key": "benef002",
+          "text": "Business name on end-of-season shirts."
+        },
+        {
+          "_key": "benef003",
+          "text": "End-of-year plaque, if requested."
+        },
+        {
+          "_key": "benef004",
+          "text": "$100 toward a team banner or end-of-year party."
+        }
+      ],
+      "featured": true,
+      "showOnSponsorsPage": true
+    }
+  },
+  {
+    "id": "tier_team",
+    "data": {
+      "name": "Team Sponsor",
+      "program": "rec",
+      "price": {
+        "amount": 400
+      },
+      "benefits": [
+        {
+          "_key": "benef100",
+          "text": "Logo on the website."
+        },
+        {
+          "_key": "benef101",
+          "text": "Logo and mention on social media."
+        },
+        {
+          "_key": "benef102",
+          "text": "Business name on end-of-season shirts."
+        },
+        {
+          "_key": "benef103",
+          "text": "End-of-year plaque, if requested."
+        },
+        {
+          "_key": "benef104",
+          "text": "$50 toward a team banner or end-of-year party."
+        }
+      ],
+      "featured": false,
+      "showOnSponsorsPage": true
+    }
+  }
+]

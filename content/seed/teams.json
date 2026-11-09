@@ -1,0 +1,187 @@
+[
+  {
+    "id": "tea_1",
+    "data": {
+      "ageGroup": "U9",
+      "gender": "girls",
+      "level": "Bronze",
+      "coaches": [
+        {
+          "_key": "coach000",
+          "name": "Perry Schultz"
+        }
+      ],
+      "season": "Fall 2026 / Spring 2027"
+    }
+  },
+  {
+    "id": "tea_2",
+    "data": {
+      "ageGroup": "U10",
+      "gender": "girls",
+      "level": "Silver",
+      "coaches": [
+        {
+          "_key": "coach000",
+          "name": "Keith Rowe"
+        },
+        {
+          "_key": "coach001",
+          "name": "Ashlee Powers"
+        }
+      ],
+      "season": "Fall 2026 / Spring 2027"
+    }
+  },
+  {
+    "id": "tea_3",
+    "data": {
+      "ageGroup": "U11",
+      "gender": "girls",
+      "level": "Bronze",
+      "coaches": [
+        {
+          "_key": "coach000",
+          "name": "Samantha Welsh"
+        },
+        {
+          "_key": "coach001",
+          "name": "Ashlee Powers"
+        }
+      ],
+      "season": "Fall 2026 / Spring 2027"
+    }
+  },
+  {
+    "id": "tea_4",
+    "data": {
+      "ageGroup": "U11",
+      "gender": "boys",
+      "level": "Silver",
+      "coaches": [
+        {
+          "_key": "coach000",
+          "name": "Russel Beal"
+        },
+        {
+          "_key": "coach001",
+          "name": "Kevin Jones"
+        }
+      ],
+      "season": "Fall 2026 / Spring 2027"
+    }
+  },
+  {
+    "id": "tea_5",
+    "data": {
+      "ageGroup": "U11",
+      "gender": "boys",
+      "level": "Bronze",
+      "coaches": [
+        {
+          "_key": "coach000",
+          "name": "Lydia Haycox"
+        }
+      ],
+      "season": "Fall 2026 / Spring 2027"
+    }
+  },
+  {
+    "id": "tea_6",
+    "data": {
+      "ageGroup": "U11",
+      "gender": "boys",
+      "level": "Copper",
+      "coaches": [
+        {
+          "_key": "coach000",
+          "name": "Patrick Johns"
+        }
+      ],
+      "season": "Fall 2026 / Spring 2027"
+    }
+  },
+  {
+    "id": "tea_7",
+    "data": {
+      "ageGroup": "U12",
+      "gender": "girls",
+      "level": "Silver",
+      "coaches": [
+        {
+          "_key": "coach000",
+          "name": "Gene Groninger"
+        }
+      ],
+      "season": "Fall 2026 / Spring 2027"
+    }
+  },
+  {
+    "id": "tea_8",
+    "data": {
+      "ageGroup": "U12",
+      "gender": "girls",
+      "level": "Bronze",
+      "coaches": [
+        {
+          "_key": "coach000",
+          "name": "Kevin McBride"
+        }
+      ],
+      "season": "Fall 2026 / Spring 2027"
+    }
+  },
+  {
+    "id": "tea_9",
+    "data": {
+      "ageGroup": "U14",
+      "gender": "girls",
+      "level": "Bronze",
+      "coaches": [
+        {
+          "_key": "coach000",
+          "name": "Mike Bailey"
+        }
+      ],
+      "season": "Fall 2026 / Spring 2027"
+    }
+  },
+  {
+    "id": "tea_10",
+    "data": {
+      "ageGroup": "U14",
+      "gender": "boys",
+      "level": "Silver",
+      "coaches": [
+        {
+          "_key": "coach000",
+          "name": "Brandon Powers"
+        },
+        {
+          "_key": "coach001",
+          "name": "Rayshaun Smith"
+        }
+      ],
+      "season": "Fall 2026 / Spring 2027"
+    }
+  },
+  {
+    "id": "tea_11",
+    "data": {
+      "ageGroup": "U15",
+      "gender": "girls",
+      "level": "Gold",
+      "coaches": [
+        {
+          "_key": "coach000",
+          "name": "Paul Rice"
+        },
+        {
+          "_key": "coach001",
+          "name": "Keith Rowe"
+        }
+      ],
+      "season": "Fall 2026 / Spring 2027"
+    }
+  }
+]

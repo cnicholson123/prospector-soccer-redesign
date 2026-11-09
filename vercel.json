@@ -3,7 +3,6 @@
   "buildCommand": "npm run build",
   "outputDirectory": "public",
   "framework": null,
-  "functions": { "api/render.ts": { "includeFiles": "docs/*.html" } },
   "redirects": [
     { "source": "/index.html", "destination": "/", "permanent": true },
     { "source": "/:page.html", "destination": "/:page", "permanent": true }

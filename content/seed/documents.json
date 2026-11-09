@@ -1,0 +1,353 @@
+[
+  {
+    "id": "doc_1",
+    "data": {
+      "title": "PSC Bylaws v2 (approved)",
+      "description": "Approved version 2 of the club bylaws.",
+      "category": "club",
+      "kind": "pdf",
+      "source": {
+        "mode": "url",
+        "url": "https://prospector.org/wp-content/uploads/sites/206/2026/01/PSC-Bylaws-v2.approved.docx.pdf"
+      },
+      "external": true
+    }
+  },
+  {
+    "id": "doc_2",
+    "data": {
+      "title": "PSC Constitution v3",
+      "description": "Version 3 of the club constitution.",
+      "category": "club",
+      "kind": "pdf",
+      "source": {
+        "mode": "url",
+        "url": "https://www.prospector.org/wp-content/uploads/sites/206/2023/04/PSC-Constitution-v3-151215.pdf"
+      },
+      "external": true
+    }
+  },
+  {
+    "id": "doc_3",
+    "data": {
+      "title": "District 6 Zero Tolerance Policy",
+      "description": "District 6 standards for zero tolerance.",
+      "category": "club",
+      "kind": "pdf",
+      "source": {
+        "mode": "url",
+        "url": "https://www.prospector.org/wp-content/uploads/sites/206/2023/04/2016_district_6_zero_tolerance_policy.pdf"
+      },
+      "external": true
+    }
+  },
+  {
+    "id": "doc_4",
+    "data": {
+      "title": "Laws of the Game",
+      "description": "The Laws of the Game for players, coaches and referees.",
+      "category": "club",
+      "kind": "pdf",
+      "source": {
+        "mode": "url",
+        "url": "https://www.prospector.org/wp-content/uploads/sites/206/2023/04/Laws_of_the_Game.pdf"
+      },
+      "external": true
+    }
+  },
+  {
+    "id": "doc_5",
+    "data": {
+      "title": "PSC Environmental Play Policy (air quality / AQI)",
+      "description": "Club guidance for air quality and environmental play.",
+      "category": "club",
+      "kind": "pdf",
+      "source": {
+        "mode": "url",
+        "url": "https://www.prospector.org/wp-content/uploads/sites/206/2023/04/Revised_AQI_dated_110322.pdf"
+      },
+      "external": true
+    }
+  },
+  {
+    "id": "doc_6",
+    "data": {
+      "title": "PSC Parent/Spectator Code of Conduct",
+      "description": "Sideline conduct expectations for parents and spectators.",
+      "category": "club",
+      "kind": "pdf",
+      "source": {
+        "mode": "url",
+        "url": "https://www.prospector.org/wp-content/uploads/sites/206/2023/09/PSC-Parent-Spectator-Code-of-Conduct.pdf"
+      },
+      "external": true
+    }
+  },
+  {
+    "id": "doc_7",
+    "data": {
+      "title": "Code of Conduct — Coach",
+      "description": "Conduct expectations for coachs.",
+      "category": "club",
+      "kind": "pdf",
+      "source": {
+        "mode": "url",
+        "url": "https://www.prospector.org/wp-content/uploads/sites/206/2023/09/Code_of_conduct_coach.pdf"
+      },
+      "external": true
+    }
+  },
+  {
+    "id": "doc_8",
+    "data": {
+      "title": "Code of Conduct — Player",
+      "description": "Conduct expectations for players.",
+      "category": "club",
+      "kind": "pdf",
+      "source": {
+        "mode": "url",
+        "url": "https://www.prospector.org/wp-content/uploads/sites/206/2023/09/Code_of_conduct_player.pdf"
+      },
+      "external": true
+    }
+  },
+  {
+    "id": "doc_9",
+    "data": {
+      "title": "Code of Conduct — Parent",
+      "description": "Conduct expectations for parents.",
+      "category": "club",
+      "kind": "pdf",
+      "source": {
+        "mode": "url",
+        "url": "https://www.prospector.org/wp-content/uploads/sites/206/2023/09/Code_of_conduct_parent.pdf"
+      },
+      "external": true
+    }
+  },
+  {
+    "id": "doc_10",
+    "data": {
+      "title": "Concussion Info Fact Sheet",
+      "description": "Concussion safety information for the soccer community.",
+      "category": "safety",
+      "kind": "pdf",
+      "source": {
+        "mode": "url",
+        "url": "https://www.prospector.org/wp-content/uploads/sites/206/2023/04/Concussion-Info-Fact-Sheet.pdf"
+      },
+      "external": true
+    }
+  },
+  {
+    "id": "doc_11",
+    "data": {
+      "title": "Cardiac Arrest Information Fact Sheet",
+      "description": "Cardiac arrest health and safety information.",
+      "category": "safety",
+      "kind": "pdf",
+      "source": {
+        "mode": "url",
+        "url": "https://www.prospector.org/wp-content/uploads/sites/206/2023/04/Cardiac-Arrest-Information-Fact-Sheet.pdf"
+      },
+      "external": true
+    }
+  },
+  {
+    "id": "doc_12",
+    "data": {
+      "title": "Mini-CPL Playing League Rules 2023",
+      "description": "The 2023 Mini-CPL playing league rules.",
+      "category": "safety",
+      "kind": "pdf",
+      "source": {
+        "mode": "url",
+        "url": "https://www.prospector.org/wp-content/uploads/sites/206/2023/08/Mini-CPL-Playing-League-Rules-2023.pdf"
+      },
+      "external": true
+    }
+  },
+  {
+    "id": "doc_13",
+    "data": {
+      "title": "U6 session planning",
+      "description": "Practice session planning for U6 coaches.",
+      "category": "coaching",
+      "kind": "pdf",
+      "source": {
+        "mode": "url",
+        "url": "https://www.prospector.org/wp-content/uploads/sites/206/2023/06/U6_Session_Planning.pdf"
+      },
+      "external": true
+    }
+  },
+  {
+    "id": "doc_14",
+    "data": {
+      "title": "U8 session planning",
+      "description": "Practice session planning for U8 coaches.",
+      "category": "coaching",
+      "kind": "pdf",
+      "source": {
+        "mode": "url",
+        "url": "https://www.prospector.org/wp-content/uploads/sites/206/2023/06/U8_Session_Planning.pdf"
+      },
+      "external": true
+    }
+  },
+  {
+    "id": "doc_15",
+    "data": {
+      "title": "U10 session planning",
+      "description": "Practice session planning for U10 coaches.",
+      "category": "coaching",
+      "kind": "pdf",
+      "source": {
+        "mode": "url",
+        "url": "https://www.prospector.org/wp-content/uploads/sites/206/2023/06/U10_Session_Planning.pdf"
+      },
+      "external": true
+    }
+  },
+  {
+    "id": "doc_16",
+    "data": {
+      "title": "U12 session planning",
+      "description": "Practice session planning for U12 coaches.",
+      "category": "coaching",
+      "kind": "pdf",
+      "source": {
+        "mode": "url",
+        "url": "https://www.prospector.org/wp-content/uploads/sites/206/2023/06/U12_Session_Planning.pdf"
+      },
+      "external": true
+    }
+  },
+  {
+    "id": "doc_17",
+    "data": {
+      "title": "U6 modified rules",
+      "description": "Modified rules of the game for U6.",
+      "category": "coaching",
+      "kind": "pdf",
+      "source": {
+        "mode": "url",
+        "url": "https://www.prospector.org/wp-content/uploads/sites/206/2023/07/PSC-U6-MODIFIED-RULES-OF-THE-GAME.pdf"
+      },
+      "external": true
+    }
+  },
+  {
+    "id": "doc_18",
+    "data": {
+      "title": "U8 modified rules",
+      "description": "Modified rules of the game for U8.",
+      "category": "coaching",
+      "kind": "pdf",
+      "source": {
+        "mode": "url",
+        "url": "https://www.prospector.org/wp-content/uploads/sites/206/2023/07/PSC-U8-MODIFIED-RULES-OF-THE-GAME.pdf"
+      },
+      "external": true
+    }
+  },
+  {
+    "id": "doc_19",
+    "data": {
+      "title": "U10 (7v7) modified rules",
+      "description": "Modified rules for U10 seven-a-side games.",
+      "category": "coaching",
+      "kind": "pdf",
+      "source": {
+        "mode": "url",
+        "url": "https://www.prospector.org/wp-content/uploads/sites/206/2023/07/PSC-U10-7v7-M0DIFIED-RULES-OF-THE-GAME.pdf"
+      },
+      "external": true
+    }
+  },
+  {
+    "id": "doc_20",
+    "data": {
+      "title": "Cal North Injury Claim — View Online Form",
+      "description": "For Cal North registered players and team officials injured at a sanctioned event.",
+      "category": "forms",
+      "kind": "form",
+      "source": {
+        "mode": "url",
+        "url": "https://app.playershealthclaims.com/landing/cal-north"
+      },
+      "external": true
+    }
+  },
+  {
+    "id": "doc_21",
+    "data": {
+      "title": "Code of Conduct — Parent",
+      "description": "Conduct expectations for parents.",
+      "category": "policies",
+      "kind": "pdf",
+      "source": {
+        "mode": "url",
+        "url": "https://prospector.teamsnapsites.com/wp-content/uploads/sites/206/2023/02/Code_of_conduct_parent.pdf"
+      },
+      "external": true
+    }
+  },
+  {
+    "id": "doc_22",
+    "data": {
+      "title": "Code of Conduct — Player",
+      "description": "Conduct expectations for players.",
+      "category": "policies",
+      "kind": "pdf",
+      "source": {
+        "mode": "url",
+        "url": "https://prospector.teamsnapsites.com/wp-content/uploads/sites/206/2023/02/Code_of_conduct_player.pdf"
+      },
+      "external": true
+    }
+  },
+  {
+    "id": "doc_23",
+    "data": {
+      "title": "Code of Conduct — Coach",
+      "description": "Conduct expectations for coachs.",
+      "category": "policies",
+      "kind": "pdf",
+      "source": {
+        "mode": "url",
+        "url": "https://prospector.teamsnapsites.com/wp-content/uploads/sites/206/2023/02/Code_of_conduct_coach.pdf"
+      },
+      "external": true
+    }
+  },
+  {
+    "id": "doc_24",
+    "data": {
+      "title": "FAQs for Families",
+      "description": "Answers to frequently asked family questions.",
+      "category": "policies",
+      "kind": "pdf",
+      "source": {
+        "mode": "url",
+        "url": "https://prospector.org/wp-content/uploads/sites/206/2026/01/FAQs-for-Families-%E2%80%93-U.pdf"
+      },
+      "external": true
+    }
+  },
+  {
+    "id": "doc_25",
+    "data": {
+      "title": "PSC Comp Sponsorship Information",
+      "description": "Sponsorship information for the competitive program.",
+      "category": "club",
+      "kind": "pdf",
+      "source": {
+        "mode": "url",
+        "url": "https://www.prospector.org/wp-content/uploads/sites/206/2023/08/PSC-Comp-Sponsorship-Information.pdf"
+      },
+      "external": true,
+      "showInLibrary": false
+    }
+  }
+]

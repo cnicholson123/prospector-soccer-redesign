@@ -5,7 +5,7 @@ export const collectionNames = ['site', ...pageNames.filter(name => name !== 'sp
 export type CollectionName = typeof collectionNames[number];
 export const systemCollectionNames = ['users', 'sessions', 'revisions', 'publishes', 'audit', 'loginAttempts', 'scheduled', 'linkChecks', 'snapshots'] as const;
 // Stable names for the SVG registry extracted in Phase 2. Never accept arbitrary SVG.
-export const iconNames = ['arrow-right', 'arrow-up-right', 'calendar', 'flag', 'ball', 'users', 'check', 'book', 'pin', 'plus', 'clock', 'mail', 'shield', 'heart', 'trophy', 'menu', 'close', 'facebook', 'instagram', 'tiktok', 'key'] as const;
+export const iconNames = ['arrow-right', 'arrow-up-right', 'calendar', 'flag', 'ball', 'users', 'check', 'book', 'pin', 'plus', 'clock', 'mail', 'shield', 'heart', 'trophy', 'menu', 'close', 'facebook', 'instagram', 'tiktok', 'key', 'waving-flag', 'arrow-up', 'contours', 'search', 'calendar-date'] as const;
 interface FieldOptions {
   label?: string; help?: string; group?: string; width?: 'half' | 'full'; editable?: 'inline';
   required?: boolean; default?: unknown; defaultFrom?: string;
@@ -111,6 +111,7 @@ export const collections: Record<CollectionName, Collection> = {
   sponsorTiers: collection('sponsorTiers', 'Sponsor tier', 'Sponsor tiers', 'name', { name: text({ required: true }), program: select(['rec', 'comp']), price: { type: 'money' }, benefits: strings, featured: { type: 'boolean' }, showOnSponsorsPage: { type: 'boolean' } }, 'sponsors'),
   documents: collection('documents', 'Document', 'Documents', 'title', {
     title: text({ required: true }), description: text(), category: select(['club', 'safety', 'coaching', 'forms', 'policies'], true), kind: select(['pdf', 'form', 'link']),
+    showInLibrary: { type: 'boolean', default: true },
     source: object({ mode: select(['url', 'upload'], true), url, fileId: { type: 'file' } }, { required: true }), external: { type: 'boolean' },
   }, 'resources'),
   faqs: collection('faqs', 'FAQ', 'FAQs', 'question', { page: select(['competitive', 'recreational', 'referees', 'sponsors'], true), question: text({ required: true }), answer: rich(false, true) }),

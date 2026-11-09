@@ -2,7 +2,6 @@ import { describe, expect, it, vi } from 'vitest';
 import { adminApp } from '../../server/http/hono-app';
 import { loadConfig } from '../../server/config';
 import { tagContent, purgeContent } from '../../server/render/cdn';
-import { readFile } from 'node:fs/promises';
 import { renderPublic } from '../../server/render/handler';
 
 describe('Phase 0 scaffold', () => {
@@ -36,11 +35,6 @@ describe('Phase 0 scaffold', () => {
   it('does not invoke remote cache operations locally', async () => {
     vi.stubEnv('VERCEL', ''); expect(() => tagContent()).not.toThrow();
     expect(await purgeContent()).toBe(false); vi.unstubAllEnvs();
-  });
-  it.each(['index', 'recreational', 'competitive', 'referees', 'sponsors', 'board', 'resources', 'about'])('serves unchanged legacy %s HTML', async page => {
-    const response = await renderPublic(new Request(`http://localhost/${page === 'index' ? '' : page}`));
-    expect(response.status).toBe(200);
-    expect(await response.text()).toBe(await readFile(`docs/${page}.html`, 'utf8'));
   });
   it('keeps preview unavailable without a session', async () => {
     const response = await renderPublic(new Request('http://localhost/?preview=1'));

@@ -1,0 +1,95 @@
+[
+  {
+    "id": "referees",
+    "data": {
+      "meta": {
+        "title": "Referees · Prospector Soccer Club",
+        "description": "Join the PSC referee program, age 13 and up. Contact Referee Director Matthew Hamedian and find the Laws of the Game.",
+        "ogImage": {
+          "mediaId": "med_referee",
+          "alt": ""
+        }
+      },
+      "hero": {
+        "eyebrow": "Know the game. Guide the game.",
+        "lead": "Help provide a safe, enjoyable soccer environment for players of every age and skill level.",
+        "title": "Referees",
+        "image": {
+          "mediaId": "med_referee",
+          "alt": "An assistant referee holding a checkered flag beside the soccer field"
+        },
+        "chips": [
+          {
+            "_key": "26bb4fab",
+            "text": "Referees needed"
+          },
+          {
+            "_key": "45aa4c0f",
+            "text": "Age 13 and up"
+          },
+          {
+            "_key": "e9cc103a",
+            "text": "Develop at every level"
+          }
+        ]
+      },
+      "cta": {
+        "eyebrow": "Your next step",
+        "title": "Ready to step onto the field?",
+        "text": "Contact Matthew Hamedian to learn about joining the referee program.",
+        "buttons": [
+          {
+            "_key": "097bc589",
+            "label": "Become a referee",
+            "href": "mailto:refereedirector@prospector.org",
+            "external": false
+          }
+        ]
+      },
+      "program": {
+        "eyebrow": "The referee program",
+        "title": "An essential part of the game",
+        "body": "Referees are critical to Prospector Soccer Club’s success. Our program builds a qualified, well-trained group of referees held to high standards. We actively recruit, develop and advance referees at all levels.\n\nReferees should know and correctly apply the Laws of the Game."
+      },
+      "why": {
+        "eyebrow": "Be part of the game",
+        "title": "Why referee",
+        "cards": [
+          {
+            "_key": "0d01a223",
+            "title": "A safe game",
+            "text": "Help provide a safe, enjoyable environment for players of all ages and skill levels.",
+            "icon": "check"
+          },
+          {
+            "_key": "24e48485",
+            "title": "Know the laws",
+            "text": "Learn and correctly apply the Laws of the Game.",
+            "icon": "book"
+          },
+          {
+            "_key": "e36f0bbe",
+            "title": "Keep developing",
+            "text": "Join a program that recruits, develops and advances referees at all levels.",
+            "icon": "waving-flag"
+          },
+          {
+            "_key": "56dc138b",
+            "title": "Start at 13+",
+            "text": "Referees are needed, age 13 and up.",
+            "icon": "users"
+          }
+        ]
+      },
+      "contact": {
+        "eyebrow": "Get involved",
+        "title": "Connect with our referee director",
+        "boardMemberId": "mem_7",
+        "buttonLabel": "Email Matthew",
+        "documentIds": [
+          "doc_4"
+        ]
+      }
+    }
+  }
+]

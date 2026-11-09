@@ -1,0 +1,35 @@
+[
+  {
+    "id": "res_1",
+    "data": {
+      "competition": "2026 CUFA Tournament",
+      "year": 2026,
+      "teamName": "Sharks",
+      "ageGroup": "U15",
+      "gender": "girls",
+      "place": 1
+    }
+  },
+  {
+    "id": "res_2",
+    "data": {
+      "competition": "2026 CUFA Tournament",
+      "year": 2026,
+      "teamName": "Arsenal",
+      "ageGroup": "U14",
+      "gender": "boys",
+      "place": 2
+    }
+  },
+  {
+    "id": "res_3",
+    "data": {
+      "competition": "2026 CUFA Tournament",
+      "year": 2026,
+      "teamName": "Pumas",
+      "ageGroup": "U12",
+      "gender": "girls",
+      "place": 2
+    }
+  }
+]

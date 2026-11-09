@@ -1,0 +1,149 @@
+[
+  {
+    "id": "spo_1",
+    "data": {
+      "name": "Castillo’s Legal Life Support",
+      "tier": "tier_gold",
+      "url": "https://legallifesupport.com/",
+      "active": true
+    }
+  },
+  {
+    "id": "spo_2",
+    "data": {
+      "name": "Elite Cable Systems",
+      "tier": "tier_gold",
+      "url": "https://www.elitecable.net/",
+      "active": true
+    }
+  },
+  {
+    "id": "spo_3",
+    "data": {
+      "name": "Marshall Hospital",
+      "tier": "tier_gold",
+      "url": "https://www.marshallmedical.org/",
+      "active": true
+    }
+  },
+  {
+    "id": "spo_4",
+    "data": {
+      "name": "Garbage Grabbers",
+      "tier": "tier_team",
+      "active": true
+    }
+  },
+  {
+    "id": "spo_5",
+    "data": {
+      "name": "Kona Ice",
+      "tier": "tier_team",
+      "active": true
+    }
+  },
+  {
+    "id": "spo_6",
+    "data": {
+      "name": "Boeger Winery",
+      "tier": "tier_team",
+      "active": true
+    }
+  },
+  {
+    "id": "spo_7",
+    "data": {
+      "name": "Bubble Hive",
+      "tier": "tier_team",
+      "active": true
+    }
+  },
+  {
+    "id": "spo_8",
+    "data": {
+      "name": "El Dorado Savings Bank",
+      "tier": "tier_team",
+      "active": true
+    }
+  },
+  {
+    "id": "spo_9",
+    "data": {
+      "name": "Knotty Pines",
+      "tier": "tier_team",
+      "active": true
+    }
+  },
+  {
+    "id": "spo_10",
+    "data": {
+      "name": "Pizza Factory",
+      "tier": "tier_team",
+      "active": true
+    }
+  },
+  {
+    "id": "spo_11",
+    "data": {
+      "name": "Placerville Food Co-op",
+      "tier": "tier_team",
+      "active": true
+    }
+  },
+  {
+    "id": "spo_12",
+    "data": {
+      "name": "Rocket Door",
+      "tier": "tier_team",
+      "active": true
+    }
+  },
+  {
+    "id": "spo_13",
+    "data": {
+      "name": "Sacramento County Deputy Sheriff’s Association",
+      "tier": "tier_team",
+      "active": true
+    }
+  },
+  {
+    "id": "spo_14",
+    "data": {
+      "name": "The Breakroom",
+      "tier": "tier_team",
+      "active": true
+    }
+  },
+  {
+    "id": "spo_15",
+    "data": {
+      "name": "Thriving Numbers Bookkeeping",
+      "tier": "tier_team",
+      "active": true
+    }
+  },
+  {
+    "id": "spo_16",
+    "data": {
+      "name": "Tunnel Electric, Inc.",
+      "tier": "tier_team",
+      "active": true
+    }
+  },
+  {
+    "id": "spo_17",
+    "data": {
+      "name": "Valley Scale Company",
+      "tier": "tier_team",
+      "active": true
+    }
+  },
+  {
+    "id": "spo_18",
+    "data": {
+      "name": "Wally’s",
+      "tier": "tier_team",
+      "active": true
+    }
+  }
+]

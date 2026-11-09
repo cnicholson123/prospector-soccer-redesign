@@ -552,3 +552,73 @@ Acceptance: repo has a single build path; `npm test` + both Playwright specs gre
 8. Use the `*.vercel.app` URL for v1; no custom domain yet.
 
 Hosting credentials are not yet available (pending Chris authorizing ChrisBot). Phases 0–5 and 7–12 must be fully runnable locally with the FS driver; Phase 6 real-service contract tests report "not run" if env is absent.
+
+## 18. Review amendments (2026-11-09)
+
+Source: independent reviews of the Phase 0–1 snapshot by Fable (plan author) and Astra. Earlier sections stay as written; where this section conflicts with them, this section wins. Codex: implement these in the phase named for each item; nothing here changes Phases 2–3, which are in flight.
+
+### 18.1 Decisions changed
+
+| Topic | Was (§) | Now |
+|---|---|---|
+| Production storage | Postgres **or** Blob-KV fallback (§0, §4, §17.2) | **Postgres (Neon) for all metadata; Vercel Blob for media binaries only.** `KvStore` + `FsPrimitives` remain for dev/tests. The `primitives/blob.ts` KV driver is **dropped** from Phase 6; `STORE_DRIVER` accepts `fs | postgres` only. |
+| Bootstrap credential | `Phil`/`Phil` defaults in code and `.env.example` (§6.1, §11) | Chris's requested `Phil`/`Phil` stays as the *dev* default. In production (`NODE_ENV=production`) `ADMIN_BOOTSTRAP_USER`/`ADMIN_BOOTSTRAP_PASSWORD` have **no code default**: `loadConfig` fails fast if either is unset. `.env.example` lists `ADMIN_BOOTSTRAP_PASSWORD=` **empty** with a comment ("set locally; Chris's chosen value is not committed"). Not forced to change (explicit request), but: `passwordWeak` ⇒ a persistent, prominent banner on every admin screen with a one-click path to Change password, dismissible only per session; dashboard health check "Owner password is weak"; **every** login attempt (success, failure, lockout) is audited with IP/UA (`auth.login`, `auth.login_failed`, `auth.locked`). |
+| Conflict handling | Per-field merge panel + auto-merge (§7.3) | **v1: 409 ⇒ "Someone else saved this. Reload and compare"** — the SPA shows the server doc next to the local draft with the schema-aware DiffView (§7.1) and two actions: *Discard mine / Keep mine (overwrite, with a new revision)*. Per-field merge moves to a post-v1 backlog. Polling "Also editing" indicator stays. |
+| Reorder reversibility | Reorder = audit only; manifests omit order (§5, §7.4) | `order` is part of the versioned state: `Snapshot.docs[].order` and `PublishRecord.manifest[].order` are required; site restore restores order. Reorder still writes one audit entry and no per-doc revision, but bumps each moved doc's `version` through the atomic mutation API (18.2.3). |
+| Store API | Separate `updateDoc` / `upsertWorkingRevision` / `appendAudit` (§4.1) | One atomic content mutation call (18.2.3). `publish(tx)` takes `{ expectedVersion, nextDoc }` pairs (18.2.4). |
+
+### 18.2 Phase 1b — Store and baseline remediation (M)
+
+Runs **after Phases 2–3 and before Phase 4**. One Codex run. Nothing in Phase 4+ may build on the pre-1b store API.
+
+1. **Build baseline.** Add `@types/node@^22` to devDependencies and update the lockfile; add it to the §13 allowlist. Acceptance: `rm -rf node_modules && npm ci && npm run build` passes.
+2. **Vercel entrypoint shape.** Vercel's Node runtime treats a bare default-exported function as a `(req, res)` Node handler, not a Web `Request` handler. `api/render.ts` and `api/admin.ts` must export the Web-standard shape the runtime dispatches on: `export default { fetch: renderPublic }` / `export default { fetch: (req: Request) => adminApp.fetch(req) }` (or `export const GET/POST = …` named method handlers — pick one, document it in `README`). Acceptance: a unit test imports both modules and invokes them exactly as the runtime does (object with `fetch` receiving a `Request` built from a Node `IncomingMessage`-style URL/headers) and asserts `/` → 200 HTML and `/api/admin/healthz` → `{ok:true}`; a second test asserts the modules do **not** export a bare function.
+3. **Atomic content mutation API.** Replace the trio of calls with one Store method:
+   ```ts
+   mutateDoc(m: {
+     collection; id; expectedVersion: number;            // CAS; 'conflict' if mismatch
+     patch: Partial<Doc>;                                 // version := expectedVersion + 1 (store-enforced)
+     revision?: { upsert: Revision } | { append: Revision }; // working-revision upsert or new sealed/unsealed revision
+     seal?: string[];                                     // revision ids to seal in the same write
+     audit: AuditEntry;                                   // required: no silent mutation
+   }): Promise<Doc | 'conflict'>;
+   ```
+   Rules enforced by every adapter: the upserted revision must satisfy `rev.docId === id`, `rev.docVersion === expectedVersion + 1`, and `rev.docVersion > old.docVersion` (reject stale/decreasing `docVersion`); sealed revisions are immutable; in KV the doc write happens **last** so a crash never leaves a doc ahead of its history; in Postgres it is one transaction. `createDoc` likewise takes `{ doc, revision, audit }`. `updateDoc`, `upsertWorkingRevision`, `appendRevision`, `sealRevision`, `appendAudit` are removed from the public interface (kept private inside adapters if useful). Acceptance: contract tests for conflict, stale `docVersion` rejection, interleaved saves from two instances producing monotonic history, and failure injection at each KV write proving the doc is never newer than its latest revision.
+4. **Publish transaction shape.** `PublishTx.docs` becomes `{ expectedVersion: number; nextDoc: Doc }[]`; the store CAS-checks `stored.version === expectedVersion` and writes `nextDoc` (whose `version` may be `expectedVersion` or `expectedVersion + 1`, e.g. restore). Acceptance: a restore-style publish that increments versions succeeds atomically; a stale `expectedVersion` rejects before any write.
+5. **Kind-tagged publish records and recovery.** `PublishRecord.kind: 'publish' | 'unpublish' | 'schedule' | 'restore' | 'rebuild'`. Every snapshot change goes through `publish(tx)` and creates a record — unpublish and schedule-cancel included (replaces "republishes the snapshot" wording in §7.5). KV write order: docs → revisions → audit → record → snapshot; each step idempotent on retry (same ids ⇒ same keys ⇒ overwrite with identical content is allowed, **different** content under an existing id is rejected). Add `store.recoverPublish(): Promise<{ repaired: boolean; siteVersion }>` which, when `publishes/<n+1>` exists but the snapshot is at `n`, rebuilds the snapshot from the stored `published` fields and record manifest (`kind: 'rebuild'` is *not* a new version; it completes the pending one). The admin API calls `recoverPublish` lazily on the first publish/dashboard request after an error. Acceptance: failure-injection tests at **each** of the five write steps, followed by retry or `recoverPublish`, end in a consistent state (snapshot, record, docs agree) with no duplicate records.
+6. **Snapshot / manifest completeness.** `Snapshot` gains `schemaVersion: number` (from `shared/schema.ts` `SCHEMA_VERSION`), `docs[].order`, `scheduled[]` as today **plus** `effectiveAt` bookkeeping (18.4.4), and `media: Record<mediaId, { url; mime; width; height; alt }>` — an immutable copy of every media record referenced by published docs, so historical versions render even after a media record is edited. `PublishRecord.manifest[]` gains `order`. Media binaries referenced by any publish record are never deleted (media "delete" = trash flag; binary GC is out of scope for v1).
+7. **Ids and KV layout.** Ids are time-sortable: `rev_<ISO-ms base32>_<rand6>`, `aud_<…>`, `pub` stays the padded site version; doc ids unchanged. Keys: `revisions/<docId>/<revId>.json`, `audit/<yyyy-mm>/<auditId>.json` (no `<at>` in keys; existence check = one `get`). `getRevision(docId, revId)` and `listRevisions(collection, docId, …)` are scoped by doc; `queryAudit` without filters reads months newest-first until `limit` is satisfied. `FsPrimitives.list(prefix)` walks only the prefix directory. `createDoc` checks `docs/<collection>/<id>` only (ids already carry the collection prefix; Postgres keeps `id` as PK). Acceptance: a contract test with 500 revisions across 20 docs asserts `getRevision` performs ≤ 2 primitive reads (count via a wrapping `KvPrimitives`).
+8. **Stale-lock recovery.** `FsPrimitives.exclusive` writes `{ pid, at }` into `.store-lock/owner.json`; a waiter steals the lock when the pid is not alive or `at` is older than 30 s, logging a warning. Acceptance: test kills nothing but plants a lock with a dead pid and an old `at`, and the next mutation succeeds within 1 s.
+9. **Validation tiers.** `validate(collection, data, { mode: 'draft' | 'publish', resolve })`. `draft`: current behaviour plus defaults applied **on create** by the API (`default`/`defaultFrom`), default `maxLength` 500 for `text`, 5 000 for `multiline`, 20 000 for `richtext`, and a 1 MB JSON body cap on `/api/admin`. `publish`: additionally every `reference` must resolve to an existing, non-trashed doc of the declared collection; every `image`/`file` to a media record of the right kind; singletons must contain every required section (`validate('home', {})` fails in publish mode). Acceptance: tests for each rule; the `publish` route rejects with `validation` 422 listing paths.
+10. **Small fixes.** `toLowerCase()` (not `toLocaleLowerCase`) for username index keys; `playwright.config.ts` `webServer` runs with `DATA_DIR=<mkdtemp>` and `PW_CHANNEL` default; remove `Cache-Control: no-store` from `/admin/assets/*` (hashed) while keeping it on `/admin/index.html`.
+
+Phase 1b acceptance overall: `npm ci && npm run build && npm test` green from a clean checkout; `plans/admin-progress.md` CHANGELOG lists every item above as done or explicitly not done.
+
+### 18.3 Security and integrity rules (Phase 4/5 unless noted)
+
+1. **Referential integrity.** `POST …/trash` on a doc referenced by any other draft or published doc is refused: 409 `{ error: { code: 'in_use', details: { usage: [{collection,id,title,path}] } } }`; the SPA shows the list with links. The renderer skips unresolved references defensively and the dashboard health check "Broken reference" lists them.
+2. **Link checker SSRF.** Only `http:`/`https:`; resolve DNS first and refuse loopback, link-local, RFC 1918, ULA, multicast and metadata (`169.254.169.254`) ranges; no redirects to such ranges (follow ≤ 3 redirects, re-checking each); 8 s timeout; 1 MB response cap; `HEAD` then `GET` fallback; concurrency 5. Tests with a local stub server on 127.0.0.1 must be **refused**.
+3. **Upload quarantine (Phase 10).** Client uploads land under `media/incoming/<token>/…`; `POST /media` finalizes only after the server fetches the blob, verifies magic bytes against the declared mime, size limits (§6.2), image dimensions, and rejects SVG; the verified file is copied to `media/<yyyy>/<mediaId>/…` and the incoming copy deleted. Unfinalized incoming blobs are GC'd after 24 h by the cron. Media records are created only at finalize.
+4. **Cache correctness with schedules.** `ETag` = `W/"<siteVersion>-<templateHash>-<scheduleStateHash>"` where `scheduleStateHash` hashes the set of scheduled items whose `at` ≤ now. When any scheduled item is due within the SWR window, respond with `s-maxage=<seconds until due>, stale-while-revalidate=0`; otherwise the normal policy. Copy: "Live now" only when the purge returned `true`; otherwise "Live within about 5 minutes" (SWR 300 s is the real bound, not 30 s — §2 wording corrected).
+5. **Authorization matrix fixes (§5 vs §6.3).** Reorder requires `content.trash`-tier (Editor+) to match §6.3 — rename the permission to `content.manage` covering reorder, trash, media.delete, link check. Editing the `site` singleton via the generic `PUT /docs/site/site` requires `site.settings`; `requirePermission` receives the collection and applies this ceiling.
+6. **Session GC.** `Store.deleteExpiredSessions(now)`; called by the cron and lazily (≤ once per hour) on login. Sliding refresh writes at most hourly as in §6.1.
+
+### 18.4 Re-sequenced phases
+
+Phases 0–3 unchanged. Then:
+
+| Order | Phase | Change |
+|---|---|---|
+| 4 | **1b** Store and baseline remediation | new (18.2) |
+| 5 | **4** Auth, users, sessions, permissions, audit | as written + 18.1 bootstrap rules, 18.3.5, 18.3.6 |
+| 6 | **5** Revisions, publish, restore, scheduling | on the 1b API; `recoverPublish`, kind-tagged records, 18.3.1, 18.3.4 |
+| 7 | **6** Production storage | **Postgres + Vercel media blobs only**; contract suite (incl. 1b failure-injection tests) against Neon when env present |
+| 8 | **7a — Vertical slice (M)** | **new.** Minimal SPA: Login → Dashboard (pending count only) → Events list → Event editor (generic form, autosave, 409 reload-and-compare) → Preview pane → Publish → History timeline with Restore. Plus the public utility-bar Admin link. Acceptance: Playwright flow `/` → Admin → login as Phil → create event → preview shows it → publish → `/` contains it → edit → restore first revision → publish → `/` shows original; run at **390 px and 1280 px**, once **keyboard-only**; weak-password banner visible; Lighthouse a11y ≥ 95 on login and editor. No other editors, no palette, no inline edit, no media yet. |
+| 9 | **7b** Breadth: remaining editors, page editors, collection lists, list editor, trash, bulk | former Phase 7 minus the slice |
+| 10 | **8** Publish tray, scheduling, inline edit | as written; inline edit may slip to post-v1 if 7b runs long |
+| 11 | **9** History & audit UI | as written (DiffView already exists from 7a's compare screen) |
+| 12 | **10** Media | as written + 18.3.3 |
+| 13 | **11** Users, roles, review flow, palette, shortcuts | as written |
+| 14 | **12** Cut-over | as written; deployment checklist adds "set `ADMIN_BOOTSTRAP_*` env before first request" |
+
+Rule: nothing from 7b onward starts until the 7a Playwright flow is green on the FS driver and, once env exists, on Postgres.

@@ -1,0 +1,76 @@
+[
+  {
+    "id": "evt_1",
+    "data": {
+      "title": "Yoga Berry fundraiser",
+      "type": "Fundraiser",
+      "date": "2026-11-06",
+      "calendarTitle": "Fundraiser at Yoga Berry",
+      "location": "Yoga Berry",
+      "locationDetail": "Yoga Berry",
+      "showOnHome": true
+    }
+  },
+  {
+    "id": "evt_2",
+    "data": {
+      "title": "U12 Allstars",
+      "type": "All-stars",
+      "date": "2026-11-07",
+      "calendarTitle": "U12 Allstars",
+      "location": "Rasmussen Park",
+      "locationDetail": "Rasmussen Park",
+      "showOnHome": true
+    }
+  },
+  {
+    "id": "evt_3",
+    "data": {
+      "title": "Pizza Factory fundraiser",
+      "type": "Fundraiser",
+      "date": "2026-11-11",
+      "calendarTitle": "Fundraiser at Pizza Factory",
+      "location": "Pizza Factory",
+      "locationDetail": "Pizza Factory",
+      "showOnHome": true
+    }
+  },
+  {
+    "id": "evt_4",
+    "data": {
+      "title": "Board meeting",
+      "type": "Club meeting",
+      "date": "2026-11-12",
+      "calendarTitle": "Board Meeting",
+      "location": "Mountain Mike's",
+      "locationDetail": "Mountain Mike’s",
+      "showOnHome": true,
+      "time": "18:30"
+    }
+  },
+  {
+    "id": "evt_5",
+    "data": {
+      "title": "U8 / U10 Allstars",
+      "type": "All-stars",
+      "date": "2026-11-14",
+      "calendarTitle": "U8/U10 Allstars",
+      "location": "U8 at Indian Creek, U10 at Golden Sierra",
+      "locationDetail": "U8 at Indian Creek · U10 at Golden Sierra",
+      "showOnHome": true
+    }
+  },
+  {
+    "id": "evt_6",
+    "data": {
+      "title": "Annual General Meeting",
+      "type": "Annual meeting",
+      "date": "2026-12-10",
+      "calendarTitle": "Annual General Meeting (AGM)",
+      "location": "Los Pinos",
+      "locationDetail": "Los Pinos",
+      "showOnHome": true,
+      "time": "17:30"
+    }
+  }
+]

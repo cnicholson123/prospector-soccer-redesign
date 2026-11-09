@@ -1,0 +1,73 @@
+[
+  {
+    "id": "resources",
+    "data": {
+      "meta": {
+        "title": "Resources & forms · Prospector Soccer Club",
+        "description": "PSC document library: governance, codes of conduct, safety fact sheets, coaching session plans, modified rules and the Cal North injury claim form.",
+        "ogImage": {
+          "mediaId": "med_resources",
+          "alt": ""
+        }
+      },
+      "hero": {
+        "eyebrow": "The club library",
+        "lead": "Find club documents, safety information, coaching plans and the forms you need.",
+        "title": "Resources & forms",
+        "image": {
+          "mediaId": "med_resources",
+          "alt": "Soccer coaching materials and equipment ready for a session"
+        },
+        "chips": [
+          {
+            "_key": "c4981fd2",
+            "text": "Club documents"
+          },
+          {
+            "_key": "b2fd1ddd",
+            "text": "Coaching plans"
+          },
+          {
+            "_key": "11dfcb28",
+            "text": "Safety & health"
+          }
+        ]
+      },
+      "library": {
+        "eyebrow": "Document library",
+        "title": "Find what you need",
+        "lead": "Search by title or choose a category. PDFs and the online form open in a new tab.",
+        "searchPlaceholder": "Search documents",
+        "emptyText": "No documents match your search. Try another term or choose All.",
+        "categories": [
+          {
+            "_key": "f9777506",
+            "label": "All",
+            "key": "all"
+          },
+          {
+            "_key": "264c38dd",
+            "label": "Club documents",
+            "key": "club"
+          },
+          {
+            "_key": "88f19624",
+            "label": "Safety & health",
+            "key": "safety"
+          },
+          {
+            "_key": "17e29e18",
+            "label": "Coaching",
+            "key": "coaching"
+          },
+          {
+            "_key": "bf369658",
+            "label": "Forms",
+            "key": "forms"
+          }
+        ]
+      },
+      "formsNote": "**Submit within 90 days of the incident.** Online submissions only; hard-copy submissions are no longer accepted. This is secondary insurance with a $500 deductible."
+    }
+  }
+]

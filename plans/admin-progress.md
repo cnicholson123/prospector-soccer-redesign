@@ -50,3 +50,56 @@ Deviations / open issues:
 - FS lock recovery after an ungraceful process death is manual: with all dev servers stopped, remove `DATA_DIR/.store-lock`. The lock times out rather than stealing an active writer's lock. This is a local-development limitation; production transactions remain Phase 6 work.
 - No content migration, production service tests, sign-in, publishing engine, or admin editor is claimed in these two phases.
 - Playwright uses the installed Google Chrome (channel 'chrome'); the Codex sandbox cannot launch browsers, so Claude runs e2e outside it.
+
+## CHANGELOG — Phase 2 — Renderer core and home/shared migration — 2026-11-09
+
+Shipped
+
+- Added escaped tagged HTML, renderer-owned raw markup, constrained Markdown with XSS tests, URL normalization and render-time scheme checks. Extracted all 20 distinct legacy SVG bodies into named icons and implemented the six remaining schema-reserved icons.
+- Added snapshot views, shared layout, home template and reusable collection templates. Seeded site, home, events, callouts, results, sponsors, sponsor tiers and all 16 static images. Image records preserve per-use alt text on page fields and store intrinsic dimensions. The JPEG and WebP hero assets have distinct IDs.
+- Added `npm run seed`, with whole-migration validation, global ID uniqueness checks, edit protection, idempotent reruns, explicit `--force`, an initial published snapshot, sealed revisions and a restorable publish manifest. Development startup seeds an empty FS store automatically. Existing initialized stores are preserved.
+- Added `scripts/export-golden.ts`, gated by `UPDATE_GOLDEN=1`. All eight fixtures were copied byte-for-byte from `docs/`. Added `npm run check-facts` for the inventory's URLs, email addresses, dollar amounts and named people, businesses and places.
+- Wired the existing API entry to the snapshot renderer, with ETags, conditional GET/HEAD, configurable cache headers, CDN tagging and per-instance snapshot reuse keyed by site version. Callout windows and the local-midnight event cutoff cap the TTL. The ETag also includes a representation digest so clock-driven changes cannot receive an incorrect 304.
+- Retained the original public CSS and JavaScript byte-for-byte, including client-side event dimming and the season dial.
+
+Acceptance and verification
+
+- Home golden passes. Home, Global and Sponsors inventory facts are covered by the whole-inventory check, which passes all 122 extracted facts.
+- Local `npm run dev` with `STORE_DRIVER=fs`, a fresh repository-local data directory, `CACHE_SMAXAGE=15` and `CACHE_SWR=300` serves `/` with status 200, a weak ETag and `Cache-Control: public, max-age=0, s-maxage=15, stale-while-revalidate=300`.
+- `npm run seed` and its repeat pass. Tests cover protected edits and explicit force, published/draft equality, sealed seed revisions and the initial manifest.
+- `npm run build` passes. Combined Phase 0–3 suite passes 214 tests, with two hosted-service skips.
+- Neon contract tests — **not run (no env)**. Blob contract tests — **not run (no env)**.
+
+Decisions and remaining work
+
+- Golden normalization additionally canonicalizes equivalent character-reference spellings and relative/root-relative asset paths. All elements, classes, attributes and text remain compared. Root-relative assets keep deep 404 URLs usable.
+- Rendering helpers accept edit-mode annotations, but the HTTP route continues to deny preview/edit requests with 401 and `no-store`. Session-backed draft selection belongs to Phases 4–5.
+- The unchanged client-side season-phase labels remain in `main.js` as required by this phase's preservation constraint. Their corresponding phase definitions are present in the home seed.
+- No public Admin link or new admin screen was added. Those are Phase 7 scope.
+
+## CHANGELOG — Phase 3 — Remaining seven pages — 2026-11-09
+
+Shipped
+
+- Added snapshot-driven recreational, competitive, referees, sponsors, board, resources and about templates and seeds. Migrated teams, board members, documents and FAQs, including all 11 teams, 14 board roles and 25 document records. The complete migration contains 111 documents across 19 content types.
+- Added a branded 404, robots.txt and sitemap.xml driven by the site's indexing setting. The seed preserves `noindex`. Clean legacy URLs return 308 redirects with query strings retained.
+- Added stable-key `data-edit` field addresses in explicit edit renders. Unit tests validate the emitted addresses against the schema and confirm ordinary public output contains no edit metadata.
+- Removed the legacy static-page bridge. The development server now renders every public page from the Store snapshot, with no runtime reads from `docs/`. Removed the obsolete Vercel function include for legacy HTML.
+- Updated the scaffold e2e spec and added renderer HTTP, redirect, crawler, preview-denial, responsive, filtering and no-JavaScript specs. Playwright uses an isolated repository-local FS directory and the installed Chrome configuration.
+
+Acceptance and verification
+
+- All eight golden comparisons pass through the renderer and the HTTP handler. The fixtures still match `docs/*.html` byte-for-byte.
+- `npm run check-facts` passes all 122 extracted inventory facts.
+- Local HTTP checks confirm `/recreational.html` returns 308 to `/recreational`, an unknown deep path returns a 404 with site chrome, `/robots.txt` disallows indexing, the health endpoint returns `{ "ok": true }`, and `?edit=1` returns 401 with `no-store`.
+- Tests cover page edits, shared collection edits, ordering, added/empty lists, image URLs and per-use alts, callout activation/expiry, old-event filtering, timezones, midnight TTL caps, conditional requests and indexing opt-in.
+- `npm run build` passes. `npm test` passes 214 tests, with two explicit hosted-service skips. `npm run test:e2e -- --list` discovers nine tests across two specs.
+- Browser e2e and visual screenshots — **not run (sandbox)**. Claude must execute the specs with the installed Chrome. No browser or Lighthouse pass is claimed.
+- Neon and Blob — **not run (no env)**.
+
+Deviations and open issues
+
+- Added the optional `documents.showInLibrary` boolean, defaulting to true. The existing competitive sponsorship PDF is referenced by its program page but absent from the original resources library. Its seed flag is false, preserving both pages without hard-coded document-ID exclusions.
+- Continued the Phase 1 `sponsorsPage` singleton naming decision. `/sponsors` is unchanged and `sponsors` remains the collection.
+- Public golden output is unchanged apart from the plan's clean URLs and equivalent escaped/root-relative spellings noted above. CSS, JavaScript, source pages and legacy built pages remain unchanged.
+- Authenticated preview and the admin UI remain assigned to their later phases. Hosted storage and deployment remain Phase 6 work. No credentials, commits, pushes, deployments or global configuration changes were made.

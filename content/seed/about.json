@@ -1,0 +1,128 @@
+[
+  {
+    "id": "about",
+    "data": {
+      "meta": {
+        "title": "About Prospector · Prospector Soccer Club",
+        "description": "Learn about Prospector Soccer Club: our communities, purpose, vision, mission and five core values.",
+        "ogImage": {
+          "mediaId": "med_about",
+          "alt": ""
+        }
+      },
+      "hero": {
+        "eyebrow": "Rooted in the foothills",
+        "lead": "A community soccer club with room for every player to grow.",
+        "title": "About Prospector",
+        "image": {
+          "mediaId": "med_about",
+          "alt": "A soccer field in the California foothills"
+        },
+        "chips": [
+          {
+            "_key": "e4534c9e",
+            "text": "Non-profit"
+          },
+          {
+            "_key": "b06bd51d",
+            "text": "100% volunteer-run"
+          },
+          {
+            "_key": "d41ab1fd",
+            "text": "Cameron Park · Shingle Springs · Rescue"
+          }
+        ]
+      },
+      "cta": {
+        "eyebrow": "Your next step",
+        "title": "Find your place on the field",
+        "text": "Explore recreational and competitive soccer with Prospector Soccer Club.",
+        "buttons": [
+          {
+            "_key": "14fe972d",
+            "label": "Recreational soccer",
+            "href": "/recreational",
+            "external": false
+          },
+          {
+            "_key": "9ece96ca",
+            "label": "Competitive soccer",
+            "href": "/competitive",
+            "external": false
+          }
+        ]
+      },
+      "purpose": {
+        "eyebrow": "Our purpose",
+        "title": "A club for our community",
+        "lead": "Prospector Soccer Club (PSC) serves Cameron Park, Shingle Springs and Rescue, California, in the El Dorado County foothills.",
+        "statement": "Our purpose is to lead in developing young talent and to administer and promote an organized, non-profit, volunteer soccer program for the children of our club’s territory."
+      },
+      "vision": {
+        "eyebrow": "Looking ahead",
+        "title": "Room to grow",
+        "image": {
+          "mediaId": "med_pitch_sunrise",
+          "alt": "Sunrise across a soccer pitch in the foothills"
+        },
+        "heading": "Our vision",
+        "lead": "To be a cornerstone of the community: developing players at every level while championing teamwork, respect, discipline, integrity and community.",
+        "body": "Every player, recreational or competitive, should have room to grow and a lasting love of the game."
+      },
+      "mission": {
+        "eyebrow": "What brings us together",
+        "title": "A rewarding place to play",
+        "image": {
+          "mediaId": "med_about",
+          "alt": "A soccer field in the California foothills"
+        },
+        "heading": "Our mission",
+        "bullets": [
+          {
+            "_key": "f37ddd00",
+            "text": "Give every player a supportive, rewarding place to play, focused on fun, enjoyment and skill at their level of interest and ability."
+          },
+          {
+            "_key": "ab421b8b",
+            "text": "Create a challenging environment for players who want to reach their full potential."
+          },
+          {
+            "_key": "bdfddaab",
+            "text": "Foster physical, mental and emotional growth through soccer at all ages and levels."
+          }
+        ]
+      },
+      "values": {
+        "eyebrow": "Our core values",
+        "title": "The values we play by",
+        "items": [
+          {
+            "_key": "0ddc427a",
+            "title": "Teamwork",
+            "text": "Building trust and communication. We win and lose together."
+          },
+          {
+            "_key": "db1cd063",
+            "title": "Respect",
+            "text": "For the game, teammates, opponents, coaches and officials."
+          },
+          {
+            "_key": "92417ac3",
+            "title": "Discipline",
+            "text": "Following the rules and staying committed."
+          },
+          {
+            "_key": "4d5b5d6e",
+            "title": "Integrity",
+            "text": "Fair play, honesty and transparency."
+          },
+          {
+            "_key": "60d58276",
+            "title": "Community",
+            "text": "Building lasting relationships through soccer."
+          }
+        ]
+      }
+    }
+  }
+]

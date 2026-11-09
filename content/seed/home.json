@@ -1,0 +1,392 @@
+[
+  {
+    "id": "home",
+    "data": {
+      "meta": {
+        "title": "Prospector Soccer Club",
+        "description": "Prospector Soccer Club — non-profit, volunteer-run youth soccer for Cameron Park, Shingle Springs and Rescue, California. Recreational U6–U19 and competitive U9–U19.",
+        "ogImage": {
+          "mediaId": "med_hero_jpg",
+          "alt": ""
+        }
+      },
+      "hero": {
+        "eyebrow": "Cameron Park · Shingle Springs · Rescue",
+        "title": "Gold Country’s home for *youth soccer*",
+        "lead": "A non-profit, volunteer-run club where kids from U6 to U19 learn the game, grow as teammates, and fall in love with Saturday mornings in the foothills.",
+        "image": {
+          "mediaId": "med_hero",
+          "alt": "Youth soccer players racing for the ball at golden hour on a foothill field ringed by oak trees"
+        },
+        "primaryCta": {
+          "label": "Recreational program",
+          "href": "/recreational",
+          "external": false
+        },
+        "secondaryCta": {
+          "label": "Competitive teams",
+          "href": "/competitive",
+          "external": false
+        },
+        "pills": [
+          {
+            "_key": "00fd783b",
+            "text": "Non-profit · 100% volunteer-run"
+          },
+          {
+            "_key": "6116b6e0",
+            "text": "Ages U6–U19"
+          },
+          {
+            "_key": "13355024",
+            "text": "Rec & Comp"
+          }
+        ]
+      },
+      "cta": {
+        "eyebrow": "Questions?",
+        "title": "We’re here to help",
+        "text": "Not sure which program fits, or need help with registration? Our communications director will point you in the right direction.",
+        "buttons": [
+          {
+            "_key": "15f6dc59",
+            "label": "Email the club",
+            "href": "mailto:communicationsdirector@prospector.org",
+            "external": false
+          },
+          {
+            "_key": "26e52855",
+            "label": "Resources",
+            "href": "/resources",
+            "external": false
+          }
+        ]
+      },
+      "season": {
+        "title": "The PSC year",
+        "srSummary": "Competitive tryouts run January, February or May depending on age group. Recreational registration runs April 1 to June 15. Rec practices start mid-July and games run mid-August through the fall. The Annual General Meeting is in December.",
+        "marks": [
+          {
+            "_key": "24ad4c65",
+            "label": "Comp tryouts",
+            "position": 8.33
+          },
+          {
+            "_key": "e3c4f8e9",
+            "label": "Rec registration",
+            "position": 25.0
+          },
+          {
+            "_key": "c38050be",
+            "label": "May tryouts",
+            "position": 37.5
+          },
+          {
+            "_key": "108a7be4",
+            "label": "Rec practices",
+            "position": 54.0
+          },
+          {
+            "_key": "170da577",
+            "label": "Fall games",
+            "position": 64.0
+          },
+          {
+            "_key": "45c43bf8",
+            "label": "All-stars",
+            "position": 87.5
+          }
+        ],
+        "bands": [
+          {
+            "_key": "0a4a16ea",
+            "kind": "comp",
+            "from": 25.0,
+            "to": 100.0
+          },
+          {
+            "_key": "1b3db2c6",
+            "kind": "rec",
+            "from": 54.0,
+            "to": 88.0
+          }
+        ],
+        "legend": [
+          {
+            "_key": "70aaa4f2",
+            "label": "Recreational season (from mid-July)",
+            "swatch": "var(--blue-600)"
+          },
+          {
+            "_key": "7c17a805",
+            "label": "Competitive season (Apr – Dec)",
+            "swatch": "rgb(11 42 91 / .2)"
+          },
+          {
+            "_key": "bc24f7bd",
+            "label": "Today",
+            "swatch": "var(--gold-500)"
+          }
+        ],
+        "phases": [
+          {
+            "_key": "phase000",
+            "fromMonth": 1,
+            "toMonth": 2,
+            "label": "Competitive tryouts (by age group)"
+          },
+          {
+            "_key": "phase001",
+            "fromMonth": 3,
+            "toMonth": 3,
+            "label": "Spring season options for comp teams"
+          },
+          {
+            "_key": "phase002",
+            "fromMonth": 4,
+            "toMonth": 6,
+            "label": "Rec registration is open (Apr 1 – Jun 15)"
+          },
+          {
+            "_key": "phase003",
+            "fromMonth": 7,
+            "toMonth": 7,
+            "label": "Rec practices kick off mid-July"
+          },
+          {
+            "_key": "phase004",
+            "fromMonth": 8,
+            "toMonth": 11,
+            "label": "Fall season is underway"
+          },
+          {
+            "_key": "phase005",
+            "fromMonth": 12,
+            "toMonth": 12,
+            "label": "Annual General Meeting & season wrap"
+          }
+        ]
+      },
+      "calloutsSection": {
+        "title": "Important right now"
+      },
+      "eventsSection": {
+        "eyebrow": "Mark your calendar",
+        "title": "Upcoming events",
+        "lead": "Fundraisers, all-star games and club meetings. Tap any event to drop it straight into your calendar.",
+        "newsLink": {
+          "label": "Latest news on Facebook",
+          "href": "https://www.facebook.com/Prospector-Soccer-Club-108383495868117",
+          "external": true
+        }
+      },
+      "programsSection": {
+        "eyebrow": "Find your season",
+        "title": "Two ways to play",
+        "lead": "From first touches to tournament play — compare PSC’s recreational and competitive programs."
+      },
+      "programs": [
+        {
+          "_key": "2bc2a05e",
+          "image": {
+            "mediaId": "med_rec",
+            "alt": "Young players dribbling between orange cones while a volunteer coach cheers them on"
+          },
+          "badge": "Practices from mid-July",
+          "kicker": "Recreational · U6–U19",
+          "title": "Rec soccer",
+          "text": "Fun-first, local soccer with volunteer coaches. Teams practice once or twice a week and play their games on Saturdays.",
+          "facts": [
+            {
+              "_key": "4e14324b",
+              "label": "Practices",
+              "value": "Mid-July",
+              "note": "1–2× a week, set by your coach"
+            },
+            {
+              "_key": "3c2c3ac0",
+              "label": "Games",
+              "value": "8–10 games",
+              "note": "Saturdays from mid-August"
+            },
+            {
+              "_key": "5a4eb257",
+              "label": "Registration",
+              "value": "$170–$185",
+              "note": "Apr 1 – Jun 15 (waitlist after)"
+            },
+            {
+              "_key": "c5df5c13",
+              "label": "Uniform",
+              "value": "$55 kit",
+              "note": "Capelli uniform required"
+            }
+          ],
+          "cta": {
+            "label": "Explore rec",
+            "href": "/recreational",
+            "external": false
+          },
+          "secondaryLink": {
+            "label": "See all fees",
+            "href": "/recreational#costs",
+            "external": false
+          }
+        },
+        {
+          "_key": "eb900d6d",
+          "image": {
+            "mediaId": "med_comp",
+            "alt": "A teenage player driving forward with the ball as a defender closes in"
+          },
+          "badge": "Tryouts required",
+          "kicker": "Competitive · U9–U19",
+          "title": "Comp soccer",
+          "text": "For players ready for more: tryout-selected teams, longer training, league and cup games across the Sacramento region, and 4+ tournaments a year.",
+          "facts": [
+            {
+              "_key": "4e14324b",
+              "label": "Tryouts",
+              "value": "Jan · Feb · May",
+              "note": "Depending on age group"
+            },
+            {
+              "_key": "3c2c3ac0",
+              "label": "Training",
+              "value": "2–3× a week",
+              "note": "2-hour sessions"
+            },
+            {
+              "_key": "5a4eb257",
+              "label": "Fall league",
+              "value": "10 games",
+              "note": "5 home · 5 away, late Aug – mid Nov"
+            },
+            {
+              "_key": "c5df5c13",
+              "label": "Registration",
+              "value": "$330",
+              "note": "Plus team fee & uniform"
+            }
+          ],
+          "cta": {
+            "label": "Explore comp",
+            "href": "/competitive",
+            "external": false
+          },
+          "secondaryLink": {
+            "label": "Meet the 2026–27 teams",
+            "href": "/competitive#teams",
+            "external": false
+          }
+        }
+      ],
+      "band": {
+        "eyebrow": "Built by neighbors",
+        "title": "Run by volunteers.\nPowered by Gold Country.",
+        "lead": "PSC is a non-profit, volunteer-run club — from the board members who run it to the volunteer head coaches on the sideline.",
+        "image": {
+          "mediaId": "med_about",
+          "alt": ""
+        },
+        "stats": [
+          {
+            "_key": "968c17a8",
+            "value": "100%",
+            "label": "volunteer-run, non-profit club"
+          },
+          {
+            "_key": "d4671c45",
+            "value": "U6–U19",
+            "label": "every age, from first kicks to seniors"
+          },
+          {
+            "_key": "e866d3ca",
+            "value": "11",
+            "label": "competitive teams for Fall 2026 / Spring 2027"
+          },
+          {
+            "_key": "b4b32821",
+            "value": "3",
+            "label": "communities: Cameron Park, Shingle Springs & Rescue"
+          }
+        ]
+      },
+      "resultsSection": {
+        "eyebrow": "Bragging rights",
+        "title": "2026 CUFA Tournament",
+        "lead": "Three PSC teams reached the podium this year. Congratulations, players and coaches!",
+        "link": {
+          "label": "Competitive program",
+          "href": "/competitive",
+          "external": false
+        },
+        "resultIds": [
+          "res_1",
+          "res_2",
+          "res_3"
+        ]
+      },
+      "explore": {
+        "eyebrow": "Get involved",
+        "title": "There’s a role for everyone",
+        "tiles": [
+          {
+            "_key": "1a6b1757",
+            "image": {
+              "mediaId": "med_referee",
+              "alt": "A teenage assistant referee holding a checkered flag on the touchline"
+            },
+            "kicker": "Ages 13+",
+            "title": "Referee",
+            "text": "Join a well-trained crew and keep the game fair.",
+            "href": "/referees"
+          },
+          {
+            "_key": "a0f9fdd6",
+            "image": {
+              "mediaId": "med_coach",
+              "alt": "A volunteer coach explaining a drill to players kneeling on the grass"
+            },
+            "kicker": "Coaches wanted",
+            "title": "Coach",
+            "text": "Pick your roster, get training and new gear.",
+            "href": "/competitive#coaches-wanted"
+          },
+          {
+            "_key": "0d664a35",
+            "image": {
+              "mediaId": "med_board",
+              "alt": "Club volunteers gathered at the edge of a field at dusk"
+            },
+            "kicker": "2026 board",
+            "title": "Board",
+            "text": "Meet the volunteers who run the club.",
+            "href": "/board"
+          },
+          {
+            "_key": "d7d3f79b",
+            "image": {
+              "mediaId": "med_sponsors",
+              "alt": "Volunteers handing out oranges and water under a blue canopy beside the field"
+            },
+            "kicker": "From $400",
+            "title": "Sponsor",
+            "text": "Put your business on the field.",
+            "href": "/sponsors"
+          }
+        ]
+      },
+      "sponsorsSection": {
+        "eyebrow": "Thank you",
+        "title": "Our sponsors",
+        "lead": "Thank you to the local businesses that support Prospector Soccer Club.",
+        "link": {
+          "label": "Become a sponsor",
+          "href": "/sponsors",
+          "external": false
+        }
+      }
+    }
+  }
+]

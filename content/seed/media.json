@@ -1,0 +1,258 @@
+[
+  {
+    "id": "med_about",
+    "data": {
+      "filename": "about.webp",
+      "mime": "image/webp",
+      "size": 244406,
+      "alt": "A soccer field in the California foothills",
+      "variants": {
+        "original": "/assets/img/about.webp",
+        "web": "/assets/img/about.webp"
+      },
+      "source": "static",
+      "width": 1400,
+      "height": 788
+    }
+  },
+  {
+    "id": "med_apple_touch_icon",
+    "data": {
+      "filename": "apple-touch-icon.png",
+      "mime": "image/png",
+      "size": 46261,
+      "alt": "",
+      "variants": {
+        "original": "/assets/img/apple-touch-icon.png",
+        "web": "/assets/img/apple-touch-icon.png"
+      },
+      "source": "static",
+      "width": 180,
+      "height": 180
+    }
+  },
+  {
+    "id": "med_board",
+    "data": {
+      "filename": "board.webp",
+      "mime": "image/webp",
+      "size": 121282,
+      "alt": "Club volunteers gathered at the edge of a field at dusk",
+      "variants": {
+        "original": "/assets/img/board.webp",
+        "web": "/assets/img/board.webp"
+      },
+      "source": "static",
+      "width": 1400,
+      "height": 934
+    }
+  },
+  {
+    "id": "med_coach",
+    "data": {
+      "filename": "coach.webp",
+      "mime": "image/webp",
+      "size": 133412,
+      "alt": "A volunteer coach explaining a drill to players kneeling on the grass",
+      "variants": {
+        "original": "/assets/img/coach.webp",
+        "web": "/assets/img/coach.webp"
+      },
+      "source": "static",
+      "width": 1400,
+      "height": 934
+    }
+  },
+  {
+    "id": "med_comp",
+    "data": {
+      "filename": "comp.webp",
+      "mime": "image/webp",
+      "size": 128508,
+      "alt": "A teenage player driving forward with the ball as a defender closes in",
+      "variants": {
+        "original": "/assets/img/comp.webp",
+        "web": "/assets/img/comp.webp"
+      },
+      "source": "static",
+      "width": 1400,
+      "height": 934
+    }
+  },
+  {
+    "id": "med_crest_sm",
+    "data": {
+      "filename": "crest-sm.png",
+      "mime": "image/png",
+      "size": 63798,
+      "alt": "",
+      "variants": {
+        "original": "/assets/img/crest-sm.png",
+        "web": "/assets/img/crest-sm.png"
+      },
+      "source": "static",
+      "width": 180,
+      "height": 221
+    }
+  },
+  {
+    "id": "med_crest",
+    "data": {
+      "filename": "crest.png",
+      "mime": "image/png",
+      "size": 270676,
+      "alt": "",
+      "variants": {
+        "original": "/assets/img/crest.png",
+        "web": "/assets/img/crest.png"
+      },
+      "source": "static",
+      "width": 440,
+      "height": 540
+    }
+  },
+  {
+    "id": "med_equipment",
+    "data": {
+      "filename": "equipment.webp",
+      "mime": "image/webp",
+      "size": 335836,
+      "alt": "Soccer cleats, shin guards and a ball ready for practice",
+      "variants": {
+        "original": "/assets/img/equipment.webp",
+        "web": "/assets/img/equipment.webp"
+      },
+      "source": "static",
+      "width": 1400,
+      "height": 1050
+    }
+  },
+  {
+    "id": "med_favicon",
+    "data": {
+      "filename": "favicon.png",
+      "mime": "image/png",
+      "size": 8493,
+      "alt": "",
+      "variants": {
+        "original": "/assets/img/favicon.png",
+        "web": "/assets/img/favicon.png"
+      },
+      "source": "static",
+      "width": 64,
+      "height": 64
+    }
+  },
+  {
+    "id": "med_hero_jpg",
+    "data": {
+      "filename": "hero.jpg",
+      "mime": "image/jpeg",
+      "size": 219299,
+      "alt": "",
+      "variants": {
+        "original": "/assets/img/hero.jpg",
+        "web": "/assets/img/hero.jpg"
+      },
+      "source": "static",
+      "width": 1200,
+      "height": 675
+    }
+  },
+  {
+    "id": "med_hero",
+    "data": {
+      "filename": "hero.webp",
+      "mime": "image/webp",
+      "size": 157562,
+      "alt": "Youth soccer players racing for the ball at golden hour on a foothill field ringed by oak trees",
+      "variants": {
+        "original": "/assets/img/hero.webp",
+        "web": "/assets/img/hero.webp"
+      },
+      "source": "static",
+      "width": 1920,
+      "height": 1081
+    }
+  },
+  {
+    "id": "med_pitch_sunrise",
+    "data": {
+      "filename": "pitch-sunrise.webp",
+      "mime": "image/webp",
+      "size": 301168,
+      "alt": "Sunrise across a soccer pitch in the foothills",
+      "variants": {
+        "original": "/assets/img/pitch-sunrise.webp",
+        "web": "/assets/img/pitch-sunrise.webp"
+      },
+      "source": "static",
+      "width": 2172,
+      "height": 724
+    }
+  },
+  {
+    "id": "med_rec",
+    "data": {
+      "filename": "rec.webp",
+      "mime": "image/webp",
+      "size": 193488,
+      "alt": "Young players dribbling between orange cones while a volunteer coach cheers them on",
+      "variants": {
+        "original": "/assets/img/rec.webp",
+        "web": "/assets/img/rec.webp"
+      },
+      "source": "static",
+      "width": 1400,
+      "height": 934
+    }
+  },
+  {
+    "id": "med_referee",
+    "data": {
+      "filename": "referee.webp",
+      "mime": "image/webp",
+      "size": 248228,
+      "alt": "A teenage assistant referee holding a checkered flag on the touchline",
+      "variants": {
+        "original": "/assets/img/referee.webp",
+        "web": "/assets/img/referee.webp"
+      },
+      "source": "static",
+      "width": 1400,
+      "height": 1750
+    }
+  },
+  {
+    "id": "med_resources",
+    "data": {
+      "filename": "resources.webp",
+      "mime": "image/webp",
+      "size": 140652,
+      "alt": "Soccer coaching materials and equipment ready for a session",
+      "variants": {
+        "original": "/assets/img/resources.webp",
+        "web": "/assets/img/resources.webp"
+      },
+      "source": "static",
+      "width": 1400,
+      "height": 934
+    }
+  },
+  {
+    "id": "med_sponsors",
+    "data": {
+      "filename": "sponsors.webp",
+      "mime": "image/webp",
+      "size": 207284,
+      "alt": "Volunteers handing out oranges and water under a blue canopy beside the field",
+      "variants": {
+        "original": "/assets/img/sponsors.webp",
+        "web": "/assets/img/sponsors.webp"
+      },
+      "source": "static",
+      "width": 1400,
+      "height": 934
+    }
+  }
+]
