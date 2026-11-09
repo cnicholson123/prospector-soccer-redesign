@@ -1,0 +1,16 @@
+* { box-sizing: border-box; }
+body { margin: 0; font: 16px/1.7 var(--font-body); color: var(--navy); background: var(--cream); }
+body::before { content: ''; position: fixed; inset: 0 0 auto; height: 48vh; background: var(--navy); z-index: -1; }
+.welcome { width: min(640px, 100% - 40px); margin: clamp(36px, 8vh, 90px) auto; }
+.brand { display: flex; align-items: center; gap: 16px; color: white; text-decoration: none; font: 700 32px/1 var(--font-display); letter-spacing: .02em; width: fit-content; }
+.brand small { display: block; margin-top: 9px; font: 600 11px/1.5 var(--font-body); text-transform: uppercase; letter-spacing: .13em; }
+.welcome-card { margin-top: 40px; padding: clamp(28px, 6vw, 56px); background: white; border-top: 5px solid var(--gold); border-radius: 6px 6px 22px 22px; box-shadow: 0 16px 56px #0b2a5b18; }
+.eyebrow { color: var(--blue); font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .15em; }
+h1 { font: 700 clamp(38px, 7vw, 56px)/1.05 var(--font-display); margin: 20px 0; }
+p { color: var(--muted); }
+.status { display: flex; align-items: center; gap: 10px; padding-top: 12px; font-size: 13px; }
+.status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--blue); }
+.button { display: flex; justify-content: space-between; align-items: center; min-height: 48px; margin-top: 30px; padding: 12px 20px; border-radius: 8px; background: var(--blue); color: white; text-decoration: none; font-size: 14px; font-weight: 700; }
+.button:hover { background: var(--navy); }
+a:focus-visible { outline: 3px solid var(--gold); outline-offset: 5px; }
+.welcome-note { text-align: center; font-size: 12px; margin: 24px 20px; }

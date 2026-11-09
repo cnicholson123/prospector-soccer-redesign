@@ -1,0 +1,12 @@
+node_modules/
+public/admin/
+.data/
+.cache/
+.env
+.env.*
+!.env.example
+.vercel/
+coverage/
+playwright-report/
+test-results/
+.DS_Store
