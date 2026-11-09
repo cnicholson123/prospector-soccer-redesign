@@ -23,3 +23,103 @@
 @media(min-width:1001px){.page-shop .product-buy,.page-shop .cart-summary{top:180px}}
 @media(max-width:599px){.shop-poc-banner .container{padding-top:.55rem;padding-bottom:.55rem}.shop-poc-banner span{font-size:.75rem}.shop-poc-banner strong{font-size:1.2rem}}
 @media(prefers-reduced-motion:reduce){.shop-poc-banner{transition:none}}
+
+/* ==========================================================================
+   Design review, pass 2 (Fable, 2026-11-09)
+   ========================================================================== */
+
+/* Focus rings follow the site rule: blue on light surfaces, gold on dark. */
+.page-shop :is(a,button,input,select,textarea):focus-visible,.product-option input:focus-visible+span{outline-color:var(--blue-600)}
+.page-shop :is(.utility-bar,.shop-hero,.shop-bundle:not(.shop-bundle--gold),.site-footer,.mobile-menu,.section--navy) :is(a,button,input,select,textarea):focus-visible,.page-shop .shop-bundle:not(.shop-bundle--gold)>a:focus-visible{outline-color:var(--gold-500)}
+
+/* Product and bundle cards: photo runs edge to edge and the whole card responds. */
+.product-card.card{padding:0}
+.product-card,.shop-bundle{transition:transform .25s var(--ease),box-shadow .25s var(--ease),border-color .2s}
+.product-card>a,.shop-bundle>a{display:flex;flex-direction:column;-webkit-tap-highlight-color:transparent}
+.product-card>a>img,.shop-bundle>a>img{transition:transform .7s var(--ease)}
+.product-card>a,.shop-bundle>a{overflow:hidden;border-radius:inherit}
+.product-card__body{position:relative;flex:1;display:flex;flex-direction:column;align-items:flex-start;background:inherit}
+.product-card .product-card__body{background:var(--white)}
+.product-card__body>:last-child{margin-bottom:0}
+.product-card__body>.pill{margin-top:auto}
+.product-card__body .shop-poc-note{margin-bottom:.9rem}
+.product-card h3{font-size:1.5rem}
+.product-card__price{font-size:1.15rem;margin-bottom:.6rem;font-variant-numeric:tabular-nums}
+.product-card:hover,.shop-bundle:hover{transform:translateY(-4px);box-shadow:var(--shadow)}
+.product-card:hover{border-color:var(--line-2)}
+.product-card:hover>a>img,.shop-bundle:hover>a>img{transform:scale(1.04)}
+.product-card:hover h3{color:var(--blue-600)}
+.product-card:active,.shop-bundle:active{transform:scale(.99)}
+.shop-bundle .shop-price{margin:.2rem 0 .8rem;font-variant-numeric:tabular-nums}
+.shop-bundle .product-card__body>p{margin-bottom:.5rem}
+
+/* Category chips use the shared chip component; these only tune spacing. */
+.shop-categories a.chip{border-width:1.5px;padding:.4em 1em}
+.shop-categories a.chip:hover{background:var(--white);border-color:var(--blue-900)}
+.shop-categories a[aria-current]{background:var(--blue-900);border-color:var(--blue-900);color:#fff}
+
+/* Hero photo */
+.shop-hero__inner>img{border-radius:var(--radius-lg) var(--radius-lg) 0 var(--radius-lg);box-shadow:var(--shadow-lg)}
+
+/* Product page */
+.product-gallery figure{border-radius:var(--radius-lg);overflow:hidden;background:var(--cream-2);border:1px solid var(--line)}
+.product-gallery figcaption{background:var(--cream)}
+.product-gallery nav img{border:2px solid transparent;transition:border-color .15s,transform .2s var(--ease)}
+.product-gallery nav a:hover img,.product-gallery nav button:hover img{border-color:var(--blue-600);transform:translateY(-2px)}
+.shop-price{font-variant-numeric:tabular-nums}
+.product-option>span{transition:background-color .15s,border-color .15s,color .15s,transform .12s var(--ease);border-width:1.5px}
+.product-option:hover input:not(:disabled,:checked)+span{border-color:var(--blue-900)}
+.product-option:active input:not(:disabled)+span{transform:scale(.96)}
+.product-option input:checked+span{box-shadow:0 4px 12px rgb(11 42 91/.22)}
+.cart-stepper{border-width:1.5px;border-radius:999px;background:#fff}
+.cart-stepper button{cursor:pointer;font-weight:800;transition:background-color .15s}
+.cart-stepper button:hover{background:var(--blue-50)}
+.cart-stepper button:active{background:var(--blue-100)}
+.cart-stepper input{font-weight:800;font-variant-numeric:tabular-nums}
+.product-details{border-top:1px solid var(--line);padding-top:1.5rem}
+.product-details dt{font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;color:var(--slate)}
+.product-details dd{font-weight:600;color:var(--ink-2)}
+.shop-breadcrumb a{text-decoration-color:color-mix(in srgb,currentColor 38%,transparent)}
+.shop-breadcrumb a:hover{text-decoration-color:currentColor}
+
+/* Form fields */
+.checkout-fields input,.shop-lookup input,.checkout-section textarea,.product-picker select{border-width:1.5px;transition:border-color .15s,box-shadow .15s}
+.checkout-fields input:focus,.shop-lookup input:focus,.checkout-section textarea:focus,.product-picker select:focus{outline:none;border-color:var(--blue-600);box-shadow:0 0 0 4px rgb(29 91 214/.15)}
+.checkout-choice{transition:border-color .15s,background-color .15s}
+.checkout-choice:hover{border-color:var(--blue-900)}
+.checkout-choice:has(input:checked){border-color:var(--blue-600);background:var(--blue-50)}
+
+/* Shop disclosures are bare <details class="faq">; give them the site's FAQ card. */
+details.faq{display:block;border-radius:var(--radius);background:var(--white);border:1px solid var(--line);transition:border-color .2s,box-shadow .2s}
+details.faq+details.faq{margin-top:10px}
+details.faq:hover{border-color:var(--line-2)}
+details.faq[open]{border-color:var(--line-2);box-shadow:var(--shadow-sm)}
+details.faq[open]>summary::after{transform:rotate(45deg);background-color:var(--gold-100)}
+details.faq>:not(summary){margin:0;padding:0 20px 20px;color:var(--ink-2)}
+details.faq>:not(summary)+:not(summary){margin-top:-8px}
+.shop-faq>h2{margin-bottom:1.2rem}
+@media(prefers-reduced-motion:no-preference){
+details.faq::details-content{block-size:0;overflow:clip;opacity:0;transition:block-size .34s var(--ease),opacity .28s ease,content-visibility .34s allow-discrete}
+details.faq[open]::details-content{block-size:auto;opacity:1}
+}
+
+/* Cart drawer slides in from the edge and dims the page behind it. */
+.cart-drawer{border-radius:var(--radius-lg) 0 0 var(--radius-lg);overscroll-behavior:contain}
+.cart-drawer::backdrop{-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)}
+@media(max-width:480px){.cart-drawer{border-radius:0}}
+@media(prefers-reduced-motion:no-preference){
+.cart-drawer{transition:translate .32s var(--ease),overlay .32s allow-discrete,display .32s allow-discrete;translate:100% 0}
+.cart-drawer[open]{translate:0 0}
+@starting-style{.cart-drawer[open]{translate:100% 0}}
+.cart-drawer::backdrop{transition:opacity .3s,overlay .3s allow-discrete,display .3s allow-discrete;opacity:0}
+.cart-drawer[open]::backdrop{opacity:1}
+@starting-style{.cart-drawer[open]::backdrop{opacity:0}}
+}
+.cart-line img{border:1px solid var(--line)}
+.cart-line button[data-remove]{text-decoration-color:color-mix(in srgb,currentColor 38%,transparent)}
+.cart-line button[data-remove]:hover{text-decoration-color:currentColor}
+
+/* The concept banner is part of the header chrome during page transitions. */
+@media(prefers-reduced-motion:no-preference){.shop-poc-banner{view-transition-name:shop-poc-banner}}
+.shop-bundle:not(.shop-bundle--gold) .eyebrow{color:var(--gold-300)}
+.shop-bundle--gold .eyebrow::before{background:var(--blue-900)}

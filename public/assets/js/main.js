@@ -58,7 +58,7 @@
         else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
       }
     });
-    window.matchMedia("(min-width: 1141px)").addEventListener("change", (m) => { if (m.matches && !menu.hidden) close(); });
+    window.matchMedia("(min-width: 1201px)").addEventListener("change", (m) => { if (m.matches && !menu.hidden) close(); });
   }
 
   /* ---------- Reveal on scroll ---------- */
@@ -257,9 +257,41 @@
   }
 
   /* ---------- Mobile action bar hides over footer ---------- */
+  // It also waits until the hero has scrolled away, so it never covers the page title.
   const bar = $("[data-action-bar]");
   const footer = $(".site-footer");
   if (bar && footer && "IntersectionObserver" in window) {
-    new IntersectionObserver(([en]) => bar.classList.toggle("is-hidden", en.isIntersecting)).observe(footer);
+    const hero = $(".page-hero, .hero");
+    const covering = new Set();
+    if (hero) { // start hidden without animating the first frame
+      covering.add(hero);
+      bar.style.transition = "none"; bar.classList.add("is-hidden");
+      requestAnimationFrame(() => requestAnimationFrame(() => { bar.style.transition = ""; }));
+    }
+    new IntersectionObserver((entries) => {
+      entries.forEach((en) => { if (en.isIntersecting) covering.add(en.target); else covering.delete(en.target); });
+      bar.classList.toggle("is-hidden", covering.size > 0);
+    }).observe(footer);
+    if (hero) {
+      new IntersectionObserver(([en]) => {
+        if (en.intersectionRatio > 0.25) covering.add(hero); else covering.delete(hero);
+        bar.classList.toggle("is-hidden", covering.size > 0);
+      }, { threshold: [0, 0.25, 0.5] }).observe(hero);
+    }
+  }
+
+  /* ---------- Instant navigation ----------
+     Warm the next page when a visitor hovers or starts to press a link. */
+  if (HTMLScriptElement.supports?.("speculationrules") && !navigator.connection?.saveData) {
+    const internal = { href_matches: "/*" };
+    const never = [{ href_matches: "/admin*" }, { href_matches: "/api/*" }, { href_matches: "/media/*" }, { href_matches: "/blobs/*" }, { href_matches: "/assets/*" }, { selector_matches: "[download], [target=_blank], [rel~=nofollow]" }];
+    const shop = { href_matches: "/shop*" };
+    const rules = document.createElement("script");
+    rules.type = "speculationrules";
+    rules.textContent = JSON.stringify({
+      prerender: [{ where: { and: [internal, { not: shop }, ...never.map((not) => ({ not }))] }, eagerness: "moderate" }],
+      prefetch: [{ where: { and: [shop, ...never.map((not) => ({ not }))] }, eagerness: "moderate" }],
+    });
+    document.head.appendChild(rules);
   }
 })();

@@ -33,13 +33,13 @@ for (const width of [390, 820, 1280]) test(`proof-of-concept browsing and disabl
   page.on('pageerror', error => errors.push(error.message));
   page.on('request', request => { if (request.url().includes('/api/shop/checkout')) checkoutRequests.push(request.url()); });
   await page.goto('/');
-  // Below 1141px the header nav collapses into the Menu panel; open it to reach the link like a visitor would.
-  if (width < 1141) {
+  // Below 1201px the header nav collapses into the Menu panel; open it to reach the link like a visitor would.
+  if (width < 1201) {
     const menu = page.getByRole('button', { name: 'Menu', exact: true });
     await menu.click();
     await expect(menu).toHaveAttribute('aria-expanded', 'true');
   }
-  const nav = page.getByRole('navigation', { name: width < 1141 ? 'Mobile' : 'Main', exact: true });
+  const nav = page.getByRole('navigation', { name: width < 1201 ? 'Mobile' : 'Main', exact: true });
   // The mobile link includes a decorative CSS arrow in its accessible name.
   const merch = nav.getByRole('link', { name: /^Merch \(concept\)(?: →)?$/ });
   await expect(merch).toBeVisible(); await merch.click();
