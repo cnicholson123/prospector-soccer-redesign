@@ -1,18 +1,23 @@
 import { html, type Html } from '../html.js';
+import { drawer } from '../shop/shared.js';
 import { icon } from '../icons.js';
 import { type SnapshotView, type DocumentView } from '../snapshot-view.js';
 import type { PageName } from '../../../shared/schema.js';
 
-function navigation(site: DocumentView, pageName: string): Html[] {
-  return site.list('nav').filter(item => item.boolean('visible', true)).map(item => html`<li><a href="${item.text('href') ? item.url('href') : item.text('page') === 'home' ? '/' : '/' + item.text('page')}"${item.text('page') === pageName ? html` aria-current="page"` : html``}>${item.text('label')}</a></li>`);
+function navigation(site: DocumentView, pageName: string, shop: DocumentView): Html[] {
+  const items = site.list('nav').filter(item => item.boolean('visible', true)).map(item => html`<li><a href="${item.text('href') ? item.url('href') : item.text('page') === 'home' ? '/' : '/' + item.text('page')}"${item.text('page') === pageName ? html` aria-current="page"` : html``}>${item.text('label')}</a></li>`);
+  if (shop.boolean('enabled') && shop.boolean('nav.showInHeader', true)) items.push(html`<li><a href="/shop"${pageName === 'shop' ? html` aria-current="page"` : html``}>${shop.text('nav.label') || 'Shop'}</a></li>`);
+  return items;
 }
 function announcement(site: DocumentView): Html {
   if (!site.boolean('banner.enabled')) return html``;
   return html`<div class="note"><div class="container">${site.text('banner.text')}${site.text('banner.link.href') ? html` <a href="${site.url('banner.link.href')}"${site.external('banner.link')}>${site.text('banner.link.label')}</a>` : html``}</div></div>`;
 }
-export function layout(view: SnapshotView, pageName: PageName, content: Html, meta?: { title: string; description: string }): Html {
+export function layout(view: SnapshotView, pageName: PageName, content: Html, meta?: { title: string; description: string }, options: { styles?: string[]; scripts?: string[]; noindex?: boolean; preloadImage?: string } = {}): Html {
   const site = view.doc('site', 'site');
-  const page = view.doc(pageName === 'sponsors' ? 'sponsorsPage' : pageName, pageName === 'sponsors' ? 'sponsorsPage' : pageName);
+  const shop = view.doc('storeSettings', 'storeSettings');
+  const pageCollection = pageName === 'sponsors' ? 'sponsorsPage' : pageName === 'shop' ? 'shopPage' : pageName;
+  const page = view.doc(pageCollection, pageCollection);
   return html`<!doctype html>
 <html lang="en">
 <head>
@@ -20,7 +25,7 @@ export function layout(view: SnapshotView, pageName: PageName, content: Html, me
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>${meta?.title ?? page.text("meta.title")}</title>
   <meta name="description" content="${meta?.description ?? page.text("meta.description")}">
-  <meta name="robots" content="${site.boolean("seo.indexable") ? "index, follow" : "noindex"}">
+  <meta name="robots" content="${!options.noindex && site.boolean("seo.indexable") ? "index, follow" : "noindex"}">
   <meta name="theme-color" content="#0B2A5B">
   <meta property="og:title" content="${meta?.title ?? page.text("meta.title")}">
   <meta property="og:description" content="${meta?.description ?? page.text("meta.description")}">
@@ -32,7 +37,7 @@ export function layout(view: SnapshotView, pageName: PageName, content: Html, me
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,500;0,600;0,700;0,800;1,600&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/assets/css/styles.css">
-  <script src="/assets/js/main.js" defer></script>
+  <script src="/assets/js/main.js" defer></script>${(options.styles ?? []).map(href => html`<link rel="stylesheet" href="${href}">`)}${(options.scripts ?? (shop.boolean('enabled') ? ['/assets/js/shop.js'] : [])).map(src => html`<script src="${src}" defer></script>`)}${options.preloadImage ? html`<link rel="preload" as="image" href="${options.preloadImage}">` : html``}
   ${view.edit ? html`<link rel="stylesheet" href="/assets/css/admin-inline.css"><script src="/assets/js/admin-inline.js" defer></script>` : html``}
 </head>
 <body class="${"page-" + (pageName === "home" ? "index" : pageName)}">
@@ -59,11 +64,11 @@ export function layout(view: SnapshotView, pageName: PageName, content: Html, me
       </a>
       <nav class="primary-nav" aria-label="Main">
         <ul>
-${navigation(site, pageName)}
+${navigation(site, pageName, shop)}
         </ul>
       </nav>
       <a class="btn btn--gold btn--sm site-header__cta" href="${site.url("headerCta.href")}"${site.external("headerCta")}>${site.text("headerCta.label")}</a>
-      <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="mobile-menu" data-menu-toggle>
+      ${shop.boolean("enabled") || pageName === "shop" && view.snapshot.docs.products?.length ? html`<a class="btn btn--sm" href="/shop/cart" data-cart-open aria-label="Open cart" aria-controls="cart-drawer" aria-expanded="false">Cart <span data-cart-count>0</span></a>` : html``}<button class="menu-toggle" type="button" aria-expanded="false" aria-controls="mobile-menu" data-menu-toggle>
         <span class="menu-toggle__label">Menu</span>
         <span class="menu-toggle__icon" aria-hidden="true"><span></span><span></span></span>
       </button>
@@ -80,7 +85,7 @@ ${navigation(site, pageName)}
       <nav aria-label="Mobile">
         <ul class="mobile-menu__list">
           <li><a href="/">Home</a></li>
-${navigation(site, pageName)}
+${navigation(site, pageName, shop)}
         </ul>
       </nav>
       <div class="mobile-menu__foot">
@@ -120,6 +125,7 @@ ${content}
       <a class="to-top" href="#main">Back to top ${icon("arrow-up", " viewBox=\"0 0 24 24\" aria-hidden=\"true\"")}</a>
     </div>
   </footer>
+${shop.boolean('enabled') && pageName !== 'shop' ? drawer() : html``}
 </body>
 </html>
 `;

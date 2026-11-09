@@ -1,0 +1,901 @@
+[
+  {
+    "id": "prod_hoodie",
+    "status": "draft",
+    "data": {
+      "name": "Crest Hoodie",
+      "slug": "crest-hoodie",
+      "categoryId": "cat_apparel",
+      "tagline": "The flagship",
+      "description": "A heavyweight pullover in deep navy with the full-color Prospector crest on the chest, the club name arched in gold above it, and a small gold pickaxe on the left cuff. Gold drawcords finish it.",
+      "details": [
+        {
+          "_key": "00000001",
+          "label": "Material",
+          "value": "8–10 oz cotton/poly fleece, brushed interior"
+        },
+        {
+          "_key": "00000002",
+          "label": "Decoration",
+          "value": "Screen print chest; embroidered cuff pickaxe"
+        },
+        {
+          "_key": "00000003",
+          "label": "Sizes",
+          "value": "Youth XS–XL · Adult S–3XL"
+        },
+        {
+          "_key": "00000004",
+          "label": "Colors",
+          "value": "Navy (gold cords)"
+        }
+      ],
+      "images": [
+        {
+          "_key": "00000001",
+          "image": {
+            "mediaId": "media_shop_hoodie",
+            "alt": "Crest Hoodie concept"
+          },
+          "caption": "Concept image — final product may vary."
+        }
+      ],
+      "price": {
+        "amount": 50
+      },
+      "variants": [
+        {
+          "_key": "00000001",
+          "label": "Youth XS",
+          "group": "youth",
+          "sku": "PSC-HOODIE-YOUTH-XS",
+          "active": true
+        },
+        {
+          "_key": "00000002",
+          "label": "Youth S",
+          "group": "youth",
+          "sku": "PSC-HOODIE-YOUTH-S",
+          "active": true
+        },
+        {
+          "_key": "00000003",
+          "label": "Youth M",
+          "group": "youth",
+          "sku": "PSC-HOODIE-YOUTH-M",
+          "active": true
+        },
+        {
+          "_key": "00000004",
+          "label": "Youth L",
+          "group": "youth",
+          "sku": "PSC-HOODIE-YOUTH-L",
+          "active": true
+        },
+        {
+          "_key": "00000005",
+          "label": "Youth XL",
+          "group": "youth",
+          "sku": "PSC-HOODIE-YOUTH-XL",
+          "active": true
+        },
+        {
+          "_key": "00000006",
+          "label": "Adult S",
+          "group": "adult",
+          "sku": "PSC-HOODIE-ADULT-S",
+          "active": true
+        },
+        {
+          "_key": "00000007",
+          "label": "Adult M",
+          "group": "adult",
+          "sku": "PSC-HOODIE-ADULT-M",
+          "active": true
+        },
+        {
+          "_key": "00000008",
+          "label": "Adult L",
+          "group": "adult",
+          "sku": "PSC-HOODIE-ADULT-L",
+          "active": true
+        },
+        {
+          "_key": "00000009",
+          "label": "Adult XL",
+          "group": "adult",
+          "sku": "PSC-HOODIE-ADULT-XL",
+          "active": true
+        },
+        {
+          "_key": "00000010",
+          "label": "Adult 2XL",
+          "group": "adult",
+          "sku": "PSC-HOODIE-ADULT-2XL",
+          "active": true
+        },
+        {
+          "_key": "00000011",
+          "label": "Adult 3XL",
+          "group": "adult",
+          "sku": "PSC-HOODIE-ADULT-3XL",
+          "active": true
+        }
+      ],
+      "salesMode": "preorder",
+      "preorder": {
+        "note": "Pre-order dates and pickup details will be confirmed before launch."
+      },
+      "allowWaitlist": true,
+      "shippable": true,
+      "featured": true,
+      "badge": "Concept",
+      "relatedProductIds": [],
+      "supplier": {
+        "estimatedCost": "$18–24",
+        "moq": "24",
+        "leadTime": "2–3 weeks",
+        "notes": "Planning estimate only; confirm supplier quotes before launch."
+      },
+      "youthPrice": {
+        "amount": 45
+      }
+    }
+  },
+  {
+    "id": "prod_fan-tee",
+    "status": "draft",
+    "data": {
+      "name": "Gold Country Fan Tee",
+      "slug": "gold-country-fan-tee",
+      "categoryId": "cat_apparel",
+      "tagline": "For everyone",
+      "description": "A soft royal-blue tee with a distressed vintage print: GOLD COUNTRY over a crossed pickaxe and starburst soccer ball, with EST. EL DORADO COUNTY below. Easy to wear for siblings, grandparents and fans who wouldn't wear a crest.",
+      "details": [
+        {
+          "_key": "00000001",
+          "label": "Material",
+          "value": "Ring-spun cotton or tri-blend, 4.2–5 oz"
+        },
+        {
+          "_key": "00000002",
+          "label": "Decoration",
+          "value": "Two-color water-based screen print, distressed"
+        },
+        {
+          "_key": "00000003",
+          "label": "Sizes",
+          "value": "Youth XS–XL · Adult XS–3XL"
+        },
+        {
+          "_key": "00000004",
+          "label": "Colors",
+          "value": "Royal blue; optional navy"
+        }
+      ],
+      "images": [
+        {
+          "_key": "00000001",
+          "image": {
+            "mediaId": "media_shop_fan-tee",
+            "alt": "Gold Country Fan Tee concept"
+          },
+          "caption": "Concept image — final product may vary."
+        }
+      ],
+      "price": {
+        "amount": 24
+      },
+      "variants": [
+        {
+          "_key": "00000001",
+          "label": "Youth XS",
+          "group": "youth",
+          "sku": "PSC-FAN-TEE-YOUTH-XS",
+          "active": true,
+          "color": "Royal blue"
+        },
+        {
+          "_key": "00000002",
+          "label": "Youth S",
+          "group": "youth",
+          "sku": "PSC-FAN-TEE-YOUTH-S",
+          "active": true,
+          "color": "Royal blue"
+        },
+        {
+          "_key": "00000003",
+          "label": "Youth M",
+          "group": "youth",
+          "sku": "PSC-FAN-TEE-YOUTH-M",
+          "active": true,
+          "color": "Royal blue"
+        },
+        {
+          "_key": "00000004",
+          "label": "Youth L",
+          "group": "youth",
+          "sku": "PSC-FAN-TEE-YOUTH-L",
+          "active": true,
+          "color": "Royal blue"
+        },
+        {
+          "_key": "00000005",
+          "label": "Youth XL",
+          "group": "youth",
+          "sku": "PSC-FAN-TEE-YOUTH-XL",
+          "active": true,
+          "color": "Royal blue"
+        },
+        {
+          "_key": "00000006",
+          "label": "Adult XS",
+          "group": "adult",
+          "sku": "PSC-FAN-TEE-ADULT-XS",
+          "active": true,
+          "color": "Royal blue"
+        },
+        {
+          "_key": "00000007",
+          "label": "Adult S",
+          "group": "adult",
+          "sku": "PSC-FAN-TEE-ADULT-S",
+          "active": true,
+          "color": "Royal blue"
+        },
+        {
+          "_key": "00000008",
+          "label": "Adult M",
+          "group": "adult",
+          "sku": "PSC-FAN-TEE-ADULT-M",
+          "active": true,
+          "color": "Royal blue"
+        },
+        {
+          "_key": "00000009",
+          "label": "Adult L",
+          "group": "adult",
+          "sku": "PSC-FAN-TEE-ADULT-L",
+          "active": true,
+          "color": "Royal blue"
+        },
+        {
+          "_key": "00000010",
+          "label": "Adult XL",
+          "group": "adult",
+          "sku": "PSC-FAN-TEE-ADULT-XL",
+          "active": true,
+          "color": "Royal blue"
+        },
+        {
+          "_key": "00000011",
+          "label": "Adult 2XL",
+          "group": "adult",
+          "sku": "PSC-FAN-TEE-ADULT-2XL",
+          "active": true,
+          "color": "Royal blue"
+        },
+        {
+          "_key": "00000012",
+          "label": "Adult 3XL",
+          "group": "adult",
+          "sku": "PSC-FAN-TEE-ADULT-3XL",
+          "active": true,
+          "color": "Royal blue"
+        }
+      ],
+      "salesMode": "preorder",
+      "preorder": {
+        "note": "Pre-order dates and pickup details will be confirmed before launch."
+      },
+      "allowWaitlist": true,
+      "shippable": true,
+      "featured": true,
+      "badge": "Concept",
+      "relatedProductIds": [],
+      "supplier": {
+        "estimatedCost": "$7–10",
+        "moq": "24",
+        "leadTime": "2 weeks",
+        "notes": "Planning estimate only; confirm supplier quotes before launch."
+      },
+      "youthPrice": {
+        "amount": 20
+      }
+    }
+  },
+  {
+    "id": "prod_scarf",
+    "status": "draft",
+    "data": {
+      "name": "Supporter Scarf",
+      "slug": "supporter-scarf",
+      "categoryId": "cat_accessories",
+      "tagline": "Sideline classic",
+      "description": "A double-knit jacquard scarf in navy, gold and royal blue with PROSPECTOR SOCCER CLUB knitted through the center and a crest on each end. Made for cold-weather all-star games and the December Annual General Meeting.",
+      "details": [
+        {
+          "_key": "00000001",
+          "label": "Material",
+          "value": "Acrylic double-knit jacquard, fringed ends"
+        },
+        {
+          "_key": "00000002",
+          "label": "Size",
+          "value": "~60 × 7 in"
+        },
+        {
+          "_key": "00000003",
+          "label": "Decoration",
+          "value": "Knitted-in design (not printed)"
+        },
+        {
+          "_key": "00000004",
+          "label": "Colors",
+          "value": "Navy / gold / royal"
+        }
+      ],
+      "images": [
+        {
+          "_key": "00000001",
+          "image": {
+            "mediaId": "media_shop_scarf",
+            "alt": "Supporter Scarf concept"
+          },
+          "caption": "Concept image — final product may vary."
+        }
+      ],
+      "price": {
+        "amount": 25
+      },
+      "variants": [
+        {
+          "_key": "00000001",
+          "label": "One size",
+          "group": "one-size",
+          "sku": "PSC-SCARF-ONE-SIZE-ONE-SIZE",
+          "active": true
+        }
+      ],
+      "salesMode": "preorder",
+      "preorder": {
+        "note": "Pre-order dates and pickup details will be confirmed before launch."
+      },
+      "allowWaitlist": true,
+      "shippable": true,
+      "featured": true,
+      "badge": "Concept",
+      "relatedProductIds": [],
+      "supplier": {
+        "estimatedCost": "$7–10",
+        "moq": "100",
+        "leadTime": "6–8 weeks (custom knit)",
+        "notes": "Planning estimate only; confirm supplier quotes before launch."
+      }
+    }
+  },
+  {
+    "id": "prod_cap",
+    "status": "draft",
+    "data": {
+      "name": "Crest Trucker Cap",
+      "slug": "crest-trucker-cap",
+      "categoryId": "cat_headwear",
+      "tagline": "Coaches & parents",
+      "description": "A structured navy trucker with a cream mesh back, a woven crest patch with a gold stitched border, and a gold undervisor.",
+      "details": [
+        {
+          "_key": "00000001",
+          "label": "Style",
+          "value": "Mid-profile, snapback closure"
+        },
+        {
+          "_key": "00000002",
+          "label": "Decoration",
+          "value": "Woven patch, merrowed gold border"
+        },
+        {
+          "_key": "00000003",
+          "label": "Sizes",
+          "value": "Adult one size · Youth one size"
+        },
+        {
+          "_key": "00000004",
+          "label": "Colors",
+          "value": "Navy / cream mesh"
+        }
+      ],
+      "images": [
+        {
+          "_key": "00000001",
+          "image": {
+            "mediaId": "media_shop_cap",
+            "alt": "Crest Trucker Cap concept"
+          },
+          "caption": "Concept image — final product may vary."
+        }
+      ],
+      "price": {
+        "amount": 25
+      },
+      "variants": [
+        {
+          "_key": "00000001",
+          "label": "Adult one size",
+          "group": "adult",
+          "sku": "PSC-CAP-ADULT-ONE-SIZE",
+          "active": true
+        },
+        {
+          "_key": "00000002",
+          "label": "Youth one size",
+          "group": "youth",
+          "sku": "PSC-CAP-YOUTH-ONE-SIZE",
+          "active": true
+        }
+      ],
+      "salesMode": "preorder",
+      "preorder": {
+        "note": "Pre-order dates and pickup details will be confirmed before launch."
+      },
+      "allowWaitlist": true,
+      "shippable": true,
+      "featured": false,
+      "badge": "Concept",
+      "relatedProductIds": [],
+      "supplier": {
+        "estimatedCost": "$8–11",
+        "moq": "24",
+        "leadTime": "3–4 weeks",
+        "notes": "Planning estimate only; confirm supplier quotes before launch."
+      }
+    }
+  },
+  {
+    "id": "prod_beanie",
+    "status": "draft",
+    "data": {
+      "name": "Pom Beanie",
+      "slug": "pom-beanie",
+      "categoryId": "cat_headwear",
+      "tagline": "Winter season",
+      "description": "A chunky cuffed knit in navy with a royal-blue stripe, a gold pom-pom and a woven crest label on the cuff.",
+      "details": [
+        {
+          "_key": "00000001",
+          "label": "Material",
+          "value": "Acrylic rib knit"
+        },
+        {
+          "_key": "00000002",
+          "label": "Decoration",
+          "value": "Woven label (stock beanie) or knitted stripe (custom)"
+        },
+        {
+          "_key": "00000003",
+          "label": "Sizes",
+          "value": "One size; youth size available"
+        },
+        {
+          "_key": "00000004",
+          "label": "Colors",
+          "value": "Navy / royal / gold pom"
+        }
+      ],
+      "images": [
+        {
+          "_key": "00000001",
+          "image": {
+            "mediaId": "media_shop_beanie",
+            "alt": "Pom Beanie concept"
+          },
+          "caption": "Concept image — final product may vary."
+        }
+      ],
+      "price": {
+        "amount": 22
+      },
+      "variants": [
+        {
+          "_key": "00000001",
+          "label": "Adult",
+          "group": "adult",
+          "sku": "PSC-BEANIE-ADULT-",
+          "active": true
+        },
+        {
+          "_key": "00000002",
+          "label": "Youth",
+          "group": "youth",
+          "sku": "PSC-BEANIE-YOUTH-",
+          "active": true
+        }
+      ],
+      "salesMode": "preorder",
+      "preorder": {
+        "note": "Pre-order dates and pickup details will be confirmed before launch."
+      },
+      "allowWaitlist": true,
+      "shippable": true,
+      "featured": false,
+      "badge": "Concept",
+      "relatedProductIds": [],
+      "supplier": {
+        "estimatedCost": "$7–10",
+        "moq": "48",
+        "leadTime": "3–4 weeks (stock + label)",
+        "notes": "Planning estimate only; confirm supplier quotes before launch."
+      }
+    }
+  },
+  {
+    "id": "prod_bottle",
+    "status": "draft",
+    "data": {
+      "name": "Engraved Insulated Bottle",
+      "slug": "engraved-insulated-bottle",
+      "categoryId": "cat_gear",
+      "tagline": "Every practice",
+      "description": "A 32 oz matte navy double-wall stainless bottle with a bamboo-and-steel cap. The crest is laser-engraved as a single gold-tone mark, so it never peels or fades.",
+      "details": [
+        {
+          "_key": "00000001",
+          "label": "Capacity",
+          "value": "32 oz (also 20 oz youth option)"
+        },
+        {
+          "_key": "00000002",
+          "label": "Decoration",
+          "value": "Laser engraving, single tone"
+        },
+        {
+          "_key": "00000003",
+          "label": "Features",
+          "value": "Keeps cold 24 h · carry handle"
+        },
+        {
+          "_key": "00000004",
+          "label": "Colors",
+          "value": "Matte navy"
+        }
+      ],
+      "images": [
+        {
+          "_key": "00000001",
+          "image": {
+            "mediaId": "media_shop_bottle",
+            "alt": "Engraved Insulated Bottle concept"
+          },
+          "caption": "Concept image — final product may vary."
+        }
+      ],
+      "price": {
+        "amount": 30
+      },
+      "variants": [
+        {
+          "_key": "00000001",
+          "label": "32 oz",
+          "group": "adult",
+          "sku": "PSC-BOTTLE-ADULT-32-OZ",
+          "active": true
+        },
+        {
+          "_key": "00000002",
+          "label": "20 oz",
+          "group": "youth",
+          "sku": "PSC-BOTTLE-YOUTH-20-OZ",
+          "active": true,
+          "priceOverride": {
+            "amount": 24
+          }
+        }
+      ],
+      "salesMode": "preorder",
+      "preorder": {
+        "note": "Pre-order dates and pickup details will be confirmed before launch."
+      },
+      "allowWaitlist": true,
+      "shippable": true,
+      "featured": false,
+      "badge": "Concept",
+      "relatedProductIds": [],
+      "supplier": {
+        "estimatedCost": "$11–15",
+        "moq": "24",
+        "leadTime": "2–3 weeks",
+        "notes": "Planning estimate only; confirm supplier quotes before launch."
+      },
+      "youthPrice": {
+        "amount": 24
+      }
+    }
+  },
+  {
+    "id": "prod_pins",
+    "status": "draft",
+    "data": {
+      "name": "Enamel Pin Set",
+      "slug": "enamel-pin-set",
+      "categoryId": "cat_collectibles",
+      "tagline": "Collect them",
+      "description": "Four hard-enamel pins on a backing card: the full crest, a gold pickaxe, a starburst soccer ball and a PSC shield. Cheap to produce, collectible, and good as end-of-season awards or team-milestone rewards.",
+      "details": [
+        {
+          "_key": "00000001",
+          "label": "Set",
+          "value": "4 pins on a printed backer card"
+        },
+        {
+          "_key": "00000002",
+          "label": "Finish",
+          "value": "Hard enamel, polished gold metal"
+        },
+        {
+          "_key": "00000003",
+          "label": "Size",
+          "value": "~1–1.5 in each"
+        },
+        {
+          "_key": "00000004",
+          "label": "Backing",
+          "value": "Rubber clutch"
+        }
+      ],
+      "images": [
+        {
+          "_key": "00000001",
+          "image": {
+            "mediaId": "media_shop_pins",
+            "alt": "Enamel Pin Set concept"
+          },
+          "caption": "Concept image — final product may vary."
+        }
+      ],
+      "price": {
+        "amount": 15
+      },
+      "variants": [
+        {
+          "_key": "00000001",
+          "label": "Set of 4",
+          "group": "one-size",
+          "sku": "PSC-PINS-ONE-SIZE-SET-OF-4",
+          "active": true
+        }
+      ],
+      "salesMode": "preorder",
+      "preorder": {
+        "note": "Pre-order dates and pickup details will be confirmed before launch."
+      },
+      "allowWaitlist": true,
+      "shippable": true,
+      "featured": false,
+      "badge": "Concept",
+      "relatedProductIds": [],
+      "supplier": {
+        "estimatedCost": "$3.50–5 / set",
+        "moq": "100 per design",
+        "leadTime": "3–4 weeks",
+        "notes": "Planning estimate only; confirm supplier quotes before launch."
+      }
+    }
+  },
+  {
+    "id": "prod_blanket",
+    "status": "draft",
+    "data": {
+      "name": "Sherpa Sideline Blanket",
+      "slug": "sherpa-sideline-blanket",
+      "categoryId": "cat_gear",
+      "tagline": "Chilly mornings",
+      "description": "A plush navy sherpa-fleece stadium blanket with a large embroidered crest and gold blanket-stitch edging. It rolls up with a carry strap that clips onto a camp chair.",
+      "details": [
+        {
+          "_key": "00000001",
+          "label": "Material",
+          "value": "Sherpa / micro-plush fleece"
+        },
+        {
+          "_key": "00000002",
+          "label": "Size",
+          "value": "~50 × 60 in"
+        },
+        {
+          "_key": "00000003",
+          "label": "Decoration",
+          "value": "Embroidered crest, gold edge stitch"
+        },
+        {
+          "_key": "00000004",
+          "label": "Includes",
+          "value": "Carry strap"
+        }
+      ],
+      "images": [
+        {
+          "_key": "00000001",
+          "image": {
+            "mediaId": "media_shop_blanket",
+            "alt": "Sherpa Sideline Blanket concept"
+          },
+          "caption": "Concept image — final product may vary."
+        }
+      ],
+      "price": {
+        "amount": 40
+      },
+      "variants": [
+        {
+          "_key": "00000001",
+          "label": "One size",
+          "group": "one-size",
+          "sku": "PSC-BLANKET-ONE-SIZE-ONE-SIZE",
+          "active": true
+        }
+      ],
+      "salesMode": "preorder",
+      "preorder": {
+        "note": "Pre-order dates and pickup details will be confirmed before launch."
+      },
+      "allowWaitlist": true,
+      "shippable": true,
+      "featured": false,
+      "badge": "Concept",
+      "relatedProductIds": [],
+      "supplier": {
+        "estimatedCost": "$16–22",
+        "moq": "24",
+        "leadTime": "3–4 weeks",
+        "notes": "Planning estimate only; confirm supplier quotes before launch."
+      }
+    }
+  },
+  {
+    "id": "prod_backpack",
+    "status": "draft",
+    "data": {
+      "name": "Cleat Backpack",
+      "slug": "cleat-backpack",
+      "categoryId": "cat_gear",
+      "tagline": "Ready for practice",
+      "description": "A youth soccer backpack in navy with royal accents, a ventilated bottom cleat compartment, a side ball net, gold zipper pulls and an embroidered crest patch.",
+      "details": [
+        {
+          "_key": "00000001",
+          "label": "Capacity",
+          "value": "~25 L, ball net + cleat pocket"
+        },
+        {
+          "_key": "00000002",
+          "label": "Decoration",
+          "value": "Embroidered crest patch"
+        },
+        {
+          "_key": "00000003",
+          "label": "Sizes",
+          "value": "Youth / adult"
+        },
+        {
+          "_key": "00000004",
+          "label": "Colors",
+          "value": "Navy / royal / gold pulls"
+        }
+      ],
+      "images": [
+        {
+          "_key": "00000001",
+          "image": {
+            "mediaId": "media_shop_backpack",
+            "alt": "Cleat Backpack concept"
+          },
+          "caption": "Concept image — final product may vary."
+        }
+      ],
+      "price": {
+        "amount": 45
+      },
+      "variants": [
+        {
+          "_key": "00000001",
+          "label": "Adult",
+          "group": "adult",
+          "sku": "PSC-BACKPACK-ADULT-",
+          "active": true
+        },
+        {
+          "_key": "00000002",
+          "label": "Youth",
+          "group": "youth",
+          "sku": "PSC-BACKPACK-YOUTH-",
+          "active": true
+        }
+      ],
+      "salesMode": "preorder",
+      "preorder": {
+        "note": "Pre-order dates and pickup details will be confirmed before launch."
+      },
+      "allowWaitlist": true,
+      "shippable": true,
+      "featured": false,
+      "badge": "Concept",
+      "relatedProductIds": [],
+      "supplier": {
+        "estimatedCost": "$18–24",
+        "moq": "24",
+        "leadTime": "3–4 weeks",
+        "notes": "Planning estimate only; confirm supplier quotes before launch."
+      }
+    }
+  },
+  {
+    "id": "prod_decal",
+    "status": "draft",
+    "data": {
+      "name": "Car Decal + PSC Magnet",
+      "slug": "car-decal-psc-magnet",
+      "categoryId": "cat_collectibles",
+      "tagline": "Show it around town",
+      "description": "A die-cut shield decal and a navy oval PSC magnet with a gold pickaxe. The lowest-priced item, and free club advertising around Cameron Park, Shingle Springs and Rescue.",
+      "details": [
+        {
+          "_key": "00000001",
+          "label": "Decal",
+          "value": "Die-cut weatherproof vinyl, ~5 in"
+        },
+        {
+          "_key": "00000002",
+          "label": "Magnet",
+          "value": "Oval car magnet, ~6 × 4 in"
+        },
+        {
+          "_key": "00000003",
+          "label": "Finish",
+          "value": "UV laminated"
+        },
+        {
+          "_key": "00000004",
+          "label": "Pack",
+          "value": "Sold as a set"
+        }
+      ],
+      "images": [
+        {
+          "_key": "00000001",
+          "image": {
+            "mediaId": "media_shop_decal",
+            "alt": "Car Decal + PSC Magnet concept"
+          },
+          "caption": "Concept image — final product may vary."
+        }
+      ],
+      "price": {
+        "amount": 10
+      },
+      "variants": [
+        {
+          "_key": "00000001",
+          "label": "Set",
+          "group": "one-size",
+          "sku": "PSC-DECAL-ONE-SIZE-SET",
+          "active": true
+        }
+      ],
+      "salesMode": "preorder",
+      "preorder": {
+        "note": "Pre-order dates and pickup details will be confirmed before launch."
+      },
+      "allowWaitlist": true,
+      "shippable": true,
+      "featured": false,
+      "badge": "Concept",
+      "relatedProductIds": [],
+      "supplier": {
+        "estimatedCost": "$2–3",
+        "moq": "100",
+        "leadTime": "1–2 weeks",
+        "notes": "Planning estimate only; confirm supplier quotes before launch."
+      }
+    }
+  }
+]

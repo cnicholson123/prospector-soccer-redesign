@@ -38,5 +38,41 @@
       "question": "Is coach education reimbursed?",
       "answer": "The U.S. Soccer Learning Center introduction course is free. Grassroots courses are 2 hours and $25; the club reimburses the course fee once the certificate is received."
     }
+  },
+  {
+    "id": "faq_shop_0",
+    "status": "draft",
+    "data": {
+      "page": "shop",
+      "question": "How do pre-orders work?",
+      "answer": "We collect orders during a pre-order window, then place one production order. Pickup details follow when the gear is ready."
+    }
+  },
+  {
+    "id": "faq_shop_1",
+    "status": "draft",
+    "data": {
+      "page": "shop",
+      "question": "Where can I pick up my order?",
+      "answer": "Pickup locations and dates will be confirmed before the first order window."
+    }
+  },
+  {
+    "id": "faq_shop_2",
+    "status": "draft",
+    "data": {
+      "page": "shop",
+      "question": "How do I pay?",
+      "answer": "Pay the club at pickup. Payment instructions will be confirmed before launch."
+    }
+  },
+  {
+    "id": "faq_shop_3",
+    "status": "draft",
+    "data": {
+      "page": "shop",
+      "question": "Can I exchange a size?",
+      "answer": "Contact the club about fit or product issues before pickup. Final exchange policy will be confirmed before launch."
+    }
   }
 ]

@@ -64,6 +64,7 @@ function Workspace() {
     <Route component={Dashboard} path="/admin/" publish={() => openPublish()} refresh={revision} />
     <Route component={Pages} path="/admin/pages" refresh={revision} />
     <Route key={path} component={PageEditor} path="/admin/pages/:page" page={path.split('/').at(-1)!} publish={(mode?: PublishMode) => openPublish([], mode)} refresh={revision} />
+    <Route component={DocEditor} path="/admin/store/settings" id="storeSettings" collection="storeSettings" publish={(mode?: PublishMode) => openPublish([], mode)} refresh={revision} />
     <Route component={DocEditor} path="/admin/settings" id="site" collection="site" publish={(mode?: PublishMode) => openPublish([], mode)} refresh={revision} />
     {Object.values(collections).filter(d => d.kind === 'collection' && !d.systemManaged).flatMap(d => [
       <Route key={d.name} component={CollectionList} path={`/admin/${d.name}`} collection={d.name} publish={(ids?: string[]) => openPublish(ids ?? [])} refresh={revision} />,

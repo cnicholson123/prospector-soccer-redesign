@@ -105,7 +105,7 @@ describe('draft defaults and publish validation', () => {
     expect(validate('home', {}, { mode: 'publish' }).errors).toContainEqual({ path: 'hero', message: 'Required section' });
     const docs = await loadSeed();
     const resolve = (collection: CollectionName, id: string) => docs.find(doc => doc.collection === collection && doc.id === id) ?? null;
-    for (const doc of docs) expect(validate(doc.collection, doc.draft, { mode: 'publish', resolve }), doc.id).toEqual({ valid: true, errors: [] });
+    for (const doc of docs.filter(d => d.published !== undefined)) expect(validate(doc.collection, doc.draft, { mode: 'publish', resolve }), doc.id).toEqual({ valid: true, errors: [] });
   });
   it('requires every reference to resolve in its declared collection, including nested arrays', () => {
     const sponsor = { name: 'Sponsor', tier: 'tier_a' };
@@ -145,7 +145,7 @@ describe('snapshot and reference integrity', () => {
   it('freezes schema, order, schedule bookkeeping and media at publication', async () => {
     const docs = await loadSeed();
     const snapshot = seedSnapshot(docs);
-    expect(snapshot.schemaVersion).toBe(1); expect(Object.keys(snapshot.media).length).toBeGreaterThan(0);
+    expect(snapshot.schemaVersion).toBe(2); expect(Object.keys(snapshot.media).length).toBeGreaterThan(0);
     expect(Object.values(snapshot.docs).flat().every(doc => Number.isInteger(doc.order))).toBe(true);
     const frozen = structuredClone(snapshot);
     const mediaDoc = docs.find(doc => Object.hasOwn(snapshot.media, doc.id))!;

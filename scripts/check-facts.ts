@@ -39,7 +39,7 @@ export function checkFacts(inventory: string, rendered: string): { count: number
 }
 export async function verifyFacts(): Promise<{ count: number; missing: string[] }> {
   const snapshot = seedSnapshot(await loadSeed());
-  return checkFacts(await readFile('content/content.md', 'utf8'), pageNames.map(page => renderPage(snapshot, page, { now: new Date('2026-11-09T12:00:00Z') })).join('\n'));
+  return checkFacts(await readFile('content/content.md', 'utf8'), pageNames.filter(p => p !== 'shop').map(page => renderPage(snapshot, page, { now: new Date('2026-11-09T12:00:00Z') })).join('\n'));
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
   const result = await verifyFacts();

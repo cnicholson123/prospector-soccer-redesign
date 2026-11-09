@@ -25,7 +25,7 @@ try {
   execFileSync(process.execPath, [join(root, 'node_modules/typescript/bin/tsc'),
     '-p', join(root, 'tsconfig.runtime.json'), '--outDir', compiled], { cwd: root, stdio: 'inherit' });
   await writeFile(join(compiled, 'package.json'), '{"type":"module"}\n');
-  const entrypoints = ['api/admin.js', 'api/render.js'].map(file => pathToFileURL(join(compiled, file)).href);
+  const entrypoints = ['api/admin.js', 'api/render.js', 'api/shop.js'].map(file => pathToFileURL(join(compiled, file)).href);
   execFileSync(process.execPath, ['--input-type=module', '--eval',
     `await Promise.all(${JSON.stringify(entrypoints)}.map(url => import(url)))`], { cwd: compiled, env, stdio: 'inherit' });
   // Seed a fresh FS store separately. Seed JSON is a CLI input, outside the functions.
@@ -33,7 +33,7 @@ try {
   execFileSync(process.execPath, [join(compiled, 'scripts/seed.js')], { cwd: compiled, env, stdio: 'inherit' });
 
   const config = JSON.parse(await readFile(join(root, 'vercel.json'), 'utf8'));
-  for (const entry of ['api/admin.ts', 'api/render.ts']) {
+  for (const entry of ['api/admin.ts', 'api/render.ts', 'api/shop.ts']) {
     const staging = join(temporary, entry.replace('/', '-'));
     await mkdir(staging);
     await writeFile(join(staging, 'package.json'), '{"type":"module"}\n');

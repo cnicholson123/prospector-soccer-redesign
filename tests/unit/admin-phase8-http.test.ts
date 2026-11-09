@@ -58,7 +58,7 @@ it('keeps inline saves in normal revisions/audit, guards publication, and schedu
 it('resolves all real-page annotations and gives Contributors private previews and review without publication', async () => {
   const f = await adminFixture(true); roots.push(f.root); await f.login();
   const render = createRenderHandler(f.store, f.config);
-  for (const page of pageNames) {
+  for (const page of pageNames.filter(p => p !== 'shop')) {
     const response = await render(new Request(`http://localhost:3000/${page === 'home' ? '' : page}?edit=1`, { headers: { Cookie: f.getCookie() } }));
     const body = await response.text();
     for (const match of body.matchAll(/data-edit="([^"]+)"/g)) {

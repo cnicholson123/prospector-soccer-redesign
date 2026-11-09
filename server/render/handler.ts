@@ -8,7 +8,10 @@ import type { Snapshot } from '../../shared/types.js';
 import { loadConfig, type Config } from '../config.js';
 import { createStore } from '../store/index.js';
 import type { Store } from '../store/types.js';
-import { tagContent } from './cdn.js';
+import { renderShop } from './shop/index.js';
+import { landing } from './shop/landing.js';
+import { temporaryShopStore } from '../shop/store/index.js';
+import { tagShop, tagContent } from './cdn.js';
 import { html, escape } from './html.js';
 import { SnapshotView, DocumentView } from './snapshot-view.js';
 import { richtext } from './richtext.js';
@@ -32,7 +35,7 @@ const headers = { 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'stric
 
 export function renderPage(snapshot: Snapshot, page: PageName, options: { now?: Date; edit?: boolean; timeZone?: string } = {}): string {
   const view = new SnapshotView(snapshot, options.now, options.edit, options.timeZone);
-  return layout(view, page, templates[page](view)).toString();
+  return layout(view, page, (page === 'shop' ? landing({ view, stock: {} }) : templates[page](view))).toString();
 }
 /** Future-dated callouts and midnight event expiry must not outlive their cache entry. */
 function cacheSeconds(view: SnapshotView, configured: number): number {
@@ -83,6 +86,14 @@ export function createRenderHandler(store: Store, config: Config, now: () => Dat
       ? url.searchParams.get('page') ?? 'home'
       : url.pathname.slice(1);
     const page = requested === 'index' ? 'home' : requested;
+    const shopPath = requested === 'shop' ? url.searchParams.get('path') ?? '' : requested.startsWith('shop/') ? requested.slice(5) : null;
+    if (shopPath !== null) {
+      const ids = view.collection('products').flatMap(p => p.list('variants').map(v => `${p.id}.${v.text('_key')}`));
+      const result = renderShop({ view, stock: await temporaryShopStore.getStock(ids) }, shopPath.replace(/^\/+|\/+$/g, ''), { preview, secret: config.sessionSecret, error: url.searchParams.has('error') });
+      if (!preview && !result.private) { tagContent(); tagShop(); }
+      const until = Math.min(...selected.scheduled.map(s => (Date.parse(s.at) - view.now.getTime()) / 1000).filter(n => n > 0));
+      return new Response(request.method === 'HEAD' ? null : result.body, { status: result.status, headers: { ...headers, 'Content-Type': 'text/html; charset=utf-8', 'Referrer-Policy': result.private ? 'no-referrer' : headers['Referrer-Policy'], 'Cache-Control': preview || result.private ? 'no-store' : `public, max-age=0, s-maxage=${Math.min(15, Math.max(0, Math.floor(until)))}, stale-while-revalidate=${until <= 75 ? 0 : 60}` } });
+    }
     let body: string;
     let status = 200;
     let contentType = 'text/html; charset=utf-8';
@@ -91,7 +102,7 @@ export function createRenderHandler(store: Store, config: Config, now: () => Dat
       body = site.boolean('seo.indexable') ? `User-agent: *\nAllow: /\nDisallow: /admin\nDisallow: /api/\nSitemap: ${config.publicBaseUrl}/sitemap.xml\n` : 'User-agent: *\nDisallow: /\n';
     } else if (page === 'sitemap.xml') {
       contentType = 'application/xml; charset=utf-8';
-      body = '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' + (site.boolean('seo.indexable') ? pageNames.map(name => `<url><loc>${escape(config.publicBaseUrl + (name === 'home' ? '/' : '/' + name))}</loc></url>`).join('') : '') + '</urlset>';
+      body = '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' + (site.boolean('seo.indexable') ? pageNames.filter(name => name !== 'shop').map(name => `<url><loc>${escape(config.publicBaseUrl + (name === 'home' ? '/' : '/' + name))}</loc></url>`).join('') + (view.doc('storeSettings', 'storeSettings').boolean('enabled') ? ['/shop', ...(['products', 'bundles', 'categories'] as const).flatMap((c, i) => view.collection(c).map(d => `/shop/${['p', 'b', 'c'][i]}/${d.text('slug')}`))].map(path => `<url><loc>${escape(config.publicBaseUrl + path)}</loc></url>`).join('') : '') : '') + '</urlset>';
     } else if (pageNames.includes(page as PageName)) body = renderPage(selected, page as PageName, { now: view.now, edit: view.edit, timeZone: config.tzName });
     else {
       status = 404;

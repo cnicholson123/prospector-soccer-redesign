@@ -12,11 +12,12 @@ export function docTitle(doc: ContentDoc): string {
   if (doc.collection === 'teams') return [doc.draft.ageGroup, doc.draft.gender, doc.draft.level].filter(Boolean).join(' · ') || collections.teams.label;
   return collections[doc.collection].label;
 }
-export const editorPath = (collection: CollectionName, id = collection as string) => collection === 'site' ? '/admin/settings' : collections[collection].kind === 'singleton' ? `/admin/pages/${collection === 'sponsorsPage' ? 'sponsors' : collection}` : `/admin/${collection}/${id}`;
+export const editorPath = (collection: CollectionName, id = collection as string) => collection === 'storeSettings' ? '/admin/store/settings' : collection === 'site' ? '/admin/settings' : collections[collection].kind === 'singleton' ? `/admin/pages/${collection === 'sponsorsPage' ? 'sponsors' : collection === 'shopPage' ? 'shop' : collection}` : `/admin/${collection}/${id}`;
 export function previewPath(collection: CollectionName, draft: Record<string, unknown> = {}) {
   const definition = collections[collection];
   const page = collection === 'faqs' ? String(draft.page || 'competitive') : definition.preview?.page || 'home';
   const anchor = typeof definition.preview?.anchor === 'function' ? definition.preview.anchor(draft) : definition.preview?.anchor || (collection === 'events' ? 'events' : '');
+  if (page === 'shop' && ['products', 'bundles', 'categories'].includes(collection) && draft.slug) return `/shop/${collection === 'products' ? 'p' : collection === 'bundles' ? 'b' : 'c'}/${String(draft.slug)}`;
   return `${page === 'home' ? '/' : `/${page}`}${anchor ? `#${anchor}` : ''}`;
 }
 export function defaults(fields: Record<string, Field>): Record<string, unknown> {

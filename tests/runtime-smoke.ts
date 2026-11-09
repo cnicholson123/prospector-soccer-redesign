@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import admin from '../api/admin.js';
 import render from '../api/render.js';
+import shop from '../api/shop.js';
 
 assert.equal(typeof admin, 'object');
 assert.equal(typeof render, 'object');
@@ -22,3 +23,17 @@ const login = await admin.fetch(new Request('http://localhost:3000/api/admin/aut
 assert.equal(login.status, 401);
 assert.equal(login.headers.get('set-cookie'), null);
 console.log('Plain Node ESM PASS — health 200, render 200 HTML, wrong-password login 401');
+
+assert.equal(typeof shop, 'object');
+const signedIn = await admin.fetch(new Request('http://localhost:3000/api/admin/auth/login', {
+  method: 'POST', headers: { 'Content-Type': 'application/json', Origin: 'http://localhost:3000' },
+  body: JSON.stringify({ username: process.env.ADMIN_BOOTSTRAP_USERNAME, password: process.env.ADMIN_BOOTSTRAP_PASSWORD }),
+}));
+assert.equal(signedIn.status, 200);
+// Published store stays disabled. Authenticated preview is the supported way to test it before launch.
+const quote = await shop.fetch(new Request('http://localhost:3000/api/shop/quote?preview=1', {
+  method: 'POST', headers: { 'Content-Type': 'application/json', Origin: 'http://localhost:3000', Cookie: signedIn.headers.get('set-cookie')!.split(';')[0] },
+  body: JSON.stringify({ lines: [] }),
+}));
+assert.equal(quote.status, 200); assert.equal((await quote.json()).totals.totalCents, 0);
+console.log('Plain Node ESM PASS — shop empty-cart quote 200 (authenticated preview)');

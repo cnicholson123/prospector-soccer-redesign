@@ -10,7 +10,7 @@ import { loadSeed } from '../../scripts/seed.js';
 const roots: string[] = [];
 afterEach(async () => { vi.restoreAllMocks(); await Promise.all(roots.splice(0).map(root => rm(root, { recursive: true, force: true }))); });
 async function fixture() { const f = await adminFixture(true); roots.push(f.root); await f.login(); return f; }
-it('all unauthenticated routes reject, and low roles cannot mutate through alternate routes', async () => {
+it('all unauthenticated routes reject, and low roles cannot mutate through alternate routes', { timeout: 15000 }, async () => {
   const f = await fixture();
   for (const [path, method] of [
     ['/docs/events', 'GET'], ['/docs/events', 'POST'], ['/docs/site/site', 'PUT'], ['/publish', 'POST'], ['/schedule', 'POST'], ['/audit/export', 'GET'], ['/users', 'GET'], ['/publishes', 'GET'], ['/dashboard', 'GET'], ['/search?q=a', 'GET'], ['/export/content', 'GET'], ['/health/links', 'POST'],

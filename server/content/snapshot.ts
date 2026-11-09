@@ -21,7 +21,7 @@ export function buildSnapshot(docs: Doc[], metadata: Pick<Snapshot, 'siteVersion
     const data = value as Record<string, unknown>;
     const variants = data.variants as Record<string, string> | undefined;
     media[ref.id] = { url: variants?.web || variants?.original || '', mime: String(data.mime ?? ''),
-      width: Number(data.width ?? 0), height: Number(data.height ?? 0), alt: String(data.alt ?? '') };
+      ...(variants?.small ? { small: variants.small } : {}), width: Number(data.width ?? 0), height: Number(data.height ?? 0), alt: String(data.alt ?? '') };
   }
   return { ...metadata, schemaVersion: SCHEMA_VERSION, docs: published, media, scheduled: structuredClone(metadata.scheduled ?? []).map(item => ({ ...item, order: item.order ?? 0 })) };
 }

@@ -1,0 +1,7 @@
+import { html } from '../html.js';
+import type { DocumentView } from '../snapshot-view.js';
+import { displayPrice, bundleAvailable, bundleCapacity, noScript, quantity, settings, savings, shopImage, variantPicker, type ShopContext } from './shared.js';
+import { money } from '../../shop/pricing.js';
+export function bundle(ctx: ShopContext, doc: DocumentView) {
+  return html`<section class="section"><div class="container"><nav class="shop-breadcrumb" aria-label="Breadcrumb"><a href="/shop">Shop</a> / ${doc.text('name')}</nav><div class="product-layout"><div class="product-gallery cut-br">${shopImage(ctx, doc, 'image', true)}</div><div class="product-buy"><p class="eyebrow">${doc.text('tagline')}</p><h1>${doc.text('name')}</h1><p class="shop-price">${displayPrice(doc)}</p><p class="pill pill--gold">Saves ${money(savings(ctx, doc))}</p>${doc.rich('description')}<h2>Includes</h2><ul>${doc.list('components').map(c => html`<li>${c.number('quantity') || 1} × ${ctx.view.doc('products', c.text('productId')).text('name')}</li>`)}</ul><form data-quantity-limit="${settings(ctx).number('orders.maxQuantityPerLine') || 10}" data-bundle="${doc.id}" data-title="${doc.text('name')}">${doc.list('components').map((c, i) => variantPicker(ctx, ctx.view.doc('products', c.text('productId')), `selection-${i}`, c.text('fixedVariantKey')))}${quantity(bundleCapacity(ctx, doc))}<button class="btn btn--gold btn--block"${!bundleAvailable(ctx, doc) ? html` disabled` : html``}>Add bundle to cart</button></form>${noScript(ctx)}</div></div></div></section>`;
+}

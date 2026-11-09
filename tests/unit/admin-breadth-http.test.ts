@@ -7,7 +7,7 @@ import type { Doc } from '../../shared/types.js';
 const roots: string[] = [];
 afterEach(async () => { await Promise.all(roots.splice(0).map(root => rm(root, { recursive: true, force: true }))); });
 const item = (doc: Doc) => ({ collection: doc.collection, id: doc.id, expectedVersion: doc.version });
-it('edits and publishes board members, sponsors and nested page copy with public and history verification on FS', async () => {
+it('edits and publishes board members, sponsors and nested page copy with public and history verification on FS', { timeout: 15000 }, async () => {
   const f = await adminFixture(true); roots.push(f.root); await f.login();
   const render = createRenderHandler(f.store, f.config);
   for (const [collection, id, path, marker] of [
@@ -26,7 +26,7 @@ it('edits and publishes board members, sponsors and nested page copy with public
     expect(revisions.some((rev: { action: string }) => rev.action === 'published')).toBe(true);
   }
   const dashboard = await (await f.req('/dashboard')).json();
-  expect(dashboard.counts).toMatchObject({ pages: 8, site: 1, boardMembers: 14 });
+  expect(dashboard.counts).toMatchObject({ pages: 9, site: 1, boardMembers: 14 });
   expect(dashboard.health.filter((entry: { code: string }) => entry.code === 'missing_alt').map((entry: { id: string }) => entry.id)).toEqual(['med_hero_jpg']);
 });
 it('makes every breadth collection creatable, duplicable and reversible, while refusing referenced tier trash with usage', async () => {

@@ -13,12 +13,12 @@ import { templateHash } from '../server/render/handler.js';
 export async function loadSeed(): Promise<Doc[]> {
   const docs: Doc[] = [];
   for (const collection of collectionNames) {
-    const records: { id: string; data: unknown }[] = JSON.parse(await readFile(new URL(`../content/seed/${collection}.json`, import.meta.url), 'utf8'));
+    const records: { id: string; data: unknown; status?: 'draft' }[] = JSON.parse(await readFile(new URL(`../content/seed/${collection}.json`, import.meta.url), 'utf8'));
     for (const [order, record] of records.entries()) {
       const result = validate(collection, record.data);
       if (!result.valid) throw new Error(`Invalid seed ${collection}/${record.id}: ${JSON.stringify(result.errors)}`);
-      docs.push({ id: record.id, collection, draft: record.data, published: structuredClone(record.data), version: 1,
-        publishedVersion: 1, order, status: 'published', createdAt: '2026-11-09T00:00:00.000Z', updatedAt: '2026-11-09T00:00:00.000Z', createdBy: 'seed', updatedBy: 'seed' });
+      docs.push({ id: record.id, collection, draft: record.data, published: record.status === 'draft' ? undefined : structuredClone(record.data), version: 1,
+        publishedVersion: record.status === 'draft' ? undefined : 1, order, status: record.status ?? 'published', createdAt: '2026-11-09T00:00:00.000Z', updatedAt: '2026-11-09T00:00:00.000Z', createdBy: 'seed', updatedBy: 'seed' });
     }
   }
   if (new Set(docs.map(doc => doc.id)).size !== docs.length) throw new Error('Seed document IDs must be globally unique');
@@ -50,7 +50,7 @@ export async function seedStore(store: Store, force = false): Promise<{ changed:
     else if (JSON.stringify(current.draft) === JSON.stringify(seed.draft) && JSON.stringify(current.published) === JSON.stringify(seed.published)) updated.push(current);
     else {
       const doc = await store.mutateDoc({ collection: seed.collection, id: seed.id, expectedVersion: current.version,
-        patch: { draft: seed.draft, published: seed.published, publishedVersion: current.version + 1, status: 'published', order: seed.order, updatedAt: at, updatedBy: 'seed' },
+        patch: { draft: seed.draft, published: seed.published, publishedVersion: seed.published === undefined ? undefined : current.version + 1, status: seed.status, order: seed.order, updatedAt: at, updatedBy: 'seed' },
         revision: { append: { id: createHistoryId('rev'), collection: seed.collection, docId: seed.id, docVersion: current.version + 1, authorId: 'seed', authorName: 'Content migration', at, sealedAt: at, action: 'edited', data: seed.draft } },
         audit: { id: createHistoryId('aud'), at, actorId: 'seed', actorName: 'Content migration', action: 'content.edit', collection: seed.collection, docId: seed.id } });
       if (doc === 'conflict') throw new Error(`Seed conflict for ${seed.collection}/${seed.id}; retry after stopping other writers`);

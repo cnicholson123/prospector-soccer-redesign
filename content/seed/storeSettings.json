@@ -1,0 +1,70 @@
+[
+  {
+    "id": "storeSettings",
+    "data": {
+      "enabled": false,
+      "comingSoon": {
+        "enabled": false,
+        "title": "The club shop is coming soon",
+        "text": "Club gear for players, families and fans. Check back for our first pre-order window."
+      },
+      "announcement": "Concept collection. Products, prices and pickup details are subject to confirmation.",
+      "contactEmail": "communicationsdirector@prospector.org",
+      "nav": {
+        "label": "Shop",
+        "showInHeader": true
+      },
+      "offline": {
+        "enabled": true,
+        "label": "Pay at pickup",
+        "instructions": "Payment details will be confirmed by the club before launch. Please contact the club with any questions."
+      },
+      "card": {
+        "enabled": false
+      },
+      "pickup": {
+        "enabled": true,
+        "options": [
+          {
+            "_key": "00000001",
+            "label": "Saturday practices — Cameron Park",
+            "details": "Placeholder — pickup dates and location to be confirmed.",
+            "active": false
+          }
+        ]
+      },
+      "shipping": {
+        "enabled": false,
+        "flatRate": {
+          "amount": 0
+        },
+        "note": "Pickup only at launch."
+      },
+      "tax": {
+        "mode": "off",
+        "flatRatePercent": 0,
+        "label": "Sales tax",
+        "taxShipping": false
+      },
+      "orders": {
+        "numberPrefix": "PSC",
+        "maxQuantityPerLine": 10,
+        "reservationMinutes": 30,
+        "offlineHoldDays": 14,
+        "customerNoteEnabled": true,
+        "collectPlayerTeam": true
+      },
+      "notifications": {
+        "fromName": "Prospector Soccer Club",
+        "replyTo": "communicationsdirector@prospector.org",
+        "confirmationNote": "Thank you for supporting the club.",
+        "pickupNote": "Please bring your order number."
+      },
+      "policies": {
+        "returns": "Contact the club about fit or product issues before pickup. Final exchange policy will be confirmed before launch.",
+        "sizeGuideGeneral": "Check garment measurements before ordering. Contact the club if you need help choosing a size.",
+        "preorderExplainer": "We collect orders during a pre-order window, then place one production order. Pickup details follow when the gear is ready."
+      }
+    }
+  }
+]

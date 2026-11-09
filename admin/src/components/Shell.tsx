@@ -22,6 +22,7 @@ export function Shell({ children, publish, refresh }: { children: ComponentChild
   const groups = [
     { label: 'Content', links: [['Pages', '/admin/pages', 'book', 'pages'], ['Home page', '/admin/pages/home', 'book', 'home'], ['Events', '/admin/events', 'calendar', 'events'], ['Callouts & announcements', '/admin/callouts', 'calendar', 'callouts']] },
     { label: 'Club', links: [['Programs & fees', '/admin/pages#programs', 'book', ''], ['Teams & coaches', '/admin/teams', 'user', 'teams'], ['Results', '/admin/results', 'flag', 'results'], ['Board members', '/admin/boardMembers', 'user', 'boardMembers'], ['Sponsors', '/admin/sponsors', 'flag', 'sponsors'], ['Sponsor tiers', '/admin/sponsorTiers', 'flag', 'sponsorTiers']] },
+    { label: 'Store', links: [['Products', '/admin/products', 'book', 'products'], ['Bundles', '/admin/bundles', 'book', 'bundles'], ['Categories', '/admin/categories', 'book', 'categories'], ['Store settings', '/admin/store/settings', 'shield', 'storeSettings']] },
     { label: 'Library', links: [['Documents', '/admin/documents', 'book', 'documents'], ['FAQs', '/admin/faqs', 'book', 'faqs']] },
     { label: 'Settings', links: [['Site settings', '/admin/settings', 'shield', 'site'], ['Profile', '/admin/profile', 'user', '']] },
   ];

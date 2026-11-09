@@ -1,8 +1,8 @@
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
 /** Shared by validation and the admin form engine. System records are separate. */
-export const pageNames = ['home', 'recreational', 'competitive', 'referees', 'sponsors', 'board', 'resources', 'about'] as const;
+export const pageNames = ['shop', 'home', 'recreational', 'competitive', 'referees', 'sponsors', 'board', 'resources', 'about'] as const;
 export type PageName = typeof pageNames[number];
-export const collectionNames = ['site', ...pageNames.filter(name => name !== 'sponsors'), 'sponsorsPage', 'sponsors', 'events', 'callouts', 'teams', 'results', 'boardMembers', 'sponsorTiers', 'documents', 'faqs', 'media'] as const;
+export const collectionNames = ['site', ...pageNames.filter(name => name !== 'sponsors' && name !== 'shop'), 'sponsorsPage', 'sponsors', 'events', 'callouts', 'teams', 'results', 'boardMembers', 'sponsorTiers', 'documents', 'faqs', 'media', 'products', 'bundles', 'categories', 'storeSettings', 'shopPage'] as const;
 export type CollectionName = typeof collectionNames[number];
 export const systemCollectionNames = ['users', 'sessions', 'revisions', 'publishes', 'audit', 'loginAttempts', 'scheduled', 'linkChecks', 'snapshots'] as const;
 // Stable names for the SVG registry extracted in Phase 2. Never accept arbitrary SVG.
@@ -12,11 +12,12 @@ interface FieldOptions {
   required?: boolean; default?: unknown; defaultFrom?: string;
 }
 export type Field = FieldOptions & (
-  | { type: 'text'; maxLength?: number; multiline?: boolean; placeholder?: string }
+  | { type: 'text'; maxLength?: number; multiline?: boolean; placeholder?: string; pattern?: 'slug' }
   | { type: 'richtext'; inline?: boolean }
   | { type: 'url'; allowMailto?: boolean; allowRelative?: boolean }
-  | { type: 'email' | 'date' | 'time' | 'datetime' | 'money' | 'percent' | 'month' | 'boolean' | 'icon' | 'image' | 'file' | 'link' }
-  | { type: 'number'; integer?: boolean; min?: number; max?: number }
+  | { type: 'email' | 'date' | 'time' | 'datetime' | 'percent' | 'month' | 'boolean' | 'icon' | 'image' | 'file' | 'link' }
+  | { type: 'money'; exact?: boolean }
+  | { type: 'number'; integer?: boolean; min?: number; max?: number; decimals?: number }
   | { type: 'select'; options: { value: string; label: string }[] }
   | { type: 'reference'; to: CollectionName; many?: boolean }
   | { type: 'object'; fields: Record<string, Field> }
@@ -28,11 +29,11 @@ export interface Collection {
   preview?: { page: PageName; anchor?: string | ((doc: Record<string, unknown>) => string) };
   trashable: boolean; systemManaged?: boolean;
 }
-const text = (options: FieldOptions & { maxLength?: number; multiline?: boolean; placeholder?: string } = {}): Field => ({ type: 'text', ...options });
+const text = (options: FieldOptions & { maxLength?: number; multiline?: boolean; placeholder?: string; pattern?: 'slug' } = {}): Field => ({ type: 'text', ...options });
 const rich = (inline = false, required = false): Field => ({ type: 'richtext', inline, required, editable: 'inline' });
 const select = (values: readonly string[], required = false): Field => ({ type: 'select', options: values.map(value => ({ value, label: value })), required });
 const object = (fields: Record<string, Field>, options: FieldOptions = {}): Field => ({ type: 'object', fields, ...options });
-const list = (of: Record<string, Field>, itemLabel = Object.keys(of)[0]): Field => ({ type: 'list', of, itemLabel });
+const list = (of: Record<string, Field>, itemLabel = Object.keys(of)[0]): Extract<Field, { type: 'list' }> => ({ type: 'list', of, itemLabel });
 const url: Field = { type: 'url', allowRelative: true, allowMailto: true };
 const image: Field = { type: 'image' };
 const link: Field = { type: 'link' };
@@ -42,6 +43,10 @@ const facts = list({ label: text(), value: text(), note: text() }, 'label');
 const cards = list({ icon: { type: 'icon' }, title: text(), text: text() }, 'title');
 const section = (fields: Record<string, Field> = {}): Field => object({ eyebrow: text(), title: rich(true), ...fields });
 const refs = (to: CollectionName, many = true, required = false): Field => ({ type: 'reference', to, many, required });
+const exact = (required = false): Field => ({ type: 'money', exact: true, required });
+const slug = (): Field => text({ required: true, pattern: 'slug', maxLength: 60 });
+const bool = (value = false): Field => ({ type: 'boolean', default: value });
+const integer = (min: number, value?: number): Field => ({ type: 'number', integer: true, min, ...(value === undefined ? {} : { default: value }) });
 const meta = object({ title: text(), description: text({ multiline: true }), ogImage: image });
 const hero = section({ image, lead: text({ multiline: true, editable: 'inline' }), chips: strings });
 const subnav = list({ label: text(), anchor: text() }, 'label');
@@ -115,8 +120,44 @@ export const collections: Record<CollectionName, Collection> = {
     showInLibrary: { type: 'boolean', default: true },
     source: object({ mode: select(['url', 'upload'], true), url, fileId: { type: 'file' } }, { required: true }), external: { type: 'boolean' },
   }, 'resources'),
-  faqs: collection('faqs', 'FAQ', 'FAQs', 'question', { page: select(['competitive', 'recreational', 'referees', 'sponsors'], true), question: text({ required: true }), answer: rich(false, true) }),
-  media: { ...collection('media', 'Media item', 'Media', 'filename', { filename: text(), mime: text(), size: { type: 'number', integer: true, min: 0 }, width: { type: 'number', integer: true, min: 1 }, height: { type: 'number', integer: true, min: 1 }, alt: text(), caption: text(), focal: object({ x: { type: 'number', min: 0, max: 1 }, y: { type: 'number', min: 0, max: 1 } }), variants: object({ original: url, web: url }), source: select(['upload', 'static']), uploadedBy: text(), uploadedAt: { type: 'datetime' } }, undefined, false), systemManaged: true },
+  faqs: collection('faqs', 'FAQ', 'FAQs', 'question', { page: select(['competitive', 'recreational', 'referees', 'sponsors', 'shop'], true), question: text({ required: true }), answer: rich(false, true) }),
+  categories: collection('categories', 'Category', 'Categories', 'name', {
+    name: text({ required: true }), slug: slug(), description: text({ multiline: true }), image,
+  }, 'shop'),
+  products: { ...collection('products', 'Product', 'Products', 'name', {
+    name: text({ required: true }), slug: slug(), categoryId: refs('categories', false, true), tagline: text(), description: rich(false, true),
+    details: list({ label: text(), value: text() }, 'label'),
+    images: { ...list({ image: { ...image, required: true }, caption: text() }, 'caption'), minItems: 1, required: true },
+    price: exact(true), youthPrice: exact(),
+    variants: { ...list({ label: text({ required: true }), group: select(['youth', 'adult', 'one-size'], true), sku: text(), color: text(), priceOverride: exact(), active: bool(true), limit: integer(0) }, 'label'), minItems: 1, required: true },
+    salesMode: { ...select(['preorder', 'stock', 'waitlist'], true), default: 'preorder' },
+    preorder: object({ opensAt: { type: 'datetime' }, closesAt: { type: 'datetime' }, expectedDelivery: text(), note: text() }),
+    allowWaitlist: bool(), shippable: bool(true), sizeGuide: rich(), badge: text(), featured: bool(), relatedProductIds: refs('products'),
+    supplier: object({ estimatedCost: text(), moq: text(), leadTime: text(), notes: text({ multiline: true }) }, { group: 'Internal — never shown on the site', label: 'Supplier (internal)' }),
+  }, 'shop'), preview: { page: 'shop', anchor: d => '/shop/p/' + String(d.slug ?? '') } },
+  bundles: { ...collection('bundles', 'Bundle', 'Bundles', 'name', {
+    name: text({ required: true }), slug: slug(), tagline: text(), description: rich(false, true), image: { ...image, required: true }, price: exact(true),
+    components: { ...list({ productId: refs('products', false, true), quantity: { ...integer(1, 1), required: true }, fixedVariantKey: text() }, 'productId'), minItems: 2, required: true },
+    featured: bool(), shippable: bool(true),
+  }, 'shop'), preview: { page: 'shop', anchor: d => '/shop/b/' + String(d.slug ?? '') } },
+  storeSettings: { ...singleton('storeSettings', 'Store settings', {
+    enabled: bool(), comingSoon: object({ enabled: bool(), title: text(), text: text() }, { group: 'General' }), announcement: text(), contactEmail: { type: 'email' },
+    nav: object({ label: text({ default: 'Shop' }), showInHeader: bool(true) }),
+    offline: object({ enabled: bool(true), label: text({ default: 'Pay at pickup' }), instructions: rich() }, { group: 'Payment' }),
+    card: object({ enabled: bool() }, { group: 'Payment' }),
+    pickup: object({ enabled: bool(true), options: list({ label: text({ required: true }), details: text(), active: bool(true) }, 'label') }, { group: 'Fulfillment' }),
+    shipping: object({ enabled: bool(), flatRate: exact(), freeOver: exact(), note: text() }, { group: 'Fulfillment' }),
+    tax: object({ mode: { ...select(['off', 'flat', 'stripe_tax']), default: 'off' }, flatRatePercent: { type: 'number', min: 0, max: 15, decimals: 3 }, label: text({ default: 'Sales tax' }), taxShipping: bool() }, { help: "Confirm sales tax requirements with the treasurer or CDTFA before enabling." }),
+    orders: object({ numberPrefix: text({ default: 'PSC' }), maxQuantityPerLine: integer(1, 10), reservationMinutes: integer(1, 30), offlineHoldDays: integer(0, 14), customerNoteEnabled: bool(true), collectPlayerTeam: bool(true) }),
+    notifications: object({ fromName: text({ default: 'Prospector Soccer Club' }), replyTo: { type: 'email' }, confirmationNote: rich(), pickupNote: rich() }),
+    policies: object({ returns: rich(), sizeGuideGeneral: rich(), preorderExplainer: rich() }),
+  }, 'nav.label'), preview: { page: 'shop' } },
+  shopPage: { ...singleton('shopPage', 'Shop page', {
+    meta, hero: section({ lead: text(), image, primaryCta: link, secondaryCta: link }),
+    featuredSection: section({ lead: text(), productIds: refs('products') }), bundlesSection: section({ lead: text() }), categoriesSection: section(),
+    how: section({ steps: list({ title: text(), text: text() }, 'title') }), faqSection: section(), cta,
+  }), preview: { page: 'shop' } },
+  media: { ...collection('media', 'Media item', 'Media', 'filename', { filename: text(), mime: text(), size: { type: 'number', integer: true, min: 0 }, width: { type: 'number', integer: true, min: 1 }, height: { type: 'number', integer: true, min: 1 }, alt: text(), caption: text(), focal: object({ x: { type: 'number', min: 0, max: 1 }, y: { type: 'number', min: 0, max: 1 } }), variants: object({ original: url, web: url, small: url }), source: select(['upload', 'static']), uploadedBy: text(), uploadedAt: { type: 'datetime' } }, undefined, false), systemManaged: true },
 };
 // Sponsors is both a page and a collection in the written plan. Keep the page at
 // `sponsorsPage`, keeping the collection and public URL as `sponsors`.

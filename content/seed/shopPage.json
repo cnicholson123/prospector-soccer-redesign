@@ -1,0 +1,80 @@
+[
+  {
+    "id": "shopPage",
+    "data": {
+      "meta": {
+        "title": "Club shop · Prospector Soccer Club",
+        "description": "Club gear for players, families, coaches and fans."
+      },
+      "hero": {
+        "eyebrow": "Club shop · 2026–27",
+        "title": "Wear the *gold*.",
+        "lead": "For our players. For our families. For the sidelines that feel like home.",
+        "image": {
+          "mediaId": "media_shop_hoodie",
+          "alt": "Prospector crest hoodie concept"
+        },
+        "primaryCta": {
+          "label": "Shop the collection",
+          "href": "#collection"
+        },
+        "secondaryCta": {
+          "label": "How pre-orders work",
+          "href": "#how"
+        }
+      },
+      "featuredSection": {
+        "eyebrow": "The collection",
+        "title": "Ten pieces. One club.",
+        "lead": "Wear your Gold Country roots, on and off the pitch.",
+        "productIds": []
+      },
+      "bundlesSection": {
+        "eyebrow": "Better together",
+        "title": "Gear up as a team",
+        "lead": "Club favorites, bundled for less."
+      },
+      "categoriesSection": {
+        "eyebrow": "Find your favorites",
+        "title": "Shop by category"
+      },
+      "how": {
+        "eyebrow": "Made for our club",
+        "title": "How pre-orders work",
+        "steps": [
+          {
+            "_key": "00000001",
+            "title": "Choose your gear",
+            "text": "Pick your favorites and sizes during the order window."
+          },
+          {
+            "_key": "00000002",
+            "title": "We order together",
+            "text": "One club order goes into production after the window closes."
+          },
+          {
+            "_key": "00000003",
+            "title": "Meet us for pickup",
+            "text": "We will share pickup details when your gear is ready."
+          }
+        ]
+      },
+      "faqSection": {
+        "eyebrow": "Good to know",
+        "title": "Your shop questions"
+      },
+      "cta": {
+        "eyebrow": "Here to help",
+        "title": "Questions about your gear?",
+        "text": "Get in touch with the club before you order.",
+        "buttons": [
+          {
+            "_key": "00000001",
+            "label": "Email the club",
+            "href": "mailto:communicationsdirector@prospector.org"
+          }
+        ]
+      }
+    }
+  }
+]

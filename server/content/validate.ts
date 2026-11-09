@@ -1,4 +1,5 @@
 import { collections, iconNames, type CollectionName, type Field } from '../../shared/schema.js';
+import { validateCatalog } from '../shop/catalog.js';
 import { references } from './references.js';
 import type { Doc, ValidationIssue, ValidationResult } from '../../shared/types.js';
 
@@ -29,7 +30,7 @@ function validDatetime(value: unknown): boolean {
 const finite = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value);
 const id = (value: unknown): value is string => typeof value === 'string' && /^[A-Za-z0-9][A-Za-z0-9_-]*$/.test(value);
 
-export function validateFields(fields: Record<string, Field>, data: unknown, prefix = ''): ValidationResult {
+export function validateFields(fields: Record<string, Field>, data: unknown, prefix = '', partial = false): ValidationResult {
   const errors: ValidationIssue[] = [];
   const error = (path: string, message: string) => errors.push({ path, message });
   function checkObject(defs: Record<string, Field>, value: unknown, path: string, listItem = false) {
@@ -39,14 +40,15 @@ export function validateFields(fields: Record<string, Field>, data: unknown, pre
   }
   function check(field: Field, value: unknown, path: string): void {
     if (value === undefined || (value === '' && ['text', 'richtext', 'url', 'email', 'date', 'time', 'datetime', 'select', 'icon', 'reference'].includes(field.type))) {
-      if (field.required) error(path, 'Required'); return;
+      if (field.required && !partial) error(path, 'Required'); return;
     }
     switch (field.type) {
       case 'text': case 'richtext': {
         if (typeof value !== 'string') { error(path, 'Must be text'); break; }
-        if (field.required && !value.trim()) error(path, 'Required');
+        if (field.required && !partial && !value.trim()) error(path, 'Required');
         const maxLength = field.type === 'richtext' ? 20_000 : field.maxLength ?? (field.multiline ? 5_000 : 500);
         if (value.length > maxLength) error(path, `Must be at most ${maxLength} characters`);
+        if (field.type === 'text' && field.pattern === 'slug' && (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value) || value.length > 60)) error(path, 'Use lowercase letters, numbers and single hyphens (60 characters maximum)');
         if (field.type === 'richtext') {
           // Grammar rendering belongs to Phase 2; reject unsafe Markdown links now.
           for (const match of value.matchAll(/\]\(\s*([^\s)]*)/g)) if (!isSafeUrl(match[1], { allowRelative: true, allowMailto: true })) error(path, 'Link URL is not allowed');
@@ -61,11 +63,13 @@ export function validateFields(fields: Record<string, Field>, data: unknown, pre
       case 'number': case 'percent': case 'month': {
         const min = field.type === 'percent' ? 0 : field.type === 'month' ? 1 : field.type === 'number' ? field.min : undefined;
         const max = field.type === 'percent' ? 100 : field.type === 'month' ? 12 : field.type === 'number' ? field.max : undefined;
+        if (field.type === 'number' && field.decimals !== undefined && finite(value) && value !== Number(value.toFixed(field.decimals))) error(path, 'Too many decimal places');
         const integer = field.type === 'month' || (field.type === 'number' && field.integer);
         if (!finite(value) || (integer && !Number.isSafeInteger(value)) || (min !== undefined && value < min) || (max !== undefined && value > max)) error(path, 'Number is outside the allowed range or precision');
         break;
       }
       case 'money':
+        if (field.exact && record(value) && (value.max !== undefined || !finite(value.amount) || !Number.isSafeInteger(Math.round(value.amount * 100)) || value.amount !== Number(value.amount.toFixed(2)))) error(path, 'Use one nonnegative amount with at most two decimal places');
         if (!record(value) || !finite(value.amount) || value.amount < 0 || (value.max !== undefined && (!finite(value.max) || value.max < value.amount)) || Object.keys(value).some(key => !['amount', 'max'].includes(key))) error(path, 'Must have a nonnegative amount and an optional max at least that amount');
         break;
       case 'boolean': if (typeof value !== 'boolean') error(path, 'Must be true or false'); break;
@@ -83,13 +87,13 @@ export function validateFields(fields: Record<string, Field>, data: unknown, pre
       case 'object': checkObject(field.fields, value, path); break;
       case 'list': {
         if (!Array.isArray(value)) { error(path, 'Must be a list'); break; }
-        if ((field.minItems !== undefined && value.length < field.minItems) || (field.maxItems !== undefined && value.length > field.maxItems)) error(path, 'List length is outside the allowed range');
+        if ((!partial && field.minItems !== undefined && value.length < field.minItems) || (field.maxItems !== undefined && value.length > field.maxItems)) error(path, 'List length is outside the allowed range');
         const keys = new Set<string>();
         value.forEach((item: unknown, index) => {
           const itemPath = `${path}[${index}]`;
-          if (!record(item) || typeof item._key !== 'string' || !/^[A-Za-z0-9_-]{8}$/.test(item._key)) error(`${itemPath}._key`, 'Must be a stable eight-character key');
-          else if (keys.has(item._key)) error(`${itemPath}._key`, 'Duplicate list key');
-          else keys.add(item._key);
+          if (!record(item) || (!partial || item._key !== undefined) && (typeof item._key !== 'string' || !/^[A-Za-z0-9_-]{8}$/.test(item._key))) error(`${itemPath}._key`, 'Must be a stable eight-character key');
+          else if (typeof item._key === 'string' && keys.has(item._key)) error(`${itemPath}._key`, 'Duplicate list key');
+          else if (typeof item._key === 'string') keys.add(item._key);
           checkObject(field.of, item, itemPath, true);
         });
         break;
@@ -101,12 +105,13 @@ export function validateFields(fields: Record<string, Field>, data: unknown, pre
 }
 export interface ValidationOptions {
   mode: 'draft' | 'publish';
+  id?: string; documents?: Doc[];
   resolve?: (collection: CollectionName, id: string) => Doc | null;
 }
 export function validate(collection: CollectionName, data: unknown, options: ValidationOptions = { mode: 'draft' }): ValidationResult {
   const schema = Object.hasOwn(collections, collection) ? collections[collection] : undefined;
   if (!schema) return { valid: false, errors: [{ path: '', message: 'Unknown collection' }] };
-  const result = validateFields(schema.fields, data);
+  const result = validateFields(schema.fields, data, '', options.mode === 'draft' && ['products', 'bundles', 'categories', 'storeSettings', 'shopPage'].includes(collection));
   const add = (path: string, message: string) => { result.errors.push({ path, message }); result.valid = false; };
   if (record(data)) {
     if (collection === 'documents' && record(data.source)) {
@@ -120,6 +125,7 @@ export function validate(collection: CollectionName, data: unknown, options: Val
     if (collection === 'events' && typeof data.time === 'string' && typeof data.endTime === 'string' && data.endTime <= data.time) add('endTime', 'Must be after time');
   }
   if (options.mode === 'publish') {
+    for (const issue of validateCatalog(collection, data, options)) add(issue.path, issue.message);
     if (schema.kind === 'singleton' && record(data)) {
       for (const [name, field] of Object.entries(schema.fields)) {
         if (['object', 'list'].includes(field.type) && data[name] === undefined) add(name, 'Required section');

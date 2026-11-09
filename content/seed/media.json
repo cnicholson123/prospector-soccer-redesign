@@ -254,5 +254,205 @@
       "width": 1400,
       "height": 934
     }
+  },
+  {
+    "id": "media_shop_hoodie",
+    "data": {
+      "filename": "hoodie.webp",
+      "mime": "image/webp",
+      "size": 81284,
+      "width": 1200,
+      "height": 1200,
+      "alt": "Crest Hoodie concept",
+      "caption": "AI-generated concept, not final production photography.",
+      "variants": {
+        "original": "/assets/img/shop/hoodie.webp",
+        "web": "/assets/img/shop/hoodie.webp",
+        "small": "/assets/img/shop/hoodie-sm.webp"
+      },
+      "source": "static",
+      "uploadedBy": "seed",
+      "uploadedAt": "2026-11-09T00:00:00Z"
+    }
+  },
+  {
+    "id": "media_shop_fan-tee",
+    "data": {
+      "filename": "fan-tee.webp",
+      "mime": "image/webp",
+      "size": 103520,
+      "width": 1200,
+      "height": 1200,
+      "alt": "Gold Country Fan Tee concept",
+      "caption": "AI-generated concept, not final production photography.",
+      "variants": {
+        "original": "/assets/img/shop/fan-tee.webp",
+        "web": "/assets/img/shop/fan-tee.webp",
+        "small": "/assets/img/shop/fan-tee-sm.webp"
+      },
+      "source": "static",
+      "uploadedBy": "seed",
+      "uploadedAt": "2026-11-09T00:00:00Z"
+    }
+  },
+  {
+    "id": "media_shop_scarf",
+    "data": {
+      "filename": "scarf.webp",
+      "mime": "image/webp",
+      "size": 268590,
+      "width": 1200,
+      "height": 1200,
+      "alt": "Supporter Scarf concept",
+      "caption": "AI-generated concept, not final production photography.",
+      "variants": {
+        "original": "/assets/img/shop/scarf.webp",
+        "web": "/assets/img/shop/scarf.webp",
+        "small": "/assets/img/shop/scarf-sm.webp"
+      },
+      "source": "static",
+      "uploadedBy": "seed",
+      "uploadedAt": "2026-11-09T00:00:00Z"
+    }
+  },
+  {
+    "id": "media_shop_cap",
+    "data": {
+      "filename": "cap.webp",
+      "mime": "image/webp",
+      "size": 163768,
+      "width": 1200,
+      "height": 1200,
+      "alt": "Crest Trucker Cap concept",
+      "caption": "AI-generated concept, not final production photography.",
+      "variants": {
+        "original": "/assets/img/shop/cap.webp",
+        "web": "/assets/img/shop/cap.webp",
+        "small": "/assets/img/shop/cap-sm.webp"
+      },
+      "source": "static",
+      "uploadedBy": "seed",
+      "uploadedAt": "2026-11-09T00:00:00Z"
+    }
+  },
+  {
+    "id": "media_shop_beanie",
+    "data": {
+      "filename": "beanie.webp",
+      "mime": "image/webp",
+      "size": 149410,
+      "width": 1200,
+      "height": 1200,
+      "alt": "Pom Beanie concept",
+      "caption": "AI-generated concept, not final production photography.",
+      "variants": {
+        "original": "/assets/img/shop/beanie.webp",
+        "web": "/assets/img/shop/beanie.webp",
+        "small": "/assets/img/shop/beanie-sm.webp"
+      },
+      "source": "static",
+      "uploadedBy": "seed",
+      "uploadedAt": "2026-11-09T00:00:00Z"
+    }
+  },
+  {
+    "id": "media_shop_bottle",
+    "data": {
+      "filename": "bottle.webp",
+      "mime": "image/webp",
+      "size": 77314,
+      "width": 1200,
+      "height": 1200,
+      "alt": "Engraved Insulated Bottle concept",
+      "caption": "AI-generated concept, not final production photography.",
+      "variants": {
+        "original": "/assets/img/shop/bottle.webp",
+        "web": "/assets/img/shop/bottle.webp",
+        "small": "/assets/img/shop/bottle-sm.webp"
+      },
+      "source": "static",
+      "uploadedBy": "seed",
+      "uploadedAt": "2026-11-09T00:00:00Z"
+    }
+  },
+  {
+    "id": "media_shop_pins",
+    "data": {
+      "filename": "pins.webp",
+      "mime": "image/webp",
+      "size": 112424,
+      "width": 1200,
+      "height": 1200,
+      "alt": "Enamel Pin Set concept",
+      "caption": "AI-generated concept, not final production photography.",
+      "variants": {
+        "original": "/assets/img/shop/pins.webp",
+        "web": "/assets/img/shop/pins.webp",
+        "small": "/assets/img/shop/pins-sm.webp"
+      },
+      "source": "static",
+      "uploadedBy": "seed",
+      "uploadedAt": "2026-11-09T00:00:00Z"
+    }
+  },
+  {
+    "id": "media_shop_blanket",
+    "data": {
+      "filename": "blanket.webp",
+      "mime": "image/webp",
+      "size": 250104,
+      "width": 1200,
+      "height": 1200,
+      "alt": "Sherpa Sideline Blanket concept",
+      "caption": "AI-generated concept, not final production photography.",
+      "variants": {
+        "original": "/assets/img/shop/blanket.webp",
+        "web": "/assets/img/shop/blanket.webp",
+        "small": "/assets/img/shop/blanket-sm.webp"
+      },
+      "source": "static",
+      "uploadedBy": "seed",
+      "uploadedAt": "2026-11-09T00:00:00Z"
+    }
+  },
+  {
+    "id": "media_shop_backpack",
+    "data": {
+      "filename": "backpack.webp",
+      "mime": "image/webp",
+      "size": 229942,
+      "width": 1200,
+      "height": 1200,
+      "alt": "Cleat Backpack concept",
+      "caption": "AI-generated concept, not final production photography.",
+      "variants": {
+        "original": "/assets/img/shop/backpack.webp",
+        "web": "/assets/img/shop/backpack.webp",
+        "small": "/assets/img/shop/backpack-sm.webp"
+      },
+      "source": "static",
+      "uploadedBy": "seed",
+      "uploadedAt": "2026-11-09T00:00:00Z"
+    }
+  },
+  {
+    "id": "media_shop_decal",
+    "data": {
+      "filename": "decal.webp",
+      "mime": "image/webp",
+      "size": 85530,
+      "width": 1200,
+      "height": 1200,
+      "alt": "Car Decal + PSC Magnet concept",
+      "caption": "AI-generated concept, not final production photography.",
+      "variants": {
+        "original": "/assets/img/shop/decal.webp",
+        "web": "/assets/img/shop/decal.webp",
+        "small": "/assets/img/shop/decal-sm.webp"
+      },
+      "source": "static",
+      "uploadedBy": "seed",
+      "uploadedAt": "2026-11-09T00:00:00Z"
+    }
   }
 ]

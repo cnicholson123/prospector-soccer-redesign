@@ -207,13 +207,13 @@ export class PostgresStore implements Store {
       }
       for (const doc of docs.filter(doc => doc.published !== undefined)) {
         if (!manifestIds.has(doc.id)) throw new Error('Published document missing from manifest');
-        const result = validate(doc.collection, doc.published, { mode: 'publish', resolve: (collection, id) => docs.map(target => target.published === undefined ? target : { ...target, trashedAt: undefined, status: 'published' as const }).find(target => target.collection === collection && target.id === id) ?? null });
+        const result = validate(doc.collection, doc.published, { mode: 'publish', id: doc.id, documents: docs, resolve: (collection, id) => docs.map(target => target.published === undefined ? target : { ...target, trashedAt: undefined, status: 'published' as const }).find(target => target.collection === collection && target.id === id) ?? null });
         if (!result.valid) throw new ValidationError(result.errors.map(error => ({ ...error, path: `${doc.collection}.${doc.id}.${error.path}` })));
       }
       for (const item of tx.snapshot.scheduled) {
         const target = docs.find(doc => doc.collection === item.collection && doc.id === item.id);
         if (!target || target.trashedAt || target.status === 'trashed' || !Number.isFinite(Date.parse(item.at))) throw new Error('Invalid scheduled document');
-        const result = validate(item.collection, item.data, { mode: 'publish', resolve: (collection, id) => docs.find(doc => doc.collection === collection && doc.id === id) ?? null });
+        const result = validate(item.collection, item.data, { mode: 'publish', id: item.id, documents: docs, resolve: (collection, id) => docs.find(doc => doc.collection === collection && doc.id === id) ?? null });
         if (!result.valid) throw new ValidationError(result.errors.map(error => ({ ...error, path: `${item.collection}.${item.id}.${error.path}` })));
       }
       for (const mediaId of Object.keys(tx.snapshot.media)) {

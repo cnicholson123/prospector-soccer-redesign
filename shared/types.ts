@@ -14,7 +14,7 @@ export interface Snapshot {
   schemaVersion: number; siteVersion: number; publishedAt: string;
   /** Latest scheduled time incorporated into this snapshot by settlement. */
   effectiveAt?: string;
-  media: Record<string, { url: string; mime: string; width: number; height: number; alt: string }>;
+  media: Record<string, { url: string; small?: string; mime: string; width: number; height: number; alt: string }>;
   docs: Partial<Record<CollectionName, PublishedDoc[]>>;
   scheduled: ScheduledItem[]; templateHash: string;
 }

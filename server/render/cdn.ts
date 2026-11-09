@@ -8,3 +8,10 @@ export async function purgeContent(): Promise<boolean> {
   try { await dangerouslyDeleteByTag('content'); return true; }
   catch (error) { console.warn('Content cache purge failed', error); return false; }
 }
+
+export function tagShop(): void { if (process.env.VERCEL === '1') addCacheTag('shop'); }
+export async function purgeShop(): Promise<boolean> {
+  if (process.env.VERCEL !== '1' || process.env.CDN_PURGE !== 'tag') return false;
+  try { await dangerouslyDeleteByTag('shop'); return true; }
+  catch { console.warn('Shop cache purge failed'); return false; }
+}

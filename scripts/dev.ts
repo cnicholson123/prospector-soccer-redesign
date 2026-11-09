@@ -4,6 +4,7 @@ import { seedStore } from './seed.js';
 import { createServer } from 'node:http';
 import { once } from 'node:events';
 import { loadConfig } from '../server/config.js';
+import { createShopApp } from '../server/shop/http/app.js';
 import { adminApp } from '../server/http/hono-app.js';
 import { staticFile } from '../server/http/static.js';
 import { createRenderHandler } from '../server/render/handler.js';
@@ -14,6 +15,7 @@ const config = loadConfig();
 const store = createStore(config);
 if (!await store.getSnapshot()) await seedStore(store);
 const renderPublic = createRenderHandler(store, config);
+const shopApp = createShopApp(() => store, { config });
 const built = process.argv.includes('--built');
 let vite: ViteDevServer | undefined;
 const server = createServer(async (req, res) => {
@@ -38,6 +40,7 @@ const server = createServer(async (req, res) => {
     const request = new Request(url, { method, headers, ...(method === 'GET' || method === 'HEAD' ? {} : { body: Buffer.concat(chunks) }) });
     let response: Response | null;
     if (url.pathname.startsWith('/api/admin/')) response = await adminApp.fetch(request);
+    else if (url.pathname.startsWith('/api/shop/')) response = await shopApp.fetch(request);
     else if (method !== 'GET' && method !== 'HEAD') response = new Response('Method not allowed', { status: 405 });
     else if (url.pathname === '/admin' || url.pathname.startsWith('/admin/')) {
       response = built ? await staticFile('public', url.pathname.slice(1)) ?? await staticFile('public/admin', 'index.html') : Response.redirect('http://localhost:5173' + url.pathname + url.search, 307);

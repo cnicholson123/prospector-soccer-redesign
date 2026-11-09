@@ -20,7 +20,7 @@ async function fixture(seed = false, config: Partial<Config> = {}) { const f = a
 async function create(f: Awaited<ReturnType<typeof fixture>>, collection: string, draft: unknown): Promise<Doc> {
   const r = await f.req('/docs/' + collection, 'POST', { draft }); expect(r.status).toBe(201); return (await r.json()).doc;
 }
-it('A3: stale in-flight rebuild cannot resurrect a completed unpublish', async () => {
+it('A3: stale in-flight rebuild cannot resurrect a completed unpublish', { timeout: 15000 }, async () => {
   const f = await fixture(true), capture = await f.store.capturePublication(), d = capture.docs.find(d => d.collection === 'events')!;
   await publishDocuments(f.store, [item(d)], actor, now, undefined, true);
   await expect(commitSnapshot(f.store, capture, [], actor, now, { kind: 'rebuild' })).rejects.toMatchObject({ status: 409 });

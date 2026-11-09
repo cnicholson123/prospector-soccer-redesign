@@ -5,13 +5,17 @@
   "framework": null,
   "functions": {
     "api/admin.ts": { "includeFiles": "server/auth/common-passwords.json" },
-    "api/render.ts": { "includeFiles": "server/auth/common-passwords.json" }
+    "api/render.ts": { "includeFiles": "server/auth/common-passwords.json" },
+    "api/shop.ts": { "includeFiles": "server/auth/common-passwords.json" }
   },
   "redirects": [
     { "source": "/index.html", "destination": "/", "permanent": true },
     { "source": "/:page.html", "destination": "/:page", "permanent": true }
   ],
   "rewrites": [
+    { "source": "/api/shop/:path*", "destination": "/api/shop" },
+    { "source": "/shop", "destination": "/api/render?page=shop" },
+    { "source": "/shop/:path*", "destination": "/api/render?page=shop&path=:path*" },
     { "source": "/media/:path*", "destination": "/api/render?media=:path*" },
     { "source": "/api/admin/:path*", "destination": "/api/admin" },
     { "source": "/admin", "destination": "/admin/index.html" },

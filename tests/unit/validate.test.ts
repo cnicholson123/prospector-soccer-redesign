@@ -47,7 +47,8 @@ function sample(field: Field): unknown {
   switch (field.type) {
     case 'object': return Object.fromEntries(Object.entries(field.fields).map(([name, child]) => [name, sample(child)]));
     case 'list': return [{ _key: 'abcdefgh', ...Object.fromEntries(Object.entries(field.of).map(([name, child]) => [name, sample(child)])) }];
-    case 'text': case 'richtext': return 'Prospector';
+    case 'text': return field.pattern === 'slug' ? 'prospector' : 'Prospector';
+    case 'richtext': return 'Prospector';
     case 'url': return 'https://prospector.org/';
     case 'email': return 'club@prospector.org';
     case 'date': return '2026-11-09';
@@ -68,7 +69,7 @@ function sample(field: Field): unknown {
 }
 describe('complete schema and migration-shaped documents', () => {
   it('has distinct page singleton and sponsor collection, and only content types', () => {
-    expect(Object.keys(collections)).toHaveLength(19);
+    expect(Object.keys(collections)).toHaveLength(24);
     expect(collections.sponsorsPage.kind).toBe('singleton');
     expect(collections.sponsors.kind).toBe('collection');
     expect(collections.sponsors.fields.tier).toMatchObject({ to: 'sponsorTiers' });

@@ -1,0 +1,60 @@
+import { afterAll, beforeAll, expect, it } from 'vitest';
+import { rm } from 'node:fs/promises';
+import { adminFixture } from '../helpers/admin.js';
+import { createShopApp } from '../../server/shop/http/app.js';
+import { createRenderHandler } from '../../server/render/handler.js';
+import { mintCheckoutToken, verifyCheckoutToken } from '../../server/shop/http/token.js';
+import { newSession } from '../../server/auth/session.js';
+import { requirePermission } from '../../server/http/middleware/permission.js';
+import type { User } from '../../shared/types.js';
+let f: Awaited<ReturnType<typeof adminFixture>>;
+beforeAll(async()=>{ f=await adminFixture(true); f.app.get('/api/admin/shop/permission-test',requirePermission('orders.view'),c=>c.json({ok:true})); await f.login(); },15000);
+afterAll(async()=>{ await rm(f.root,{recursive:true,force:true}); });
+it('creates, edits, previews, validates and publishes product and bundle through the admin API',async()=>{
+ const source=(await f.store.getDoc('products','prod_hoodie'))!;
+ let response=await f.req('/docs/products','POST',{draft:{...source.draft as object,name:'Practice hoodie',slug:'practice-hoodie'}});expect(response.status).toBe(201);
+ let {doc}=await response.json();
+ response=await f.req(`/docs/products/${doc.id}`,'PUT',{baseVersion:doc.version,draft:{...doc.draft,tagline:'For practice'}});expect(response.status).toBe(200);doc=(await response.json()).doc;
+ const render=createRenderHandler(f.store,f.config);
+ response=await render(new Request('http://localhost:3000/shop/p/practice-hoodie?preview=1',{headers:{Cookie:f.getCookie()}}));expect(response.status).toBe(200);expect(await response.text()).toContain('Practice hoodie');
+ const bundleSource=(await f.store.getDoc('bundles','bundle_coach-kit'))!;
+ const b={...bundleSource.draft as Record<string,unknown>,name:'Practice kit',slug:'practice-kit',components:[{_key:'00000001',productId:doc.id,quantity:1},{_key:'00000002',productId:'prod_cap',quantity:1}]};
+ response=await f.req('/docs/bundles','POST',{draft:b});expect(response.status).toBe(201);const bd=(await response.json()).doc;
+ response=await f.req('/publish','POST',{items:[{collection:'bundles',id:bd.id,expectedVersion:bd.version}]});expect(response.status).toBe(422);expect((await response.json()).error.details.some((e:{path:string})=>e.path.endsWith('components[0].productId'))).toBe(true);
+ const cap=(await f.store.getDoc('products','prod_cap'))!;
+ response=await f.req('/publish','POST',{items:[doc,cap,bd].map(d=>({collection:d.collection,id:d.id,expectedVersion:d.version}))});expect(response.status).toBe(200);
+ expect((await f.store.getSnapshot())?.docs.bundles?.some(d=>d.id===bd.id)).toBe(true);
+},15000);
+it('keeps disabled store private, enables with a publish, and guards APIs',async()=>{
+ const render=createRenderHandler(f.store,f.config), app=createShopApp(()=>f.store,{config:f.config});
+ expect((await render(new Request('http://localhost:3000/shop'))).status).toBe(404);
+ expect((await render(new Request('http://localhost:3000/shop?preview=1'))).status).toBe(401);
+ expect((await app.request('/api/shop/quote',{method:'POST',headers:{Origin:f.config.publicBaseUrl,'Content-Type':'application/json'},body:'{"lines":[]}'})).status).toBe(404);
+ const s=(await f.store.getDoc('storeSettings','storeSettings'))!;
+ const next={...s.draft as Record<string,unknown>,enabled:true,pickup:{enabled:true,options:[{_key:'00000001',label:'Practice',active:true}]}};
+ let r=await f.req('/docs/storeSettings/storeSettings','PUT',{baseVersion:s.version,draft:next});expect(r.status).toBe(200);const d=(await r.json()).doc;
+ expect((await f.req('/publish','POST',{items:[{collection:d.collection,id:d.id,expectedVersion:d.version}]})).status).toBe(200);
+ r=await render(new Request('http://localhost:3000/shop/p/practice-hoodie'));expect(r.status).toBe(200);expect(r.headers.get('cache-control')).toBe('public, max-age=0, s-maxage=15, stale-while-revalidate=60');expect(await r.text()).toContain('type="radio"');
+ const post=(body:unknown,headers:Record<string,string>={Origin:f.config.publicBaseUrl,'Content-Type':'application/json'})=>app.request('/api/shop/quote',{method:'POST',headers,body:JSON.stringify(body)});
+ expect((await post({lines:[]}, {'Content-Type':'application/json'})).status).toBe(403);
+ expect((await post({lines:[]},{Origin:'https://evil.example','Content-Type':'application/json'})).status).toBe(403);
+ expect((await post({lines:[]},{Origin:f.config.publicBaseUrl,'Content-Type':'text/plain'})).status).toBe(415);
+ expect((await post({lines:[{kind:'product',productId:'prod_hoodie',variantKey:'key',quantity:1.2}]})).status).toBe(422);
+ expect((await post({lines:[]})).status).toBe(200);
+ r=await post({lines:[{kind:'product',productId:'prod_cap',variantKey:'missing',quantity:1}]});const q=await r.json();expect(q.problems[0].code).toBe('unavailable');expect(q.totals.totalCents).toBe(0);expect(q.token).toBeTypeOf('string');
+ const a=await app.request('/api/shop/availability?ids=prod_cap.00000001,missing.unknown');expect(a.status).toBe(200);expect(a.headers.get('cache-control')).toBe('no-store');expect((await a.json()).availability['missing.unknown'].available).toBe(false);
+},15000);
+it('enforces rate limits using the filesystem store and retry-after',async()=>{
+ const app=createShopApp(()=>f.store,{config:f.config});let r:Response|undefined;
+ for(let i=0;i<61;i++)r=await app.request('/api/shop/quote',{method:'POST',headers:{Origin:f.config.publicBaseUrl,'Content-Type':'application/json','x-forwarded-for':'192.0.2.88'},body:'{"lines":[]}'});
+ expect(r?.status).toBe(429);expect(Number(r?.headers.get('retry-after'))).toBeGreaterThan(0);
+},15000);
+it.each(['Viewer','Contributor'] as const)('refuses a stub orders route for %s',async role=>{
+ const base=(await f.store.listUsers())[0],u={...base,id:'shop_'+role,username:'shop_'+role,role} as User; await f.store.putUser(u);
+ const {token}=await newSession(f.store,u,{},new Date('2030-01-01T12:00:00Z'));const r=await f.app.request('/api/admin/shop/permission-test',{headers:{Cookie:'psc_session='+token}});expect(r.status).toBe(403);
+});
+it('signs checkout tokens, rejects tampering and accepts only 3 seconds through 2 hours',()=>{
+ const date=new Date('2030-01-01T00:00:00Z'),secret='x'.repeat(32),token=mintCheckoutToken(secret,date);
+ for(const [ms,expected] of [[-1,false],[0,false],[2999,false],[3000,true],[7200000,true],[7200001,false]] as const)expect(verifyCheckoutToken(token,secret,new Date(+date+ms))).toBe(expected);
+ expect(verifyCheckoutToken(token+'x',secret,new Date(+date+4000))).toBe(false);expect(verifyCheckoutToken(token,'y'.repeat(32),new Date(+date+4000))).toBe(false);
+});

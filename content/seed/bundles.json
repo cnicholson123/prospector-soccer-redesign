@@ -1,0 +1,114 @@
+[
+  {
+    "id": "bundle_new-family-pack",
+    "status": "draft",
+    "data": {
+      "name": "New Family Pack",
+      "slug": "new-family-pack",
+      "description": "Club favorites, together for less. Choose your sizes below.",
+      "tagline": "Better together",
+      "image": {
+        "mediaId": "media_shop_fan-tee",
+        "alt": "New Family Pack concept"
+      },
+      "price": {
+        "amount": 40
+      },
+      "components": [
+        {
+          "_key": "00000001",
+          "productId": "prod_fan-tee",
+          "quantity": 1
+        },
+        {
+          "_key": "00000002",
+          "productId": "prod_decal",
+          "quantity": 1,
+          "fixedVariantKey": "00000001"
+        },
+        {
+          "_key": "00000003",
+          "productId": "prod_pins",
+          "quantity": 1,
+          "fixedVariantKey": "00000001"
+        }
+      ],
+      "featured": false,
+      "shippable": true
+    }
+  },
+  {
+    "id": "bundle_sideline-pack",
+    "status": "draft",
+    "data": {
+      "name": "Sideline Pack",
+      "slug": "sideline-pack",
+      "description": "Club favorites, together for less. Choose your sizes below.",
+      "tagline": "Better together",
+      "image": {
+        "mediaId": "media_shop_beanie",
+        "alt": "Sideline Pack concept"
+      },
+      "price": {
+        "amount": 79
+      },
+      "components": [
+        {
+          "_key": "00000001",
+          "productId": "prod_beanie",
+          "quantity": 1
+        },
+        {
+          "_key": "00000002",
+          "productId": "prod_scarf",
+          "quantity": 1,
+          "fixedVariantKey": "00000001"
+        },
+        {
+          "_key": "00000003",
+          "productId": "prod_blanket",
+          "quantity": 1,
+          "fixedVariantKey": "00000001"
+        }
+      ],
+      "featured": true,
+      "shippable": true
+    }
+  },
+  {
+    "id": "bundle_coach-kit",
+    "status": "draft",
+    "data": {
+      "name": "Coach Kit",
+      "slug": "coach-kit",
+      "description": "Club favorites, together for less. Choose your sizes below.",
+      "tagline": "Better together",
+      "image": {
+        "mediaId": "media_shop_hoodie",
+        "alt": "Coach Kit concept"
+      },
+      "price": {
+        "amount": 95
+      },
+      "components": [
+        {
+          "_key": "00000001",
+          "productId": "prod_hoodie",
+          "quantity": 1
+        },
+        {
+          "_key": "00000002",
+          "productId": "prod_cap",
+          "quantity": 1
+        },
+        {
+          "_key": "00000003",
+          "productId": "prod_bottle",
+          "quantity": 1
+        }
+      ],
+      "featured": false,
+      "shippable": true
+    }
+  }
+]

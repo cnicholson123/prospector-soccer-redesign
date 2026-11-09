@@ -1,0 +1,47 @@
+[
+  {
+    "id": "cat_apparel",
+    "status": "draft",
+    "data": {
+      "name": "Apparel",
+      "slug": "apparel",
+      "description": "Prospector apparel for the whole club."
+    }
+  },
+  {
+    "id": "cat_headwear",
+    "status": "draft",
+    "data": {
+      "name": "Headwear",
+      "slug": "headwear",
+      "description": "Prospector headwear for the whole club."
+    }
+  },
+  {
+    "id": "cat_accessories",
+    "status": "draft",
+    "data": {
+      "name": "Accessories",
+      "slug": "accessories",
+      "description": "Prospector accessories for the whole club."
+    }
+  },
+  {
+    "id": "cat_gear",
+    "status": "draft",
+    "data": {
+      "name": "Gear",
+      "slug": "gear",
+      "description": "Prospector gear for the whole club."
+    }
+  },
+  {
+    "id": "cat_collectibles",
+    "status": "draft",
+    "data": {
+      "name": "Collectibles",
+      "slug": "collectibles",
+      "description": "Prospector collectibles for the whole club."
+    }
+  }
+]
