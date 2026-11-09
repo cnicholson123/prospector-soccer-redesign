@@ -306,3 +306,62 @@ Scope / open issues
 - Remaining collection/page editors, full media/profile/session administration, bulk/trash/reordering UI, scheduling UI, site-wide history/audit screens, inline editing and the command palette remain in their assigned later phases. No additional dependency was added.
 - Existing must-change flags are honored for compatibility. Production bootstrap guidance and all new hashed accounts use optional password changes.
 - No commit, push, deployment, global configuration edit or persistent edit outside this repository was made. Real account secrets must still be supplied through the deployment environment when hosting is authorized.
+
+## CHANGELOG — Phase 7b — Breadth editors and 7a polish — 2026-11-09
+
+Shipped against §18.4 and §8
+
+- Generalized the Events editor, autosave/recovery state, conflict comparison, preview and revision timeline for every editable content type. All nine singletons (site settings and eight pages) now have working editors; page/settings sections use accordions. The existing `sponsorsPage` singleton continues to use `/admin/pages/sponsors` while the collection uses `/admin/sponsors`.
+- Extended the schema-driven form with nested objects, links, money/ranges, numbers, percentages, months, icons, Pacific-time datetime windows, searchable single/multiple references and repeatable lists. Lists support collapse, meaningful row titles, add/remove, duplication with fresh nested stable keys, pointer drag, Alt+arrow reordering and explicit up/down buttons. Constrained Markdown toolbars and previews respect inline fields. Existing media references/alt text remain visible; media selection/upload is explicitly reserved for Phase 10.
+- Added the Pages index, Home and every public-page editor, Site settings, callouts/announcements with activation windows, teams/coaches, results, board members, sponsors, sponsor tiers, link-mode documents and FAQs. Programs, recreational fees, competitive costs and coaching programs are edited within their existing singleton sections, with navigation shortcuts. No alternate collections or duplicated content were introduced.
+- Every collection, including Events, has search, status and schema-based category/type filters, sorting, status pills, selection/bulk publish, trash/restore, duplicate, preview and history links. Orderable collections use versioned atomic reorder and have keyboard/pointer controls. Trash uses the existing versioned integrity endpoint; refusals show the actual usage list with editor links. Bulk operations report partial completion if a later item is refused. Trash and reorder offer version-checked Undo. Published trash entries are explicitly selected for removal through the publish tray.
+- The shared publish tray now handles all collections/singletons, accepts collection selections, uses schema-aware titles and links View live to the relevant public page. Moved the existing field/list/word diff algorithm into a browser-safe shared module, retaining the server export and semantic equality behavior.
+- Navigation is grouped into Content / Club / Library / Settings, with live counts from the dashboard response and a phone navigation dialog. The sidebar background is painted for the full document height; its navigation scrolls within the viewport. The skip link is offscreen until keyboard focus.
+- Recent activity uses relative times with full timestamps on hover, readable action verbs and publication counts, and collapses consecutive system/seed/migration entries. Content health links now reach the new editors. Missing-alt checks exempt known static favicon, touch-icon and crest assets; uploaded/content images remain checked. The seed's `hero.jpg` missing-alt finding remains intentionally visible.
+- Added `tests/e2e/admin-breadth.spec.ts`: edit/publish a board member, sponsor and page-copy field, verify the corresponding public pages, preview/history and overflow at 390px and 1280px; additionally exercise in-use trash refusal, bulk selection and keyboard reorder/Undo. The spec restores the isolated FS site's starting version so later public golden checks retain their fixture.
+
+Verification
+
+- `npm run build` — **PASS**, Vite and strict TypeScript.
+- `npm test` — **PASS: 462 tests**, 17 explicit hosted-service skips. All eight public golden tests pass. New regressions cover every editor's collection routing, nested autosave, keyed nested duplication/diffs, reference/page routes, Pacific windows, activity grouping/verbs, missing-alt exemptions, board/sponsor/page publication and public rendering, and duplicate/trash/restore across every editable collection.
+- Real localhost FS smoke — **PASS**: generated-password login, board/sponsor/page writes, private previews, publication/public HTML, built SPA deep links and navigation counts. The temporary server was stopped and its data directory removed.
+- `npm run check-facts` — **PASS: 122 facts**. `git diff --check` — **PASS**. Public assets, legacy pages, seeds, golden fixtures, dependency manifest and lockfile are unchanged.
+- `npm run test:e2e -- --list` — **PASS: 22 tests in seven specs**. Playwright browser execution — **not run (sandbox)**. Visual browser acceptance and Lighthouse accessibility ≥95 — **not run (sandbox)**; Claude must execute with installed Chrome. No browser/a11y pass is claimed.
+- Real Neon/Postgres and private Blob service tests — **not run (no env)**. Everything executed here used the filesystem driver; no hosted service, credential acquisition or deployment was attempted.
+
+Decisions / open acceptance gates
+
+- Chris explicitly requested Phase 7b while the recorded Phase 7a browser gate remained open. Implementation proceeded under that instruction; the outstanding 7a/7b browser and accessibility gates are still reported above.
+- Media picker/upload, publish scheduling and inline editing, site-wide history/audit, and later role/review/palette work remain in their assigned phases. Documents expose link mode in this phase. Singletons intentionally have no duplicate/trash operations, consistent with their schema and server contract.
+- No commit, push, deployment, global configuration edit or edit outside this repository was made. No dependencies were added.
+
+## CHANGELOG — Phase 7b fix-up, including Phase 7a regressions — 2026-11-09
+
+Shipped
+
+- Reviewed and retained the interrupted Phase 7b editors, forms, collection actions, public-render integration and existing tests. Read all six failure contexts and inspected the 19 supplied screenshots. Recorded each failure's classification, root cause and fix in §20 of `plans/admin-plan.md`. No trace archives were present in the supplied directory.
+- Fixed the editor's publication/navigation flush to wait for an in-flight checkpoint even when its draft is clean. Kept the publish tray's version checks and explicit conflict reload behavior. Fixed background refreshes so delayed reads cannot replace a newer saved version, a local edit or a disposed editor. Other-editor notices remain available for dirty drafts.
+- Preserved stable accessible navigation names by hiding count badges from the accessibility name. Added meaningful unnamed-team labels. Corrected the reorder spec to await loaded rows and verify exact swaps/Undo by stable editor URLs.
+- Classified the missing reminder as test isolation. The failed snapshot shows a rate-limited login. Added a shared e2e fixture that resets only the isolated FS store's localhost login-attempt buckets before each test. The application still enforces its existing ten-attempt IP limit. Added successful-login checks before the reminder assertions.
+- Classified the intermittent bootstrap failure as a scheduling assumption in the test. Concurrent FS lock acquisition has no caller-order guarantee. The assertion now requires exactly one creator, while retaining credential/role preservation and exactly-once audit checks.
+- Added state and component-effect regressions for refresh/save overlap, local keystrokes, disposal, clean checkpoint flush, stable counted navigation and reminder dismissal. The event e2e flow additionally checks the saved Location through the API. Both admin UI suites close their pages before restoring the seed publication, preventing their successful edits from contaminating later public comparisons.
+
+Verification
+
+- `npm run build` — **PASS**, Vite and strict TypeScript.
+- `npm test` — **PASS**, **468 tests**, 17 hosted-service skips. All eight public golden comparisons pass. The suite uses the filesystem driver without hosting credentials.
+- Bootstrap concurrency case — **PASS, 20 consecutive runs** with concurrent calls and the original preservation/audit assertions.
+- Regression sensitivity — removing the new refresh protections and restoring the early-return flush reproduced **three failing regression tests**. Restored the fixes afterwards.
+- `npm run test:e2e -- --list` — **PASS**, 22 tests in seven specs. Browser execution and Lighthouse accessibility scores — **not run (sandbox)**. Claude must rerun with installed Chrome before the 7a/7b browser gates can close.
+- `npm run check-facts` — **PASS**, 122 facts. `git diff --check` — **PASS**. Public assets, seeds, golden fixtures, dependency manifest and lockfile remain unchanged.
+- Real Neon/Postgres and Blob checks — **not run (no env)**.
+
+Decisions / open issues
+
+- Used focused unit/component-effect checks and supplied artifacts because browser launch is prohibited. These checks establish the covered state transitions and component contracts. Visual layout, actual browser keyboard/focus behavior and Lighthouse ≥95 remain unverified in this run.
+- Kept the inherited Phase 7b scope and its existing deferred media, scheduling, inline-edit and later administration work. No dependencies were added.
+- No commit, push, deployment, global configuration change or edit outside this repository was made.
+
+## 7b browser verification (Claude, 2026-11-09)
+- Ran all 22 Playwright specs in real Chrome. Fixed: autosave false 409 after another user's publish bumped the version without changing the draft (editor now rebases silently when `current.draft` equals the base draft); keyboard spec targeted the out-of-order header "Save checkpoint" button (now the footer one). Playwright now runs with `workers: 1` because specs share one server/DATA_DIR.
+- Open for Phase 8: the publish tray must handle a 409 from a concurrent edit gracefully (explain, refresh pending list, let the user retry) instead of leaving the dialog open silently.

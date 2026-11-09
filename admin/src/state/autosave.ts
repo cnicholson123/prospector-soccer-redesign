@@ -1,7 +1,8 @@
 import { signal, computed } from '@preact/signals';
 import type { Doc, ValidationIssue } from '../../../shared/types';
-import { collections } from '../../../shared/schema';
+import { collections, type CollectionName } from '../../../shared/schema';
 import { validate } from '../../../server/content/validate';
+import { defaults, changed } from './content';
 import { api, ApiError, message, session } from '../api';
 export type EventDoc = Doc<Record<string, unknown>>;
 export class EditorState {
@@ -18,19 +19,33 @@ export class EditorState {
   private retryDelay = 2000;
   private disposed = false;
   private key: string;
-  constructor(readonly id: string) { this.key = `psc_draft_${session.value?.user.id}_events_${id}`; }
+  constructor(readonly id: string, readonly collection: CollectionName = 'events') {
+    this.key = `psc_draft_${session.value?.user.id}_${collection}_${id}`;
+    this.draft.value = { ...defaults(collections[collection].fields), ...(collection === 'events' ? this.draft.value : {}), ...(collection === 'documents' ? { source: { mode: 'url' } } : {}) };
+    this.status.value = `Unsaved ${collections[collection].label.toLowerCase()}`;
+  }
   async load() {
     if (this.id !== 'new') {
-      const { doc } = await api<{ doc: EventDoc }>(`/docs/events/${this.id}`);
+      const { doc } = await api<{ doc: EventDoc }>(`/docs/${this.collection}/${this.id}`);
       this.doc.value = doc; this.draft.value = doc.draft; this.status.value = 'Saved';
     }
     try {
       const saved = JSON.parse(localStorage.getItem(this.key) ?? 'null');
       if (saved && typeof saved === 'object' && saved.draft && typeof saved.draft === 'object' && !Array.isArray(saved.draft)) {
-        const draft = Object.fromEntries(Object.entries(saved.draft).filter(([key]) => key in collections.events.fields));
+        const draft = Object.fromEntries(Object.entries(saved.draft).filter(([key]) => key in collections[this.collection].fields));
         if (JSON.stringify(draft) !== JSON.stringify(this.draft.value)) this.recovery.value = draft;
       }
     } catch { /* Invalid or inaccessible local storage does not block editing. */ }
+  }
+  async refresh(): Promise<'updated' | 'changed' | false> {
+    const before = this.doc.value, draft = this.draft.value;
+    if (!before || this.disposed || this.saving.value || this.recovery.value) return false;
+    const { doc } = await api<{ doc: EventDoc }>(`/docs/${this.collection}/${before.id}`);
+    // A read started before a save or keystroke must never replace newer state.
+    if (this.disposed || this.saving.value || this.doc.value !== before || this.draft.value !== draft || doc.version <= before.version) return false;
+    if (this.dirty.value || this.conflict.value) return 'changed';
+    this.accept(doc);
+    return 'updated';
   }
   update(name: string, value: unknown) {
     this.draft.value = { ...this.draft.value, [name]: value };
@@ -42,7 +57,7 @@ export class EditorState {
   }
   clearRecovery() { this.recovery.value = null; try { localStorage.removeItem(this.key); } catch { /* unavailable */ } }
   recover() { const draft = this.recovery.value; this.clearRecovery(); if (draft) { this.draft.value = draft; this.persist(); this.status.value = 'Recovered changes · waiting to save'; } }
-  validate() { const result = validate('events', this.draft.value, { mode: 'draft' }); this.errors.value = result.errors; return result.valid; }
+  validate() { const result = validate(this.collection, this.draft.value, { mode: 'draft' }); this.errors.value = result.errors; return result.valid; }
   async save(checkpoint = false): Promise<boolean> {
     if (this.inFlight) { await this.inFlight; return this.save(checkpoint); }
     if (this.disposed || this.conflict.value || this.recovery.value) return false;
@@ -57,8 +72,8 @@ export class EditorState {
     const draft = structuredClone(this.draft.value), doc = this.doc.value;
     this.saving.value = true; this.status.value = 'Saving…';
     try {
-      const result = await api<{ doc: EventDoc }>(doc ? `/docs/events/${doc.id}` : '/docs/events', doc ? 'PUT' : 'POST', doc ? { draft, baseVersion: doc.version, checkpoint } : { draft });
-      this.doc.value = result.doc;
+      const result = await api<{ doc: EventDoc }>(doc ? `/docs/${this.collection}/${doc.id}` : `/docs/${this.collection}`, doc ? 'PUT' : 'POST', doc ? { draft, baseVersion: doc.version, checkpoint } : { draft });
+      this.doc.value = result.doc; changed();
       // A later keystroke must survive the response to an earlier save.
       if (JSON.stringify(draft) === JSON.stringify(this.draft.value)) { this.draft.value = result.doc.draft; this.clearRecovery(); }
       else this.persist();
@@ -68,6 +83,13 @@ export class EditorState {
     } catch (error) {
       if (error instanceof ApiError && error.status === 409) {
         const current = (error.details as { current?: EventDoc })?.current;
+        // A publish/schedule by someone else bumps the version without touching
+        // the draft content we edited from: rebase silently instead of conflicting.
+        if (current && doc && current.version > doc.version && JSON.stringify(current.draft) === JSON.stringify(doc.draft)) {
+          this.doc.value = current;
+          this.saving.value = false;
+          return this.write(checkpoint);
+        }
         if (current) this.conflict.value = current;
         this.status.value = 'Someone else saved this. Reload and compare';
       } else if (error instanceof ApiError && error.status === 422) {

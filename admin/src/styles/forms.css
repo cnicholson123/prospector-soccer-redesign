@@ -2,3 +2,22 @@ input:not([type=checkbox]), select, textarea { width: 100%; border: 1px solid #c
 input::placeholder, textarea::placeholder { color: #667386; } textarea { resize: vertical; line-height: 1.6; } input[type=checkbox] { accent-color: var(--blue); width: 20px; margin: 0; flex-shrink: 0; }
 input[aria-invalid=true], select[aria-invalid=true], textarea[aria-invalid=true] { border-color: var(--red); }
 .form-grid { display: grid; grid-template-columns: 1fr 1fr; column-gap: 18px; row-gap: 22px; }.field { min-width: 0; }.field-full { grid-column: 1 / -1; }.field label { display: block; margin-bottom: 8px; font-size: 12px; font-weight: 700; }.field label > span[aria-hidden] { color: var(--blue); }.field small { display: block; color: var(--muted); font-size: 10px; margin-top: 7px; }.field small.field-error { color: var(--red); font-weight: 600; }.field-check { border: 1px solid var(--border); border-radius: 10px; background: #f8fafc; padding: 12px; }.field-check label { display: flex; align-items: center; gap: 12px; margin-bottom: 0; }.field-check small { padding-left: 32px; }.form-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; border-top: 1px solid var(--border); margin-top: 28px; padding-top: 16px; }.form-footer small { font-size: 9px; color: var(--muted); }.password-input { display: flex; align-items: center; position: relative; }.password-input input { padding-right: 50px; }.password-input button { position: absolute; right: 4px; top: 2px; border: 0; background: none; width: 42px; }.format-toolbar { display: flex; gap: 2px; border: 1px solid #c3cddc; border-bottom: 0; padding: 3px; border-radius: 8px 8px 0 0; background: #f4f7fb; }.format-toolbar button { border: 0; border-radius: 5px; background: none; min-width: 42px; font-size: 12px; }.format-toolbar button:hover { background: white; }.richtext-control textarea { border-radius: 0 0 8px 8px; }.richtext-preview { font-size: 12px; }.richtext-preview summary { color: var(--blue); min-height: 44px; padding-top: 10px; }.richtext-preview > div { padding: 8px 12px; background: #f4f7fb; border-radius: 8px; }
+fieldset { margin: 0; padding: 0; min-width: 0; border: 0; }
+legend { font-size: 13px; font-weight: 800; padding: 0; margin-bottom: 12px; }
+.section-accordion { border: 1px solid var(--border); border-radius: 10px; background: white; min-width: 0; scroll-margin-top: 20px; }
+.section-accordion > summary { min-height: 52px; padding: 16px; font-weight: 800; background: #f5f7fb; border-radius: 10px; }
+.section-accordion .badge { margin-left: 10px; }
+.section-body { padding: 20px 16px; }
+.list-editor > p { font-size: 11px; }
+.list-editor > .button { margin-top: 12px; }
+.list-item { padding: 8px 12px; }
+.list-item > summary { padding: 9px 0; min-height: 44px; font-weight: 700; overflow-wrap: anywhere; }
+.list-item > .form-grid { padding-top: 14px; }
+.list-actions { display: flex; gap: 8px; flex-wrap: wrap; padding-top: 12px; }
+.danger-text { color: var(--red); }
+.reference-options { max-height: 220px; overflow-y: auto; margin-top: 10px; border: 1px solid var(--border); border-radius: 8px; }
+.reference-options label { display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 6px 12px; margin: 0; border-bottom: 1px solid var(--border); }
+.reference-options label > span:first-of-type { flex: 1; }
+.selected-reference { display: flex; align-items: center; gap: 12px; padding: 8px; }.selected-reference > span { flex: 1; }
+.media-placeholder { background: var(--cream); padding: 14px; border: 1px dashed #b9c7d8; border-radius: 8px; }
+.media-placeholder p { font-size: 12px; }.media-placeholder small { display: block; margin-top: 10px; color: var(--muted); }

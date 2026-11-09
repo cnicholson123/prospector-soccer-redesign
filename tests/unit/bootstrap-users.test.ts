@@ -16,7 +16,8 @@ describe('Section 19 hashed bootstrap', () => {
   it('adds missing users across concurrent runs, keeps existing credentials/roles and audits each creation once', async () => {
     const { users, passwords } = await setupUsers();
     const f = await adminFixture(false, { adminBootstrapUsers: users });
-    expect(await Promise.all([bootstrap(f.store, f.config), bootstrap(f.store, f.config)])).toEqual([true, false]);
+    const created = await Promise.all([bootstrap(f.store, f.config), bootstrap(f.store, f.config)]);
+    expect(created.filter(Boolean)).toHaveLength(1);
     const phil = await f.store.getUserByUsername('Phil');
     expect(await verifyPassword(passwords[0], phil!.passwordHash)).toBe(true);
     const replacement = { ...users[0], role: 'Viewer' as const, passwordHash: await hashPassword(generatedPassword()) };

@@ -1,5 +1,7 @@
 const paths: Record<string, string> = {
   dashboard: 'M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z',
+  book: 'M3 4h7l2 2 2-2h7v15h-7l-2 2-2-2H3V4Zm9 2v15',
+  flag: 'M5 22V3m0 1c5-5 9 5 15 0v10c-6 5-10-5-15 0',
   calendar: 'M5 5h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2ZM7 3v4m10-4v4M3 11h18',
   arrow: 'M5 12h14m-6-6 6 6-6 6', plus: 'M12 5v14M5 12h14',
   check: 'm5 12 4 4L19 6', history: 'M3 11a9 9 0 1 1 2 7M3 4v7h7m2-4v6l4 2',

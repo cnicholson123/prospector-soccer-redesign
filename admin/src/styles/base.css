@@ -38,3 +38,7 @@ svg { flex-shrink: 0; vertical-align: middle; }
 .skip-link { position: fixed; z-index: 30; left: 16px; top: -100px; padding: 10px 16px; background: var(--gold); color: var(--navy); font-weight: 800; border-radius: 6px; }.skip-link:focus { top: 12px; }
 .initial-loading { display: grid; min-height: 100vh; place-items: center; }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; animation: none !important; } }
+/* Keyboard entry point remains out of sight for pointer users. */
+.skip-link { top: 12px; transform: translateY(calc(-100% - 24px)); }
+.skip-link:focus-visible { transform: none; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }

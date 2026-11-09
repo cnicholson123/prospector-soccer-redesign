@@ -1,5 +1,5 @@
 import { adminPassword } from './credentials';
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures';
 // Phase 6 exercises storage over real HTTP; the dropzone/editor is Phase 10.
 test('quarantines an upload, verifies it and serves only finalized media',async({context})=>{
   const api=context.request;

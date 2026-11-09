@@ -1,5 +1,5 @@
 import { adminPassword } from './credentials';
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures';
 // Phase 4/5 exercise the HTTP engine and authenticated public preview. The
 // actual login/editor screens and keyboard UI flow belong to Phase 7a.
 for (const width of [390, 1280]) {

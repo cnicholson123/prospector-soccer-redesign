@@ -3,17 +3,18 @@ import type { Doc } from '../../../shared/types';
 import { collections } from '../../../shared/schema';
 import { api, allowed, message, publicOrigin } from '../api';
 import { editorFlush } from '../state/autosave';
+import { changed, docTitle, previewPath } from '../state/content';
 import { notify } from '../state/toasts';
 import { Dialog } from './ConfirmDialog';
 import { DiffView, type Change } from './DiffView';
-export function PublishTray({ close, published }: { close: () => void; published: () => void }) {
+export function PublishTray({ close, published, selectedIds = [] }: { selectedIds?: string[]; close: () => void; published: () => void }) {
   const [docs, setDocs] = useState<(Doc<Record<string, unknown>> & { diff: Change[] })[]>([]), [selected, setSelected] = useState<string[]>([]);
   const [error, setError] = useState(''), [busy, setBusy] = useState(false), [loading, setLoading] = useState(true), [note, setNote] = useState('');
   async function load() {
     setLoading(true);
     try {
-      if (editorFlush.value && !await editorFlush.value()) throw new Error('Resolve your unsaved event changes before publishing.');
-      const result = await api<{ docs: typeof docs }>('/pending'); setDocs(result.docs); setSelected(result.docs.filter(d => d.collection === 'events').map(d => d.id));
+      if (editorFlush.value && !await editorFlush.value()) throw new Error('Resolve your unsaved changes before publishing.');
+      const result = await api<{ docs: typeof docs }>('/pending'); setDocs(result.docs); setSelected(result.docs.filter(d => !selectedIds.length || selectedIds.includes(d.id)).map(d => d.id));
     } catch (error) { setError(message(error)); } finally { setLoading(false); }
   }
   useEffect(() => { void load(); }, []);
@@ -21,8 +22,8 @@ export function PublishTray({ close, published }: { close: () => void; published
     setBusy(true); setError('');
     try {
       const result = await api<{ siteVersion: number; purged: boolean }>('/publish', 'POST', { items: docs.filter(d => selected.includes(d.id)).map(d => ({ collection: d.collection, id: d.id, expectedVersion: d.version })), summary: note || undefined });
-      notify(result.purged ? 'Live now' : 'Published · Live within about 5 minutes', `${publicOrigin}/?v=${result.siteVersion}#events`);
-      published(); close();
+      notify(result.purged ? 'Live now' : 'Published · Live within about 5 minutes', `${publicOrigin}${previewPath(docs.find(d => selected.includes(d.id))?.collection ?? 'home', docs.find(d => selected.includes(d.id))?.draft).replace(/(#|$)/, `?v=${result.siteVersion}$1`)}`);
+      changed(); published(); close();
     } catch (error) {
       setError(message(error));
       // Preserve the versioned selection until the user explicitly reviews again.
@@ -32,7 +33,7 @@ export function PublishTray({ close, published }: { close: () => void; published
     <p class="muted">Choose the saved changes to share with the club.</p>{error && <div class="error-box" role="alert"><p>{error}</p><button class="button secondary" onClick={() => { setError(''); void load(); }}>Reload pending changes</button></div>}
     {loading ? <p role="status">Loading saved changes…</p> : !docs.length ? <div class="empty-state"><h3>All caught up</h3><p>Your saved content is already published.</p></div> : Object.entries(collections).map(([collection, definition]) => {
       const items = docs.filter(d => d.collection === collection); return !items.length ? null : <section class="publish-group" key={collection}><h3>{definition.labelPlural}</h3>{items.map(doc => <article class="publish-item" key={doc.id}>
-        <label class="publish-select"><input type="checkbox" checked={selected.includes(doc.id)} disabled={!allowed('content.publish') || busy} onChange={event => setSelected(event.currentTarget.checked ? [...selected, doc.id] : selected.filter(id => id !== doc.id))} /><strong>{String(doc.draft[definition.titleField] ?? definition.label)}</strong><span class="badge">{doc.trashedAt ? 'Remove from site' : doc.status}</span></label>
+        <label class="publish-select"><input type="checkbox" checked={selected.includes(doc.id)} disabled={!allowed('content.publish') || busy} onChange={event => setSelected(event.currentTarget.checked ? [...selected, doc.id] : selected.filter(id => id !== doc.id))} /><strong>{docTitle(doc)}</strong><span class="badge">{doc.trashedAt ? 'Remove from site' : doc.status}</span></label>
         <details><summary>{doc.diff.length} field {doc.diff.length === 1 ? 'change' : 'changes'} · Review details</summary><DiffView changes={doc.diff} beforeLabel="Live" afterLabel="Draft" /></details>
       </article>)}</section>;
     })}

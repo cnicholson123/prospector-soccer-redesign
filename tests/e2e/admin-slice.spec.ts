@@ -1,8 +1,12 @@
-import { expect, test, type Locator, type Page } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
+import { expect, test, restoreSeed } from './fixtures';
 import { randomBytes } from 'node:crypto';
 import { adminPassword, reminderPassword } from './credentials';
 
+test.afterEach(async ({ context }) => restoreSeed(context));
+
 async function keyboardActivate(page: Page, target: Locator) {
+  await expect(target).toBeVisible();
   for (let step = 0; step < 100; step++) {
     if (await target.evaluate(element => element === document.activeElement)) { await page.keyboard.press('Enter'); return; }
     await page.keyboard.press('Tab');
@@ -10,6 +14,7 @@ async function keyboardActivate(page: Page, target: Locator) {
   throw new Error('Target not reachable with Tab');
 }
 async function keyboardField(page: Page, target: Locator, value: string) {
+  await expect(target).toBeVisible();
   for (let step = 0; step < 100; step++) {
     if (await target.evaluate(element => element === document.activeElement)) {
       await page.keyboard.press('ControlOrMeta+A'); await page.keyboard.type(value); return;
@@ -47,6 +52,8 @@ for (const { width, keyboard } of [{ width: 390, keyboard: false }, { width: 128
     await expect(page.getByRole('heading', { name: title, exact: true })).toBeVisible();
     await fill(page.getByRole('textbox', { name: 'Location', exact: true }), 'Club fields');
     await expect(page.getByRole('status').filter({ hasText: /^Saved/ })).toBeVisible();
+    const saved = await context.request.get(page.url().replace('/admin/events/', '/api/admin/docs/events/'));
+    expect((await saved.json()).doc.draft.location).toBe('Club fields');
     await activate(page.getByRole('button', { name: 'Preview', exact: true }));
     await expect(page.frameLocator('iframe[title="Draft event preview"]').getByText(title, { exact: true })).toBeVisible();
     for (const device of ['iPad', 'Desktop', 'Phone']) await activate(page.getByRole('button', { name: device, exact: true }));
@@ -59,7 +66,7 @@ for (const { width, keyboard } of [{ width: 390, keyboard: false }, { width: 128
     await activate(page.getByRole('button', { name: 'Event details', exact: true }));
     await fill(page.getByRole('textbox', { name: 'Title', exact: true }), `${title} updated`);
     await expect(page.getByRole('status').filter({ hasText: /^Saved/ })).toBeVisible();
-    await activate(page.getByRole('button', { name: 'Save checkpoint', exact: true }).first());
+    await activate(page.getByRole('button', { name: 'Save checkpoint', exact: true }).last());
     await activate(page.getByRole('button', { name: 'Review & publish', exact: true }));
     await activate(page.getByRole('button', { name: /Publish \d+ changes?/ }));
     await expect(page.getByRole('dialog')).toHaveCount(0);
@@ -88,6 +95,7 @@ test('weak-password reminder is optional, persists across screens and dismisses 
   await page.getByLabel('Username', { exact: true }).fill('Reminder');
   await page.getByLabel('Password', { exact: true }).fill(reminderPassword);
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+  await expect(page.getByRole('heading', { name: /Good (morning|afternoon|evening), Reminder/ })).toBeVisible();
   await expect(page.getByRole('region', { name: 'Password security' })).toBeVisible();
   await page.getByRole('link', { name: 'New event' }).click();
   await expect(page.getByRole('region', { name: 'Password security' })).toBeVisible();
