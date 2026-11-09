@@ -7,6 +7,7 @@ import { audit, type Actor } from './audit.js';
 import { validate, ValidationError } from './content/validate.js';
 import { readSession } from './auth/session.js';
 import { can } from './permissions.js';
+import { retained } from './store/blobs/common.js';
 
 const extensions: Record<string, string> = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/gif': 'gif', 'application/pdf': 'pdf' };
 interface Grant { id: string; owner: string; filename: string; mime: string; size: number; path: string; expires: number; year: string }
@@ -73,31 +74,46 @@ export function verifyMedia(bytes: Buffer, declared: string): { width: number; h
   if (mime!=='application/pdf' && (!width || !height || width>30000 || height>30000 || width*height>100_000_000)) invalid('Invalid or excessive image dimensions');
   return { width, height };
 }
-export async function finalizeMedia(store: Store, blobs: MediaStorage, grant: Grant, input: Record<string, unknown>, actor: Actor, now: Date): Promise<Doc> {
+/** Verify every variant independently before creating any trusted metadata. */
+export async function prepareMedia(blobs: MediaStorage, grant: Grant, webGrant?: Grant) {
+  async function verify(grant: Grant) {
+    const incoming = await blobs.read(grant.path);
+    if (!incoming) return invalid('Upload is missing');
+    const bytes = await readBounded(incoming.stream, grant.size);
+    if (bytes.length !== grant.size || incoming.size !== grant.size || incoming.contentType !== grant.mime) invalid('Uploaded size or MIME type differs from the ticket');
+    return { grant, bytes, dimensions: verifyMedia(bytes, grant.mime) };
+  }
+  const original = await verify(grant);
+  const web = webGrant ? await verify(webGrant) : undefined;
+  if (web && (grant.mime === 'application/pdf' || web.grant.mime !== 'image/webp' || web.grant.owner !== grant.owner || web.dimensions.width > 2000 || web.dimensions.height > 2000)) invalid('Web variant must be a WebP image no larger than 2000 pixels');
+  async function copy(item: Awaited<ReturnType<typeof verify>>, name: string) {
+    const path = `media/${grant.year}/${grant.id}/${name}.${extensions[item.grant.mime]}`;
+    const copied = await blobs.read(path);
+    if (copied) {
+      const old = await readBounded(copied.stream, item.bytes.length);
+      if (!old.equals(item.bytes)) invalid('Conflicting finalized binary');
+      return blobs.url(path);
+    }
+    return (await blobs.put(path, item.bytes, { contentType: item.grant.mime })).url;
+  }
+  const originalUrl = await copy(original, 'original');
+  const webUrl = web ? await copy(web, 'web') : originalUrl;
+  return { data: { filename: grant.filename, mime: grant.mime, size: original.bytes.length,
+    ...(grant.mime === 'application/pdf' ? {} : (web ?? original).dimensions),
+    variants: { original: originalUrl, web: webUrl }, source: 'upload', uploadedBy: grant.owner },
+    cleanup: async () => { await blobs.delete(blobs.url(grant.path)); if (webGrant) await blobs.delete(blobs.url(webGrant.path)); } };
+}
+export async function finalizeMedia(store: Store, blobs: MediaStorage, grant: Grant, input: Record<string, unknown>, actor: Actor, now: Date, webGrant?: Grant): Promise<Doc> {
   const existing = await store.getDoc('media', grant.id);
   if (existing) return existing;
-  const incoming = await blobs.read(grant.path);
-  if (!incoming) invalid('Upload is missing');
-  const bytes = await readBounded(incoming!.stream, grant.size);
-  if (bytes.length!==grant.size || incoming!.size!==grant.size || incoming!.contentType!==grant.mime) invalid('Uploaded size or MIME type differs from the ticket');
-  const dimensions = verifyMedia(bytes, grant.mime);
-  const path = `media/${grant.year}/${grant.id}/original.${extensions[grant.mime]}`;
-  // A metadata retry can reuse the already copied immutable object after an outage.
-  const copied = await blobs.read(path);
-  let url: string;
-  if (copied) {
-    const old = await readBounded(copied.stream, grant.size);
-    if (!old.equals(bytes)) invalid('Conflicting finalized binary');
-    url = blobs.url(path);
-  } else { url = (await blobs.put(path, bytes, { contentType: grant.mime })).url; }
-  const draft = { filename: grant.filename, mime: grant.mime, size: bytes.length, ...(grant.mime === 'application/pdf' ? {} : dimensions),
-    alt: typeof input.alt === 'string' ? input.alt : '', caption: typeof input.caption === 'string' ? input.caption : '',
-    focal: { x: 0.5, y: 0.5 }, variants: { original: url, web: url }, source: 'upload', uploadedBy: actor.id, uploadedAt: now.toISOString() };
+  const prepared = await prepareMedia(blobs, grant, webGrant);
+  const draft = { ...prepared.data, alt: typeof input.alt === 'string' ? input.alt : '', caption: typeof input.caption === 'string' ? input.caption : '',
+    focal: { x: 0.5, y: 0.5 }, uploadedAt: now.toISOString() };
   const checked = validate('media', draft); if (!checked.valid) throw new ValidationError(checked.errors);
   const doc: Doc = { id: grant.id, collection: 'media', draft, version: 1, status: 'draft', createdAt: now.toISOString(), updatedAt: now.toISOString(), createdBy: actor.id, updatedBy: actor.id };
   try { await store.createDoc({ doc, revision: revision(doc, actor, 'created', now), audit: audit(actor, 'media.upload', { collection: 'media', docId: doc.id }, now) }); }
   catch (error) { const winner = await store.getDoc('media', doc.id); if (!winner) throw error; return winner; }
-  await blobs.delete(blobs.url(grant.path));
+  await prepared.cleanup();
   return doc;
 }
 export async function collectIncoming(blobs: MediaStorage, now: Date): Promise<number> {
@@ -109,7 +125,7 @@ export async function collectIncoming(blobs: MediaStorage, now: Date): Promise<n
 export async function serveMedia(request: Request, store: Store, blobs: MediaStorage): Promise<Response> {
   if (!['GET', 'HEAD'].includes(request.method)) return new Response('Method not allowed', { status: 405, headers: { Allow: 'GET, HEAD' } });
   const path = new URL(request.url).pathname.slice(7);
-  if (!/^media\/\d{4}\/media_[a-f0-9]{32}\/original\.(jpg|png|webp|gif|pdf)$/.test(path)) return new Response('Not found', { status: 404 });
+  if (!/^media\/\d{4}\/media_[a-f0-9]{32}\/(?:original\.(?:jpg|png|webp|gif|pdf)|web\.webp)$/.test(path)) return new Response('Not found', { status: 404 });
   const url = blobs.url(path), id = path.split('/')[2];
   const snapshot = await store.getSnapshot();
   const published = Object.values(snapshot?.media ?? {}).some(media => media.url===url) || (snapshot?.docs.media ?? []).some(doc => Object.values((doc.data as { variants?: Record<string,string> }).variants ?? {}).includes(url));
@@ -119,7 +135,11 @@ export async function serveMedia(request: Request, store: Store, blobs: MediaSto
   }
   const doc = await store.getDoc('media', id);
   const data = doc?.draft as { variants?: Record<string,string>; mime?: string } | undefined;
-  if (!published && !Object.values(data?.variants ?? {}).includes(url)) return new Response('Not found', { status: 404 });
+  if (!published && !Object.values(data?.variants ?? {}).includes(url)) {
+    const docs = await store.listDocs('media');
+    const current = docs.some(item => Object.values((item.draft as { variants?: Record<string,string> }).variants ?? {}).includes(url));
+    if (!current && !await retained(store, url)) return new Response('Not found', { status: 404 });
+  }
   const blob = await blobs.read(path);
   if (!blob || !extensions[blob.contentType]) return new Response('Not found', { status: 404 });
   return new Response(request.method==='HEAD' ? null : blob.stream, { headers: { 'Content-Type':blob.contentType, 'Content-Length':String(blob.size), 'Content-Disposition':'inline', 'X-Content-Type-Options':'nosniff', 'Content-Security-Policy':"sandbox; default-src 'none'", 'Cache-Control':published?'public, max-age=31536000, immutable':'private, no-store' } });

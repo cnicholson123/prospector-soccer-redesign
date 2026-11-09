@@ -15,7 +15,7 @@ export function shopImage(ctx: ShopContext, doc: DocumentView, path: string, pri
   const id = doc.text(path + '.mediaId'), asset = ctx.view.snapshot.media[id];
   if (!id) return html``;
   const src = asset?.url ?? doc.image(path), small = asset?.small;
-  return html`<img src="${primary ? src : small || src}"${small ? html` srcset="${small} 480w, ${src} ${asset.width}w" sizes="${primary ? '(min-width: 900px) 50vw, 100vw' : '(min-width: 1100px) 33vw, (min-width: 600px) 50vw, 100vw'}"` : html``} alt="${doc.text(path + '.alt')}" width="${asset?.width || 1200}" height="${asset?.height || 1200}" loading="${primary ? 'eager' : 'lazy'}"${primary ? html` fetchpriority="high"` : html``}>`;
+  return html`<img src="${primary ? src : small || src}"${small ? html` srcset="${small} 480w, ${src} ${asset.width}w" sizes="${primary ? '(min-width: 900px) 50vw, 100vw' : '(min-width: 1100px) 33vw, (min-width: 600px) 50vw, 100vw'}"` : html``} alt="${doc.text(path + '.alt')}" width="${asset?.width || 1200}" height="${asset?.height || 1200}" loading="${primary ? 'eager' : 'lazy'}"${primary ? html` fetchpriority="high"` : html``}${doc.imageStyle(path)}>`;
 }
 export function displayPrice(doc: DocumentView): string { return doc.value('price') ? doc.money('price') : 'Price pending'; }
 export function productCard(ctx: ShopContext, product: DocumentView) {

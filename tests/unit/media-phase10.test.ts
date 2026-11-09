@@ -1,0 +1,143 @@
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { rm, readFile } from 'node:fs/promises';
+import { adminFixture } from '../helpers/admin.js';
+import { createMediaBlobs } from '../../server/store/index.js';
+import { serveMedia } from '../../server/media.js';
+import { renderPage } from '../../server/render/handler.js';
+import { buildSnapshot } from '../../server/content/snapshot.js';
+import { seedSnapshot, loadSeed } from '../../scripts/seed.js';
+import { SnapshotView } from '../../server/render/snapshot-view.js';
+import { scheduleDocuments } from '../../server/content/schedule.js';
+const roots: string[] = [];
+afterEach(async () => { vi.restoreAllMocks(); await Promise.all(roots.splice(0).map(root => rm(root, { recursive: true, force: true }))); });
+const now = new Date('2030-01-01T12:00:00Z');
+const webp = (width = 2000, height = 1000) => { const bytes = Buffer.alloc(30); bytes.write('RIFF'); bytes.writeUInt32LE(22, 4); bytes.write('WEBPVP8X', 8); bytes.writeUIntLE(width - 1, 24, 3); bytes.writeUIntLE(height - 1, 27, 3); return bytes; };
+async function fixture(seed = false) { const f = await adminFixture(seed); roots.push(f.root); await f.login(); return f; }
+async function incoming(f: Awaited<ReturnType<typeof fixture>>, bytes: Buffer, mime: string) {
+  const issued = await f.req('/media/upload-url', 'POST', { filename: mime === 'application/pdf' ? 'club-guide.pdf' : mime === 'image/jpeg' ? 'field.jpg' : 'field.webp', mime, size: bytes.length });
+  expect(issued.status).toBe(200); const grant = await issued.json();
+  const blobs = createMediaBlobs(f.config, f.store);
+  await blobs.put(grant.pathname, bytes, { contentType: mime });
+  return grant;
+}
+async function image(f: Awaited<ReturnType<typeof fixture>>) {
+  const original = await incoming(f, await readFile('public/assets/img/hero.jpg'), 'image/jpeg');
+  const web = await incoming(f, webp(), 'image/webp');
+  const result = await f.req('/media', 'POST', { ticket: original.ticket, webTicket: web.ticket, width: 88888, url: 'https://invalid.example' });
+  expect(result.status).toBe(201); return { doc: (await result.json()).doc, original, web };
+}
+describe('Phase 10 verified media workflows', () => {
+  it('verifies original plus WebP, keeps both, removes quarantine and rejects oversized, wrong-kind and forged variants', async () => {
+    const f = await fixture(), { doc, original, web } = await image(f), blobs = createMediaBlobs(f.config, f.store);
+    expect(doc.draft).toMatchObject({ mime: 'image/jpeg', width: 2000, height: 1000 });
+    expect(doc.draft.variants.web).toMatch(/\/web.webp$/); expect(doc.draft.variants.original).toMatch(/\/original.jpg$/);
+    expect(await blobs.read(original.pathname)).toBeNull(); expect(await blobs.read(web.pathname)).toBeNull();
+    const response = await serveMedia(new Request('http://localhost:3000' + doc.draft.variants.web, { headers: { cookie: f.getCookie() } }), f.store, blobs);
+    expect(response.status).toBe(200); expect(response.headers.get('content-type')).toBe('image/webp');
+    const bad = await incoming(f, webp(2001), 'image/webp'), good = await incoming(f, webp(), 'image/webp');
+    expect((await f.req('/media', 'POST', { ticket: good.ticket, webTicket: bad.ticket })).status).toBe(422);
+    expect((await f.req('/media', 'POST', { ticket: good.ticket, webTicket: good.ticket + 'x' })).status).toBe(422);
+    const disguised = await incoming(f, Buffer.from('<svg>bad</svg>'), 'image/webp');
+    expect((await f.req('/media', 'POST', { ticket: good.ticket, webTicket: disguised.ticket })).status).toBe(422);
+    const pdf = await incoming(f, Buffer.from('%PDF-1.7\n%%EOF'), 'application/pdf');
+    expect((await f.req('/media', 'POST', { ticket: pdf.ticket, webTicket: good.ticket })).status).toBe(422);
+    expect(await f.store.listDocs('media')).toHaveLength(1);
+  });
+  it('clears cached missing-alt health, assigns per-use alt, publishes a sponsor logo and refuses deletion with usage', async () => {
+    const f = await fixture(true), { doc } = await image(f);
+    let health = await (await f.req('/dashboard?section=health')).json();
+    expect(health.health.some((item: { id: string }) => item.id === doc.id)).toBe(true);
+    const edited = await f.req(`/media/${doc.id}`, 'PATCH', { baseVersion: doc.version, alt: 'Default club logo', caption: 'Our community', focal: { x: 0, y: 1 } });
+    expect(edited.status).toBe(200);
+    health = await (await f.req('/dashboard?section=health')).json();
+    expect(health.health.some((item: { id: string }) => item.id === doc.id)).toBe(false);
+    const sponsor = (await f.store.getDoc('sponsors', 'spo_1'))!;
+    const updated = await f.req('/docs/sponsors/spo_1', 'PUT', { baseVersion: sponsor.version, draft: { ...sponsor.draft as object, logo: { mediaId: doc.id, alt: 'Sponsor supports local soccer' } } });
+    expect(updated.status).toBe(200);
+    expect((await f.req('/publish', 'POST', { items: [{ collection: 'sponsors', id: sponsor.id, expectedVersion: (await updated.json()).doc.version }] })).status).toBe(200);
+    const snapshot = (await f.store.getSnapshot())!;
+    expect(snapshot.media[doc.id].focal).toEqual({ x: 0, y: 1 });
+    const html = renderPage(snapshot, 'sponsors', { now });
+    expect(html).toContain(`src="${doc.draft.variants.web}" alt="Sponsor supports local soccer"`); expect(html).toContain('object-position: 0% 100%');
+    const denied = await f.req(`/media/${doc.id}`, 'DELETE', { baseVersion: (await f.store.getDoc('media', doc.id))!.version });
+    expect(denied.status).toBe(409); expect((await denied.json()).error.details.usage).toContainEqual(expect.objectContaining({ id: sponsor.id, path: 'logo' }));
+    const usage = await (await f.req(`/media/${doc.id}/usage`)).json(); expect(usage.usage).toContainEqual(expect.objectContaining({ id: sponsor.id }));
+    const publicFile = await serveMedia(new Request('http://localhost:3000' + doc.draft.variants.web), f.store, createMediaBlobs(f.config, f.store));
+    expect(publicFile.status).toBe(200); expect(publicFile.headers.get('cache-control')).toContain('immutable');
+  });
+  it('keeps media review writes forbidden while a Contributor can review ordinary pending content', async () => {
+    const f = await fixture(true), { doc: media } = await image(f);
+    await f.req('/users', 'POST', { username: 'reviewer', password: 'Strong reviewer phrase 123', role: 'Contributor' });
+    expect((await f.login('reviewer', 'Strong reviewer phrase 123')).response.status).toBe(200);
+    const home = (await f.store.getDoc('home', 'home'))!;
+    const draft = home.draft as { hero: Record<string, unknown> };
+    const saved = await f.req('/docs/home/home', 'PUT', { baseVersion: home.version, draft: { ...draft, hero: { ...draft.hero, lead: 'Review this updated lead' } } });
+    expect(saved.status).toBe(200);
+    const pending = (await (await f.req('/pending')).json()).docs;
+    expect(pending.some((item: { id: string }) => item.id === media.id)).toBe(true);
+    const denied = await f.req(`/docs/media/${media.id}/review`, 'POST', { baseVersion: media.version });
+    expect(denied.status).toBe(403); expect((await denied.json()).error.message).toBe('Use the media routes');
+    const reviewed = await f.req('/docs/home/home/review', 'POST', { baseVersion: (await saved.json()).doc.version });
+    expect(reviewed.status).toBe(200); expect((await reviewed.json()).doc.status).toBe('review');
+    expect((await f.store.getDoc('media', media.id))?.reviewRequestedBy).toBeUndefined();
+  });
+  it('replaces the file through verification and CAS without changing live URLs or deleting historical binaries', async () => {
+    const f = await fixture(), first = await image(f), id = first.doc.id;
+    expect((await f.req('/publish', 'POST', { items: [{ collection: 'media', id, expectedVersion: 1 }] })).status).toBe(200);
+    const original = await incoming(f, webp(500, 250), 'image/webp'), web = await incoming(f, webp(400, 200), 'image/webp');
+    expect((await f.req(`/media/${id}/replace`, 'POST', { baseVersion: 1, ticket: original.ticket, webTicket: web.ticket })).status).toBe(409);
+    const current = (await f.store.getDoc('media', id))!;
+    const result = await f.req(`/media/${id}/replace`, 'POST', { baseVersion: current.version, ticket: original.ticket, webTicket: web.ticket });
+    expect(result.status).toBe(200); const next = (await result.json()).doc;
+    expect(next.id).toBe(id); expect(next.draft.variants.web).not.toBe(first.doc.draft.variants.web); expect(next.published.variants.web).toBe(first.doc.draft.variants.web);
+    const blobs = createMediaBlobs(f.config, f.store);
+    expect((await serveMedia(new Request('http://localhost:3000' + next.draft.variants.web, { headers: { cookie: f.getCookie() } }), f.store, blobs)).status).toBe(200);
+    expect((await serveMedia(new Request('http://localhost:3000' + next.draft.variants.web), f.store, blobs)).status).toBe(404);
+    expect((await f.req('/publish', 'POST', { items: [{ collection: 'media', id, expectedVersion: next.version }] })).status).toBe(200);
+    expect((await serveMedia(new Request('http://localhost:3000' + next.draft.variants.web), f.store, blobs)).status).toBe(200);
+    expect(await blobs.read(first.doc.draft.variants.web.slice(7))).not.toBeNull();
+    await expect(blobs.delete(first.doc.draft.variants.web)).rejects.toThrow('retained');
+    expect((await f.store.queryAudit({ action: 'media.replace', limit: 10 })).items).toHaveLength(1);
+  });
+  it('lists scheduled usage, excludes used media, rejects wrong-type document publication and renders uploaded PDF links', async () => {
+    const f = await fixture(true), { doc } = await image(f);
+    const document = (await f.store.getDoc('documents', 'doc_1')) ?? (await f.store.listDocs('documents'))[0];
+    const edited = await f.req(`/docs/documents/${document.id}`, 'PUT', { baseVersion: document.version, draft: { ...document.draft as object, source: { mode: 'upload', fileId: { mediaId: doc.id } } } });
+    expect(edited.status).toBe(200);
+    expect((await f.req('/publish', 'POST', { items: [{ collection: 'documents', id: document.id, expectedVersion: (await edited.json()).doc.version }] })).status).toBe(422);
+    const pdf = await incoming(f, Buffer.from('%PDF-1.7\n1 0 obj\n<<>>\nendobj\n%%EOF'), 'application/pdf');
+    const finalized = await f.req('/media', 'POST', { ticket: pdf.ticket }); const pdfDoc = (await finalized.json()).doc;
+    const current = (await f.store.getDoc('documents', document.id))!;
+    const assigned = await f.req(`/docs/documents/${document.id}`, 'PUT', { baseVersion: current.version, draft: { ...current.draft as object, source: { mode: 'upload', fileId: { mediaId: pdfDoc.id } } } });
+    const assignedDoc = (await assigned.json()).doc;
+    await scheduleDocuments(f.store, [{ collection: 'documents', id: document.id, expectedVersion: assignedDoc.version }], '2030-01-02T12:00:00Z', { id: 'test', displayName: 'Test' }, now);
+    const frozen = (await f.store.getDoc('documents', document.id))!;
+    const draftOnly = await f.req(`/docs/documents/${document.id}`, 'PUT', { baseVersion: frozen.version, draft: { ...frozen.draft as object, source: { mode: 'url', url: 'https://example.com/guide.pdf' } } });
+    expect(draftOnly.status).toBe(200);
+    const usage = await (await f.req(`/media/${pdfDoc.id}/usage`)).json(); expect(usage.usage.some((entry: { path: string }) => entry.path.startsWith('scheduled.'))).toBe(true);
+    const unused = await (await f.req('/media?unused=1')).json(); expect(unused.docs.some((item: { id: string }) => item.id === pdfDoc.id)).toBe(false);
+    expect((await f.req(`/media/${pdfDoc.id}`, 'DELETE', { baseVersion: (await f.store.getDoc('media', pdfDoc.id))!.version })).status).toBe(409);
+    const back = await f.req(`/docs/documents/${document.id}`, 'PUT', { baseVersion: (await f.store.getDoc('documents', document.id))!.version, draft: assignedDoc.draft });
+    expect((await f.req('/publish', 'POST', { items: [{ collection: 'documents', id: document.id, expectedVersion: (await back.json()).doc.version }] })).status).toBe(200);
+    expect(renderPage((await f.store.getSnapshot())!, 'resources', { now })).toContain(`href="${pdfDoc.draft.variants.original}"`);
+  });
+  it('enforces contributor ownership for edits, replacement and deletion', async () => {
+    const f = await fixture(), { doc } = await image(f);
+    await f.req('/users', 'POST', { username: 'contributor', password: 'Strong contributor phrase 123', role: 'Contributor' });
+    await f.login('contributor', 'Strong contributor phrase 123');
+    expect((await f.req(`/media/${doc.id}`, 'PATCH', { baseVersion: 1, alt: 'No' })).status).toBe(403);
+    expect((await f.req(`/media/${doc.id}/replace`, 'POST', {})).status).toBe(403);
+    expect((await f.req(`/media/${doc.id}`, 'DELETE', { baseVersion: 1 })).status).toBe(403);
+    const own = await image(f);
+    expect((await f.req(`/media/${own.doc.id}`, 'PATCH', { baseVersion: 1, alt: 'Own upload' })).status).toBe(200);
+  });
+  it('keeps fallback focal metadata frozen and leaves seed public HTML unchanged', async () => {
+    const docs = await loadSeed(); const media = docs.find(d => d.id === 'med_hero') ?? docs.find(d => d.collection === 'media')!;
+    media.published = { ...media.published as object, focal: { x: 0.2, y: 0.8 } };
+    const snapshot = buildSnapshot(docs, { siteVersion: 1, publishedAt: now.toISOString(), templateHash: '' });
+    expect(snapshot.media[media.id]).toBeDefined();
+    snapshot.docs.media = [];
+    expect(new SnapshotView(snapshot).doc('media', media.id).value('focal')).toEqual({ x: 0.2, y: 0.8 });
+    const fresh = seedSnapshot(await loadSeed()); expect(renderPage(fresh, 'home', { now })).not.toContain('object-position');
+  });
+});

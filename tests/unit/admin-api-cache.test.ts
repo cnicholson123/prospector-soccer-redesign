@@ -55,3 +55,40 @@ it('preserves page data prefetched in parallel with the first session validation
   await validation;
   expect(peek('/docs/events')).toEqual({ docs: ['prefetched'] });
 });
+
+it('never coalesces pending snapshots, including a read started before a mutation', async () => {
+  let finishOld!: (value: Response) => void;
+  const fetch = vi.fn().mockImplementationOnce(() => new Promise<Response>(resolve => { finishOld = resolve; }))
+    .mockResolvedValueOnce(response({ docs: ['fresh'] }))
+    .mockResolvedValueOnce(response({ ok: true }))
+    .mockResolvedValueOnce(response({ docs: ['saved'] }));
+  vi.stubGlobal('fetch', fetch);
+  const { api } = await import('../../admin/src/api.js');
+  const old = api('/pending');
+  // Also bypass a read from the same epoch, since uploads can use raw XHR.
+  expect(await api('/pending')).toEqual({ docs: ['fresh'] });
+  await api('/docs/sponsors/spo_1', 'PUT', { draft: {} });
+  expect(await api('/pending')).toEqual({ docs: ['saved'] });
+  finishOld(response({ docs: [] })); expect(await old).toEqual({ docs: [] });
+  expect(fetch).toHaveBeenCalledTimes(4);
+});
+
+it.each([200, 409])('keeps deduplication within a mutation epoch after status %s, even when the old GET finishes last', async status => {
+  let finishOld!: (value: Response) => void, finishFresh!: (value: Response) => void;
+  const fetch = vi.fn().mockImplementationOnce(() => new Promise<Response>(resolve => { finishOld = resolve; }))
+    .mockResolvedValueOnce(response({ ok: true, error: { message: 'Conflict' } }, status))
+    .mockImplementationOnce(() => new Promise<Response>(resolve => { finishFresh = resolve; }));
+  vi.stubGlobal('fetch', fetch);
+  const { api, peek } = await import('../../admin/src/api.js');
+  const old = api('/docs/events');
+  await api('/docs/events/evt_a', 'PUT', {}).catch(() => {});
+  const fresh = api('/docs/events');
+  expect(fresh).not.toBe(old);
+  finishOld(response({ docs: ['stale'] })); await old;
+  expect(peek('/docs/events')).toBeUndefined();
+  // Old cleanup cannot evict the fresh in-flight entry.
+  expect(api('/docs/events')).toBe(fresh);
+  finishFresh(response({ docs: ['current'] })); await fresh;
+  expect(peek('/docs/events')).toEqual({ docs: ['current'] });
+  expect(fetch).toHaveBeenCalledTimes(3);
+});

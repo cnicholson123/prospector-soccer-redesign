@@ -40,11 +40,11 @@ export class DocumentView {
     const media = this.view.doc('media', this.text(`${path}.mediaId`));
     return safeUrl(media.text('variants.web') || media.text('variants.original'));
   }
-  imageStyle(path: string): Html {
+  imageStyle(path: string, extra = ''): Html {
     const media = this.view.doc('media', this.text(`${path}.mediaId`));
-    if (media.value('focal') === undefined) return html``;
+    if (media.value('focal') === undefined) return extra ? html` style="${extra}"` : html``;
     const clamp = (n: number) => Math.max(0, Math.min(1, n)) * 100;
-    return html` style="object-position: ${clamp(media.number('focal.x'))}% ${clamp(media.number('focal.y'))}%"`;
+    return html` style="${extra}object-position: ${clamp(media.number('focal.x'))}% ${clamp(media.number('focal.y'))}%"`;
   }
   amount(path: string): string { return this.number(`${path}.amount`).toLocaleString('en-US'); }
   money(path: string): string {

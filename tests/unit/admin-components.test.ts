@@ -106,3 +106,15 @@ it('keeps the embedded preview out of sequential focus while exposing its full p
   expect(link.props.href).toContain('?preview=1'); expect(link.props.target).toBe('_blank');
   expect(link.props.tabIndex).not.toBe(-1);
 });
+
+it('uses the complete document source schema for link and upload modes', () => {
+  const tree = nodes(DocEditor({ id: 'new', collection: 'documents', publish: vi.fn(), refresh: 0 }));
+  // The editor renders its form after its initial load, as it does for a new document.
+  hooks.values[0] = true; hooks.cursor = 0;
+  const loaded = nodes(DocEditor({ id: 'new', collection: 'documents', publish: vi.fn(), refresh: 0 }));
+  const form = loaded.find(node => node.type === Form as unknown)!;
+  const fields = form.props.fields as Record<string, { fields: Record<string, { options?: { value: string }[]; type: string }> }>;
+  expect(fields.source.fields.mode.options?.map(option => option.value)).toEqual(['url', 'upload']);
+  expect(fields.source.fields.fileId.type).toBe('file');
+  expect(tree.length).toBeGreaterThan(0);
+});

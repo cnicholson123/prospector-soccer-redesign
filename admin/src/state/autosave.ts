@@ -108,8 +108,10 @@ export class EditorState {
     } finally { this.saving.value = false; }
   }
   async flush() {
-    if (!await this.save()) return false;
-    return !this.dirty.value || this.save();
+    do {
+      if (!await this.save()) return false;
+    } while (this.dirty.value || this.saving.value);
+    return true;
   }
   accept(doc: EventDoc) { this.doc.value = doc; this.draft.value = doc.draft; this.conflict.value = null; this.clearRecovery(); this.status.value = 'Saved'; this.errors.value = []; }
   async keepMine() { const current = this.conflict.value; if (!current) return; this.doc.value = current; this.conflict.value = null; await this.save(true); }
@@ -117,3 +119,22 @@ export class EditorState {
 }
 export const navigationGuard = signal<(() => Promise<boolean>) | null>(null);
 export const editorFlush = signal<(() => Promise<boolean>) | null>(null);
+
+// Form, inline and media editors can coexist. Cleanup removes only its own
+// registration, so closing a nested editor cannot disconnect another editor.
+const openEditors = new Set<() => Promise<boolean>>();
+async function flushEditors() {
+  let saved = true;
+  for (const flush of openEditors) if (!await flush()) saved = false;
+  return saved;
+}
+export function registerEditorFlush(flush: () => Promise<boolean>) {
+  openEditors.add(flush);
+  editorFlush.value = flushEditors;
+  navigationGuard.value = flushEditors;
+  return () => {
+    openEditors.delete(flush);
+    editorFlush.value = openEditors.size ? flushEditors : null;
+    navigationGuard.value = editorFlush.value;
+  };
+}

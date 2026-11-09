@@ -37,6 +37,9 @@ export function invalidateCache() { epoch++; cache.clear(); fetchedAt.clear(); p
 export function peek<T>(path: string): T | undefined { return cache.get(path) as T | undefined; }
 export function api<T>(path: string, method = 'GET', body?: unknown): Promise<T> {
   if (method !== 'GET') return request<T>(path, method, body).finally(invalidateCache);
+  // Review is a fresh snapshot after editor flushes, never a shared read that
+  // may have started before the latest save (including raw media uploads).
+  if (path.split('?')[0] === '/pending') return request<T>(path);
   const existing = pending.get(path);
   if (existing) return existing as Promise<T>;
   const generation = epoch;

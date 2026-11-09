@@ -34,19 +34,27 @@ export async function commitSnapshot(store: Store, capture: { docs: Doc[]; snaps
     return { ...change, version: doc.version + 1, updatedAt: now.toISOString(), updatedBy: actor.id,
       publishedVersion: change.published !== undefined && isDeepStrictEqual(change.published, change.draft) ? doc.version + 1 : change.publishedVersion };
   });
-  // Newly referenced media metadata participates in the versioned snapshot too.
+  // Newly referenced media metadata participates in the same versioned write.
+  // A selected media item may already have advanced above (e.g. scheduling a
+  // restored upload alongside its referring document). Never advance it twice.
+  const changedKeys = new Set(changes.map(doc => `${doc.collection}/${doc.id}`));
   for (const ref of next.filter(d => d.published !== undefined).flatMap(d => references(d.collection, d.published)).concat((options.scheduled ?? current?.scheduled ?? []).flatMap(d => references(d.collection, d.data)))) {
     if (ref.collection !== 'media') continue;
     const media = next.find(d => d.collection === 'media' && d.id === ref.id);
-    if (media && media.published === undefined && !media.trashedAt) Object.assign(media, { published: structuredClone(media.draft), publishedVersion: media.version + 1, version: media.version + 1, status: 'published' });
+    if (media && media.published === undefined && !media.trashedAt) {
+      const version = original.find(doc => doc.collection === 'media' && doc.id === media.id)!.version + 1;
+      Object.assign(media, { published: structuredClone(media.draft), publishedVersion: version, version,
+        updatedAt: now.toISOString(), updatedBy: actor.id, status: media.scheduledAt ? 'scheduled' : 'published' });
+      changedKeys.add(`media/${media.id}`);
+    }
   }
   const revisions: Revision[] = [], manifest: PublishRecord['manifest'] = [];
   const previous = current ? await store.getPublish(current.siteVersion) : null;
   for (const doc of next) {
-    const changed = changes.some(d => d.id === doc.id && d.collection === doc.collection);
+    const changed = changedKeys.has(`${doc.collection}/${doc.id}`);
     if (changed) {
       for (const old of await store.listRevisions(doc.collection, doc.id, 1000)) if (!old.sealedAt) revisions.push({ ...old, sealedAt: now.toISOString() });
-      if (options.kind === 'schedule') revisions.push(revision(doc, actor, 'scheduled', now, { sealedAt: now.toISOString(), publishSiteVersion: siteVersion, summary: options.summary }));
+      if (options.kind === 'schedule' && changes.some(d => d.id === doc.id && d.collection === doc.collection)) revisions.push(revision(doc, actor, 'scheduled', now, { sealedAt: now.toISOString(), publishSiteVersion: siteVersion, summary: options.summary }));
       else if (doc.published === undefined) revisions.push(revision(doc, actor, 'unpublished', now, { sealedAt: now.toISOString(), publishSiteVersion: siteVersion, summary: options.summary }));
     }
     if (doc.published === undefined) continue;

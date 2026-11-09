@@ -504,3 +504,93 @@ Files and scope
 - Query counts (warm Postgres, statements/writes): /auth/me 11/1 → 1/0; /docs/events 22/2 → 2/0; /pending 45/2 → 2/0; /dashboard 74/2 → 10/0; /counts new 1/0.
 - Claude fix: list refresh after a refused trash cleared the "Used by" explanation; failure now resets only on collection change.
 - Verified: 711 unit (FS), 758 Postgres (Codex), 39/39 Playwright in real Chrome.
+
+## CHANGELOG — Phase 10 — Media library and document uploads — 2026-11-09
+
+Shipped against §8 / §14 and the §18 upload-quarantine amendment
+
+- Added `/admin/media` and deep-linked details drawers, library navigation on desktop/mobile, dashboard upload and health links, and media prefetching. The responsive grid supports filename/alt/caption search, image/document filters, unused and missing-alt filters, loading/error/retry/empty states, multi-file drag-and-drop and file selection, per-file processing/upload progress and retry guidance. UI uses the existing navy/blue/gold/cream tokens, typography, visible focus and shared focus-contained native dialogs.
+- Added browser canvas processing: image originals up to 8 MiB are retained, and WebP variants have a longest edge of at most 2000 pixels without enlarging smaller inputs. PDFs retain their original bytes up to 15 MiB. Local uploads use the FS binary endpoint; production uses the installed private Vercel Blob client with CSRF headers. Each file/variant gets an owner-bound signed quarantine grant. Both variants undergo the existing bounded server read, exact MIME/size checks, magic-byte and intrinsic-dimension verification before metadata creation; WebP variants over 2000 pixels are refused. SVG remains forbidden. Original-only Phase 6 API requests remain compatible and still undergo verification.
+- Added version-checked metadata editing for default alt/caption/focal point, mouse and keyboard focal controls, cropped previews, original/web file links, ownership-aware controls, unsaved-details close confirmation, and draft/publication guidance. Usage includes drafts, published content and frozen schedules. Delete uses the existing locked integrity check, displays the actual refusal/usage list, and soft-trashes unused records. Replacement uses the same verified quarantine path, preserves the media ID and metadata, stores fresh immutable binaries, and records an audited revision. Current live URLs remain until publication; previous publication binaries are retained.
+- Replaced generic image/file placeholders with reusable media-picker drawers. Images get a focal preview and separate per-use alternative text; files select PDFs. Document source controls switch between URL and upload mode while clearing the inactive value. Existing document validation, references, publication, and resources rendering support uploaded PDFs end to end.
+- Added sponsor-logo rendering only when a logo resolves, on home and both sponsor sections; existing logo-free seed markup remains identical. Existing page and store images honor focal `object-position`. Frozen snapshot media now retains focal metadata for the renderer fallback. No public assets, seed data, golden fixtures or dependency versions changed.
+- Added `npm run seed:media` / `scripts/seed-media.ts`, sharing the existing additive seed transaction with `seed:store`. It registers missing static media only, publishes only those new records, audits as actor `seed` with source `seed:media`, preserves existing content/users/sessions/history/trash/schedules and all ten store media records, and resumes only its own untouched drafts. A repeat makes no content/history/publication writes. `README-deploy.md` documents the expected 16-created/10-preserved first run and 26-preserved repeat for production containing only the store records. No destructive migration or production command was run.
+- Added FS/Postgres-gated static-media seed contracts, HTTP/security/public-render/health/replacement/scheduled-usage tests, client processing/picker/permission/stale-response checks, and additional media GET performance checks. Added three Playwright scenarios: full JPEG → WebP → alt/focal → sponsor → public image and PDF → document → public resources flows at 390px and 1280px; multi-file drop → replace → unused delete with operable drawers.
+
+Files changed (summary)
+
+- Admin: `routes/Media.tsx`, `components/{MediaLibrary,MediaUpload,MediaPicker,FocalPoint}.tsx`, `state/media.ts`, `styles/media.css`; integrated with app routes, Shell, Dashboard, Form, entry CSS and prefetch.
+- Server/shared: media finalization/delivery and routes, snapshot focal metadata, health whitespace handling, image/sponsor/store rendering and document-source labels. All relative server imports retain explicit `.js` extensions.
+- Operations/tests: additive media CLI and shared seed helper, package script, deployment runbook, three focused unit/contract files, media e2e spec and the existing performance suite.
+
+Verification
+
+- `npm run build` — **PASS**: Vite and both strict TypeScript configurations.
+- `npm test` — **PASS: 728 tests**, 36 explicit service skips. Includes `npm run check:runtime` with all three current unbundled function packages, all eight public golden comparisons, existing query budgets, and zero-write media list/filter/usage GETs on FS. Existing Postgres budgets remain in the env-gated suite.
+- `npm run check-facts` — **PASS: 122 facts**. `git diff --check` — **PASS**.
+- `npm run test:e2e -- --list` — **PASS: 42 tests in 12 files**. Playwright browser execution, real keyboard/focus/responsive appearance and Lighthouse — **not run (sandbox)**. Claude must run installed Chrome; no browser or visual acceptance is claimed.
+- Real Neon/Postgres and private Blob checks — **not run (no env)**. No hosted service credentials, database container, production data change, deployment, commit or push was used. Executed application tests use filesystem storage.
+
+Deviations / open acceptance gates
+
+- No Phase 10 implementation item was deferred. Production must run the documented additive `seed:media` command after release to expose any missing static-image records; GET requests intentionally never seed or write metadata.
+- Canvas WebP is a still-image variant for animated GIF inputs; the untouched animated original remains available. Server verification retains Phase 6's signature/dimension scope, not full decoding or antivirus scanning.
+- Browser and hosted-service acceptance remain unverified as stated above. The earlier reported intermittent publish-tray browser race was not reproduced or declared fixed by this phase. No new dependency, global configuration change or edit outside this repository was made.
+
+## CHANGELOG — Phase 10 fix-up and publish-tray race — 2026-11-09
+
+Shipped against Phase 10 media acceptance and the retained Phase 7a/8 publishing and review flows
+
+- Classified both sponsor failures as a test selector error. The supplied snapshots show the sponsor in the tray, its saved logo diff, the selected image and per-use alt. The tray has never rendered the document anchors expected by the new media spec. The spec now identifies the visible pending item by its exact title and checks that its ID leaves `/pending` after publication. It opens review immediately after editing the image alt, exercising the ordinary save/flush path without a checkpoint masking a dirty-state failure.
+- Fixed the Contributor regression caused by pending media entering the global review selection. Generic `/docs/media/*` mutations intentionally return 403. The retained failed-run audit shows ordinary content review requests completing before media interrupts the batch. The tray now keeps media visible with explanatory copy and a disabled review checkbox, and excludes it from initial selection, Select all, mode changes and submission. Restricted site/store settings use the same role-aware selection rule. Publication of media remains available to publishers. A filesystem HTTP regression confirms the actual media 403 and successful ordinary Contributor review. The browser scenario now explicitly creates pending media and verifies a completed home review, independent of earlier test runs.
+- Removed the obsolete link-only document schema override from `DocEditor`. The editor uses the shared schema, including Source type and the upload/file picker. This fixes the subsequent PDF step that the failed sponsor assertion had prevented Chrome from reaching.
+- Registered form, inline and media-detail flush callbacks together. Closing one editor removes only its own callback. Publication and navigation wait for all registered editors, including an already-running media metadata save. `EditorState.flush()` drains successive edits until the draft is clean, including edits arriving during a second save. A failed editor prevents the pending read while the other registered editors still receive their flush.
+- Made every `/pending` request independent of in-flight GET deduplication, including same-epoch requests and query-string variants. Existing document/list deduplication and mutation-completion epoch invalidation remain covered. Delayed old GET completion cannot evict a newer in-flight read or repopulate its cache. Initial loads, conflict refreshes and retries all flush before requesting pending data. The tray retains its visible loading status through saves and reads, disables selection while loading and shows a save/read failure without claiming that everything is published.
+- Added component/state regressions for top-level and nested image selection, per-use alt, clearing, immutable draft changes, versioned saves, multiple editor flushes, media save completion, repeated keystrokes, mixed review permissions, mode switching and loading/error states. Added a deterministic 1280px browser scenario that holds an older `/pending` response and a newer autosave in flight, then requires a second fresh pending request and publication of the latest text. Existing 390px/1280px workflows and query-budget assertions are retained.
+
+Verification
+
+- `npm run build` — PASS, Vite and both strict TypeScript configurations. An initial run caught a new test's inferred union field-map type. The test was corrected and the full build rerun.
+- `npm test` — PASS, 741 tests with 36 explicit service skips. Includes `npm run check:runtime` for all three unbundled plain-Node function packages and all eight public goldens.
+- `npx vitest run tests/unit/admin-performance.test.ts tests/render.golden.test.ts` — PASS, 15 tests with six no-env Postgres skips. Filesystem query/write budgets and public golden comparisons remain green. `git diff --check` — PASS.
+- Regression sensitivity — PASS. Temporarily restoring the four old behaviors produced four failures in the matching new tests. Restored the app fixes immediately afterwards. The image selection/dirty/save cases also pass without a picker implementation change, consistent with the saved sponsor in the supplied snapshots.
+- `npm run test:e2e -- --list` — PASS, 43 tests in 12 files. Playwright execution, Chrome screenshots, responsive/focus verification and Lighthouse — **not run (sandbox)**. Claude must run installed Chrome to confirm the three reported failures and the intermittent event workflow.
+- `npm run check-facts` — PASS, 122 facts. Real Neon/Postgres and private Blob checks — **not run (no env)**. Executed application checks use filesystem storage.
+
+Decisions and open acceptance gates
+
+- The checkout reports `main` and has no local `admin-cms` branch. Applied the fix-up in place while retaining all pre-existing uncommitted Phase 10 work. Branch placement differs from the requested branch name.
+- The media review choice follows the existing server contract. Pending media remains inspectable and publishes with content that references it, or through an Editor/Owner publication. A separate media-review API was outside this fix-up.
+- The original intermittent Chrome race was not independently reproduced in this sandbox. Adversarial state tests and the new delayed-network browser spec cover its requested save/read guarantees. Real browser confirmation remains open.
+
+## CHANGELOG — Phase 5/8/10 fix — Schedule after whole-site restore — 2026-11-09
+
+Shipped against the reported Chrome scheduling failure
+
+- Reproduced the snapshot-shaped 409 in `commitSnapshot`: whole-site restore keeps later-created upload/document drafts. When the tray schedules a referring document and its media together, explicit scheduling advances the media envelope once, then implicit publication of referenced media advances it again. Both adapters correctly reject that `expectedVersion + 2` envelope. A home-only selection after an unrelated draft upload already succeeds; the failing case requires the restored reference and media in the same selection. Both cases are now explicit HTTP regressions.
+- Fixed shared publication assembly to derive an implicit media publication's version from the captured original envelope, advancing exactly once per transaction. Preserved scheduled status, updated actor/time metadata, and included implicitly published media in revision sealing. CAS checks, snapshot generation checks, immutable history, frozen schedule data and real 409 responses remain enforced; no retry hides conflicts.
+- Audited and tested warm render, schedule-index and health caches across publish-now, schedule, unpublish and whole-site restore. Existing `siteVersion`/`health-generation` invalidation is correct: render and authentication observe the current generation each request, while content transactions clear health metadata. No additional cache or polling delay was introduced. Cross-app-instance tests verify schedule cancellation and no stale settlement after restoration.
+- Added `tests/unit/schedule-restore.test.ts` for FS, PostgreSQL and the actual Neon HTTP serializer/parser backed by local PostgreSQL. Covers upload/finalize, publication, restore, normal home draft writes, fresh pending selections, selected and implicit media publication, single version increments, sealed history, unchanged live home before due time, settlement and genuine stale-selection rejection. The HTTP fixture encodes JSON/JSONB values by PostgreSQL field type, including scalar strings.
+- Added a Playwright regression to the existing Phase 8 spec: upload a PDF, publish a referring document, restore publication 1, edit home, then schedule the tray's restored document/media selection. It asserts the actual 200 response, closed tray, frozen scheduled IDs and unchanged public lead before the due time.
+
+Files changed in this fix
+
+- `server/content/publish.ts`: one version increment for combined explicit/implicit media changes and complete revision bookkeeping.
+- `tests/unit/schedule-restore.test.ts`: HTTP/store/transport/cache regression coverage.
+- `tests/e2e/admin-phase8.spec.ts`: restored-upload scheduling browser scenario.
+- `plans/admin-progress.md`: this entry. All earlier uncommitted work was retained.
+
+Verification
+
+- `npm run build` — PASS, Vite and both strict TypeScript configurations.
+- `npm test` without service env — PASS: 743 tests, 40 explicit service skips. Includes `check:runtime` for all three unbundled function packages, all eight public goldens and the existing FS zero-write GET budgets.
+- PostgreSQL 17 targeted Store/Postgres/performance suites — PASS: 101 tests, including the Postgres zero-write GET budgets.
+- Full local PostgreSQL 17 `npm test -- --maxWorkers=1` — PASS: 799 tests, one private Blob no-env skip. Includes all six new FS/Postgres/Neon-HTTP regression cases, runtime packaging, public goldens and both adapters' performance budgets. Overlapping initial database runs hit a WebSocket connection timeout during fixture setup; the full serial rerun passed without relaxing any timeout or assertion.
+- Regression sensitivity — PASS: an isolated copy of the pre-fix publication module returns the same snapshot-shaped 409 in the new restored-upload scheduling test; its home-only and cache controls pass. The working source remained fixed during this check.
+- `npm run check-facts` — PASS: 122 facts. `npm run test:e2e -- --list` — PASS: 44 tests in 12 files. `git diff --check` — PASS.
+
+Deviations and open acceptance gates
+
+- This checkout is still `main`, with no local `admin-cms` branch. Applied the fix in place and preserved prior uncommitted changes; no commit, push or deployment was made.
+- Playwright execution, Chrome/visual checks and Lighthouse — **not run (sandbox)**. Claude must run the installed Chrome afterwards. Real Neon cloud/private Blob and hosted deployment checks — **not run (no env)**. PostgreSQL verification uses disposable local Docker PostgreSQL 17 and the existing test WebSocket transport; media binaries remain on FS.
+- No dependency, public-site HTML/CSS, golden, seed, global configuration or file outside the repository was changed by this fix.

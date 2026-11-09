@@ -5,4 +5,5 @@ import './styles/base.css';
 import './styles/components.css';
 import './styles/forms.css';
 import './styles/responsive.css';
+import './styles/media.css';
 render(<App />, document.getElementById('app')!);

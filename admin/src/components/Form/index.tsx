@@ -4,6 +4,7 @@ import type { ValidationIssue } from '../../../../shared/types.js';
 import { richtext } from '../../../../server/render/richtext.js';
 import { api, message } from '../../api.js';
 import { defaults, docTitle, duplicateItem, freshKey, moveItem, record, type ContentDoc } from '../../state/content.js';
+import { MediaField } from '../MediaPicker.js';
 import { DragList } from '../DragList.js';
 export const fieldLabel = (name: string, field: Field) => field.label ?? ({ showOnHome: 'Show on home page', calendarTitle: 'Calendar title', locationDetail: 'Location details', endTime: 'End time', notes: 'Notes', link: 'Link', meta: 'Page details', cta: 'Call to action', headerCta: 'Header call to action', seo: 'Search engines', srSummary: 'Screen reader summary', resultIds: 'Results', documentIds: 'Documents', boardMemberId: 'Board member', startsAt: 'Starts at', endsAt: 'Ends at' }[name] ?? name.replace(/([A-Z])/g, ' $1').replace(/^./, x => x.toUpperCase()));
 function RichText({ id, label, value, change, disabled, describedBy, invalid, inline }: { id: string; label: string; value: string; change: (value: string) => void; disabled: boolean; describedBy?: string; invalid: boolean; inline?: boolean }) {
@@ -55,7 +56,7 @@ export function Form({ fields, value, change, errors = [], disabled = false, blu
     const describedBy = [error && `${id}-error`, help && `${id}-help`].filter(Boolean).join(' ') || undefined;
     const common = { id, disabled, 'aria-invalid': !!error, 'aria-describedby': describedBy, required: !!field.required };
     const update = (v: unknown) => change(name, v);
-    const nested = (defs: Record<string, Field>) => <Form fields={defs} value={record(data)} change={(key, v) => update({ ...record(data), [key]: v })} errors={errors} disabled={disabled} prefix={path} />;
+    const nested = (defs: Record<string, Field>) => <Form fields={defs} value={record(data)} change={(key, v) => update(path === 'source' && key === 'mode' ? { mode: v } : { ...record(data), [key]: v })} errors={errors} disabled={disabled} prefix={path} />;
     let control;
     if (field.type === 'object') control = nested(field.fields);
     else if (field.type === 'list') {
@@ -63,7 +64,7 @@ export function Form({ fields, value, change, errors = [], disabled = false, blu
       const title = (i: number) => String(rows[i][field.itemLabel] || `Item ${i + 1}`);
       control = <div class="list-editor"><p class="muted">{rows.length} items · Drag a handle or use Alt + ↑ / ↓ to reorder.</p><DragList ids={rows.map(row => String(row._key))} label={title} disabled={disabled} move={(from, to) => update(moveItem(rows, from, to))}>{i => <details class="list-item"><summary>{title(i)}</summary><Form fields={field.of} value={rows[i]} change={(key, v) => update(rows.map((row, index) => index === i ? { ...row, [key]: v } : row))} errors={errors} disabled={disabled} prefix={`${path}[${i}]`} /><div class="list-actions"><button type="button" class="text-button" disabled={disabled || field.maxItems !== undefined && rows.length >= field.maxItems} onClick={() => update([...rows.slice(0, i + 1), duplicateItem(rows[i]), ...rows.slice(i + 1)])}>Duplicate item</button><button type="button" class="text-button danger-text" disabled={disabled || rows.length <= (field.minItems ?? 0)} onClick={() => update(rows.filter((_, index) => index !== i))}>Remove item</button></div></details>}</DragList><button type="button" class="button secondary" disabled={disabled || field.maxItems !== undefined && rows.length >= field.maxItems} onClick={() => update([...rows, { _key: freshKey(), ...defaults(field.of) }])}>Add item</button></div>;
     } else if (field.type === 'reference') control = <Reference field={field} id={id} value={data} change={update} disabled={disabled} />;
-    else if (field.type === 'image' || field.type === 'file') control = <div class="media-placeholder">{record(data).mediaId ? <><strong>Current {field.type}</strong><p>{String(record(data).mediaId)}</p>{field.type === 'image' && <><label for={`${id}-alt`}>Alternative text</label><input id={`${id}-alt`} value={String(record(data).alt ?? '')} disabled={disabled} onInput={e => update({ ...record(data), alt: e.currentTarget.value })} /></>}</> : <p>No {field.type} selected.</p>}<small>Media selection and uploads arrive in Phase 10.</small></div>;
+    else if (field.type === 'image' || field.type === 'file') control = <MediaField id={id} type={field.type} value={data} change={update} disabled={disabled} />;
     else if (field.type === 'link') control = nested({ label: { type: 'text', label: 'Link label' }, href: { type: 'url', label: 'Link URL', allowRelative: true, allowMailto: true }, external: { type: 'boolean', label: 'Open in a new tab' } });
     else if (field.type === 'money') control = nested({ amount: { type: 'number', min: 0, decimals: field.exact ? 2 : undefined, label: 'Amount ($)' }, ...(!field.exact ? { max: { type: 'number' as const, min: 0, label: 'Maximum ($, optional)' } } : {}) });
     else if (field.type === 'boolean') control = <input {...common} type="checkbox" checked={data === true} onChange={e => update(e.currentTarget.checked)} />;
@@ -79,5 +80,5 @@ export function Form({ fields, value, change, errors = [], disabled = false, blu
     const full = complex || ['richtext', 'reference'].includes(field.type) || field.width === 'full' || name === 'title';
     return sections && complex ? <details key={path} class="section-accordion field-full" open={errors.some(issue => issue.path.startsWith(path)) || undefined} id={`section-${name}`}><summary>{label}{errors.some(issue => issue.path.startsWith(path)) && <span class="badge">Needs attention</span>}</summary><div class="section-body">{control}{error && <p class="field-error">{error}</p>}</div></details> : <div key={path} data-field-path={path} class={`field ${full ? 'field-full' : ''} ${field.type === 'boolean' ? 'field-check' : ''}`}>{content}</div>;
   };
-  return <div class="form-grid" onFocusOut={blur}>{Object.entries(fields).map(renderField)}</div>;
+  return <div class="form-grid" onFocusOut={blur}>{Object.entries(fields).filter(([name]) => !(prefix === 'source' && (name === 'fileId' && value.mode !== 'upload' || name === 'url' && value.mode === 'upload'))).map(renderField)}</div>;
 }

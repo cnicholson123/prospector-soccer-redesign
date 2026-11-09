@@ -38,7 +38,7 @@ for (const postgres of [false, true]) describe.skipIf(postgres && !process.env.D
   it('keeps steady GET/HEAD reads write-free and uses a single counts aggregate', async () => {
     const f = await fixture(postgres);
     await f.req('/dashboard'); // Warm persisted health cache and schedule state.
-    for (const path of ['/auth/me','/docs/events','/counts','/pending','/dashboard']) {
+    for (const path of ['/auth/me','/docs/events','/counts','/pending','/dashboard','/media','/media?unused=1','/media?missingAlt=1','/media/missing/usage']) {
       f.reset();
       const response = await f.req(path);
       expect(response.status).toBe(200);

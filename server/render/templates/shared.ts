@@ -32,8 +32,11 @@ export function resultCard(result: DocumentView, index = 0, stagger = false): Ht
   const gender = result.text('gender');
   return html`<li class="result" data-reveal${stagger ? delay(index, 80) : html``}><span class="medal${medal}" aria-hidden="true">${place}<sup>${suffix}</sup></span><div><p class="result__team"${result.edit('teamName')}>${result.text('teamName')}</p><p class="result__meta">${result.text('ageGroup')} ${gender.charAt(0).toUpperCase() + gender.slice(1)} · ${place}${suffix} place</p></div></li>`;
 }
+export function sponsorLogo(sponsor: DocumentView): Html {
+  return sponsor.text('logo.mediaId') && sponsor.image('logo') !== '#' ? html`<img src="${sponsor.image('logo')}" alt="${sponsor.text('logo.alt')}" width="240" height="120" loading="lazy"${sponsor.imageStyle('logo', 'object-fit:contain;max-width:100%;')}${sponsor.edit('logo')}>` : html``;
+}
 export function sponsorCard(sponsor: DocumentView, spaced = false): Html {
-  return html`<li><a class="sponsor-card" href="${sponsor.url('url')}" target="_blank" rel="noopener"><span class="pill pill--soft-gold">Gold sponsor</span><p class="sponsor-card__name"${sponsor.edit('name')}>${sponsor.text('name')}</p><span class="sponsor-card__foot">${displayDomain(sponsor.text('url'))}${spaced ? ' ' : ''}${icon('arrow-up-right', ' width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"')}</span></a></li>`;
+  return html`<li><a class="sponsor-card" href="${sponsor.url('url')}" target="_blank" rel="noopener"><span class="pill pill--soft-gold">Gold sponsor</span>${sponsorLogo(sponsor)}<p class="sponsor-card__name"${sponsor.edit('name')}>${sponsor.text('name')}</p><span class="sponsor-card__foot">${displayDomain(sponsor.text('url'))}${spaced ? ' ' : ''}${icon('arrow-up-right', ' width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"')}</span></a></li>`;
 }
 export function documentCard(document: DocumentView): Html {
   const form = document.text('kind') === 'form';

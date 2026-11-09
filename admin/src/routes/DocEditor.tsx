@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'preact/hooks';
 import { useLocation } from 'preact-iso';
 import { collections, type CollectionName } from '../../../shared/schema.js';
 import { allowed, message } from '../api.js';
-import { EditorState, editorFlush, navigationGuard, type EventDoc } from '../state/autosave.js';
+import { EditorState, registerEditorFlush, type EventDoc } from '../state/autosave.js';
 import { notify } from '../state/toasts.js';
 import { Form } from '../components/Form/index.js';
 import { Preview } from '../components/Preview.js';
@@ -24,18 +24,18 @@ export function DocEditor({ id, collection = 'events', publish, refresh }: { id:
   const [inline, setInline] = useState(false), [focusedPath, setFocusedPath] = useState(''), [siteVersion, setSiteVersion] = useState<number | null>(null);
   const definition = collections[collection], label = definition.label, singleton = definition.kind === 'singleton';
   const editable = allowed('content.edit') && (!['site', 'storeSettings'].includes(collection) || allowed('site.settings'));
-  const fields = collection === 'documents' ? { ...definition.fields, source: { type: 'object' as const, required: true, fields: { mode: { type: 'select' as const, required: true, options: [{ value: 'url', label: 'Link' }] }, url: { type: 'url' as const, required: true, allowRelative: true, allowMailto: true } } } } : definition.fields;
+  const fields = definition.fields;
   useEffect(() => {
     let active = true;
     state.load().then(() => { if (active) setReady(true); }).catch(error => { if (active) setError(message(error)); });
     const flush = async () => !editable || await state.flush();
-    navigationGuard.value = flush; editorFlush.value = flush;
+    const unregister = registerEditorFlush(flush);
     const unload = (event: BeforeUnloadEvent) => { if (editable && (state.dirty.value || state.saving.value)) { event.preventDefault(); event.returnValue = ''; } };
     const key = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 's') { event.preventDefault(); if (editable) void checkpoint(); }
     };
     window.addEventListener('beforeunload', unload); window.addEventListener('keydown', key);
-    return () => { active = false; state.dispose(); navigationGuard.value = null; editorFlush.value = null; window.removeEventListener('beforeunload', unload); window.removeEventListener('keydown', key); };
+    return () => { active = false; state.dispose(); unregister(); window.removeEventListener('beforeunload', unload); window.removeEventListener('keydown', key); };
   }, [state]);
   useEffect(() => {
     let active = true;

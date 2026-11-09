@@ -1,11 +1,11 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { toChildArray, type ComponentChildren, type VNode } from 'preact';
 import { editPath, setEditValue } from '../../shared/edit-path.js';
-import { session } from '../../admin/src/api.js';
+import { session, api, invalidateCache } from '../../admin/src/api.js';
 import { PublishTray, publishConflictMessage } from '../../admin/src/components/PublishTray.js';
 import { PublishButton } from '../../admin/src/components/PublishButton.js';
 import { InlineEditor } from '../../admin/src/components/InlineEditor.js';
-import { EditorState, editorFlush, navigationGuard } from '../../admin/src/state/autosave.js';
+import { EditorState, editorFlush, navigationGuard, registerEditorFlush } from '../../admin/src/state/autosave.js';
 
 const hooks = vi.hoisted(() => ({ cursor: 0, values: [] as unknown[], effects: [] as (() => void | (() => void))[] }));
 vi.mock('preact/hooks', () => ({
@@ -28,7 +28,7 @@ function words(children: ComponentChildren): string {
 const pending = (version = 2) => ({ id: 'home', collection: 'home', version, draft: { hero: { lead: `Draft ${version}` } }, published: { hero: { lead: 'Live' } }, status: 'changed', diff: [{ path: 'hero.lead', label: 'Hero / Lead', before: 'Live', after: `Draft ${version}` }] });
 const response = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status });
 beforeEach(() => {
-  hooks.cursor = 0; hooks.values = []; hooks.effects = [];
+  hooks.cursor = 0; hooks.values = []; hooks.effects = []; invalidateCache();
   vi.stubGlobal('localStorage', { getItem: () => null, setItem: () => {}, removeItem: () => {} });
   vi.stubGlobal('location', { origin: 'http://localhost:3000', port: '3000' });
   session.value = { user: { id: 'owner' } as never, csrfToken: 'csrf', passwordWeak: false, permissions: ['content.read', 'content.edit', 'content.publish'] };
@@ -131,4 +131,79 @@ it('a failed shared-document load never becomes an accidental create during a la
   expect(fetch).toHaveBeenCalledTimes(1);
   expect(await editorFlush.value!()).toBe(true); expect(fetch).toHaveBeenCalledTimes(1);
   if (cleanup) cleanup(); state.dispose();
+});
+
+it('flushes every registered editor before reading fresh pending data and shows loading throughout', async () => {
+  let finishSave!: (ok: boolean) => void, finishOld!: (value: Response) => void, finishFresh!: (value: Response) => void;
+  const order: string[] = [];
+  const unregisterForm = registerEditorFlush(async () => { order.push('form'); return new Promise(resolve => { finishSave = resolve; }); });
+  const unregisterInline = registerEditorFlush(async () => { order.push('inline'); return true; });
+  const fetch = vi.fn().mockImplementationOnce(() => new Promise<Response>(resolve => { finishOld = resolve; }))
+    .mockImplementationOnce(() => { order.push('pending'); return new Promise<Response>(resolve => { finishFresh = resolve; }); });
+  vi.stubGlobal('fetch', fetch);
+  const old = api('/pending');
+  const render = () => { hooks.cursor = 0; return PublishTray({ close: vi.fn(), published: vi.fn() }); };
+  try {
+    render(); hooks.effects[0]();
+    expect(words(render())).toContain('Loading saved changes');
+    expect(words(render())).not.toContain('All caught up');
+    expect(fetch).toHaveBeenCalledTimes(1);
+    finishSave(true);
+    await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(2));
+    expect(order).toEqual(['form', 'inline', 'pending']);
+    expect(words(render())).toContain('Loading saved changes');
+    finishFresh(response({ docs: [pending(3)] }));
+    await vi.waitFor(() => expect(words(render())).toContain('Draft 3'));
+    finishOld(response({ docs: [] })); await old;
+    expect(words(render())).toContain('Draft 3');
+    unregisterInline();
+    // Closing one editor retains the other registration.
+    expect(editorFlush.value).not.toBeNull();
+  } finally { unregisterInline(); unregisterForm(); }
+  expect(editorFlush.value).toBeNull();
+});
+
+it('flushes other editors after one fails and shows the save error without an empty-state claim', async () => {
+  const first = vi.fn().mockResolvedValue(false), second = vi.fn().mockResolvedValue(true);
+  const removeFirst = registerEditorFlush(first), removeSecond = registerEditorFlush(second);
+  const fetch = vi.fn(); vi.stubGlobal('fetch', fetch);
+  const render = () => { hooks.cursor = 0; return PublishTray({ close: vi.fn(), published: vi.fn() }); };
+  try {
+    render(); hooks.effects[0]();
+    await vi.waitFor(() => expect(words(render())).toContain('Resolve your unsaved changes'));
+    expect(second).toHaveBeenCalledOnce(); expect(fetch).not.toHaveBeenCalled();
+    expect(words(render())).not.toContain('All caught up');
+  } finally { removeFirst(); removeSecond(); }
+});
+
+it('requests review for eligible content while keeping pending media and restricted settings read-only', async () => {
+  session.value!.permissions = ['content.read', 'content.edit'];
+  const media = { ...pending(), id: 'media_upload', collection: 'media', draft: { filename: 'New logo.jpg' } };
+  const settings = { ...pending(), id: 'site', collection: 'site' };
+  const fetch = vi.fn().mockResolvedValueOnce(response({ docs: [pending(), media, settings] }))
+    .mockResolvedValueOnce(response({ doc: { ...pending(), status: 'review' } }));
+  vi.stubGlobal('fetch', fetch);
+  const close = vi.fn(), render = () => { hooks.cursor = 0; return PublishTray({ close, published: vi.fn() }); };
+  render(); hooks.effects[0]();
+  await vi.waitFor(() => expect(hooks.values[0]).toHaveLength(3));
+  const tree = render(), checkboxes = nodes(tree).filter(n => n.props.type === 'checkbox');
+  expect(checkboxes.map(n => [n.props.checked, n.props.disabled])).toEqual([[false, true], [true, false], [false, true]]);
+  expect(words(tree)).toContain('Media is published with the content that uses it');
+  (nodes(tree).find(n => n.type === 'button' && words(n.props.children as ComponentChildren) === 'Select all')!.props.onClick as Function)();
+  const submit = nodes(render()).find(n => n.type === 'button' && words(n.props.children as ComponentChildren).startsWith('Request review for'))!;
+  expect(words(submit.props.children as ComponentChildren)).toBe('Request review for 1');
+  (submit.props.onClick as Function)();
+  await vi.waitFor(() => expect(close).toHaveBeenCalledOnce());
+  expect(fetch.mock.calls.map(([url]) => url)).toEqual(['/api/admin/pending', '/api/admin/docs/home/home/review']);
+});
+
+it('removes media from the selection when changing from publish to request review', async () => {
+  const media = { ...pending(), id: 'media_upload', collection: 'media', draft: { filename: 'New logo.jpg' } };
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response({ docs: [media] })));
+  const render = () => { hooks.cursor = 0; return PublishTray({ close: vi.fn(), published: vi.fn() }); };
+  render(); hooks.effects[0](); await vi.waitFor(() => expect(hooks.values[0]).toHaveLength(1));
+  expect(nodes(render()).find(n => n.props.type === 'checkbox')?.props.checked).toBe(true);
+  (nodes(render()).find(n => n.props.id === 'publish-action')!.props.onChange as Function)({ currentTarget: { value: 'review' } });
+  const checkbox = nodes(render()).find(n => n.props.type === 'checkbox')!;
+  expect(checkbox.props).toMatchObject({ checked: false, disabled: true });
 });

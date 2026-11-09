@@ -1,7 +1,7 @@
 import { html, type Html } from '../html.js';
 import { icon } from '../icons.js';
 import { type SnapshotView } from '../snapshot-view.js';
-import { sponsorCard, tierCard } from './shared.js';
+import { sponsorCard, sponsorLogo, tierCard } from './shared.js';
 
 export function sponsors(view: SnapshotView): Html {
   const page = view.doc("sponsorsPage", "sponsorsPage");
@@ -42,7 +42,7 @@ export function sponsors(view: SnapshotView): Html {
 <h2${page.edit("teamSection.title")}>${page.rich("teamSection.title", true)}</h2>
 </div>
 </div>
-<ul class="chip-row" style="list-style:none">${view.sponsors(false).map(sponsor => html`<li class="pill"${sponsor.edit("name")}>${sponsor.text("name")}</li>`)}</ul>
+<ul class="chip-row" style="list-style:none">${view.sponsors(false).map(sponsor => html`<li class="pill"${sponsor.edit("name")}>${sponsorLogo(sponsor)}${sponsor.text("name")}</li>`)}</ul>
 </div>
 </section>
 

@@ -2,13 +2,12 @@ import type { Hono } from 'hono';
 import { actor, type AdminEnv } from '../middleware/auth.js';
 import { requirePermission } from '../middleware/permission.js';
 import { ApiError, object, string, version } from '../middleware/errors.js';
-import { finalizeMedia, readBounded, readGrant, uploadGrant } from '../../media.js';
+import { finalizeMedia, prepareMedia, readBounded, readGrant, uploadGrant } from '../../media.js';
 import { rateLimit } from '../../auth/ratelimit.js';
 import { validate, ValidationError } from '../../content/validate.js';
 import { revision } from '../../content/revisions.js';
 import { audit } from '../../audit.js';
 import { referenceUsage } from '../../content/references.js';
-import { allDocs } from '../../content/publish.js';
 import { can } from '../../permissions.js';
 /** SDK callbacks are signed by Blob, carry no user cookie and cannot create metadata. */
 export function mediaCallbacks(app: Hono<AdminEnv>) {
@@ -49,14 +48,38 @@ export function mediaRoutes(app: Hono<AdminEnv>) {
     const input = object(await c.req.json());
     const grant = readGrant(string(input.ticket,'ticket',4096),c.get('user').id,c.get('config'),c.get('now'));
     // Client URLs and dimensions are deliberately ignored; only the ticket path is read.
-    return c.json({ doc:await finalizeMedia(c.get('store'),c.get('blobs'),grant,input,actor(c),c.get('now')) },201);
+    return c.json({ doc:await finalizeMedia(c.get('store'),c.get('blobs'),grant,input,actor(c),c.get('now'), input.webTicket ? readGrant(string(input.webTicket,'webTicket',4096),c.get('user').id,c.get('config'),c.get('now')) : undefined) },201);
+  });
+  app.post('/api/admin/media/:id/replace', requirePermission('media.upload'), async c => {
+    const store = c.get('store'), doc = await store.getDoc('media', c.req.param('id'));
+    if (!doc || doc.trashedAt) throw new ApiError(404, 'not_found', 'Media not found');
+    const current = doc.draft as Record<string, unknown>;
+    if (!can(c.get('user'), 'media.edit', { uploadedBy: current.uploadedBy as string })) throw new ApiError(403, 'forbidden', 'You cannot replace this media');
+    const input = object(await c.req.json()), expected = version(input.baseVersion);
+    if (expected !== doc.version) throw new ApiError(409, 'conflict', 'Someone else saved this. Reload and compare', { current: doc });
+    const grant = readGrant(string(input.ticket, 'ticket', 4096), c.get('user').id, c.get('config'), c.get('now'));
+    if (String(current.mime).startsWith('image/') !== grant.mime.startsWith('image/')) throw new ApiError(422, 'validation', 'Replace with the same kind of media');
+    const web = input.webTicket ? readGrant(string(input.webTicket, 'webTicket', 4096), c.get('user').id, c.get('config'), c.get('now')) : undefined;
+    const prepared = await prepareMedia(c.get('blobs'), grant, web);
+    const draft = { ...current, ...prepared.data, uploadedBy: current.uploadedBy, uploadedAt: c.get('now').toISOString() };
+    const checked = validate('media', draft); if (!checked.valid) throw new ValidationError(checked.errors);
+    const next = { ...doc, draft, version: doc.version + 1 };
+    const updated = await store.mutateDoc({ collection: 'media', id: doc.id, expectedVersion: expected,
+      patch: { draft, status: doc.published ? 'changed' : 'draft', updatedBy: c.get('user').id, updatedAt: c.get('now').toISOString() },
+      revision: { append: revision(next, actor(c), 'edited', c.get('now')) }, audit: audit(actor(c), 'media.replace', { collection: 'media', docId: doc.id }, c.get('now')) });
+    if (updated === 'conflict') throw new ApiError(409, 'conflict', 'Someone else saved this. Reload and compare', { current: await store.getDoc('media', doc.id) });
+    await prepared.cleanup();
+    return c.json({ doc: updated });
   });
   app.get('/api/admin/media', requirePermission('content.read'), async c => {
     const docs = await c.get('store').listDocs('media');
-    const all = c.req.query('unused') === '1' ? await allDocs(c.get('store')) : [];
-    return c.json({ docs:docs.filter(doc => (c.req.query('missingAlt')!=='1' || !(doc.draft as {alt?:string}).alt) && (c.req.query('unused')!=='1' || !referenceUsage(all,'media',doc.id).length)) });
+    const capture = c.req.query('unused') === '1' ? await c.get('store').capturePublication() : undefined;
+    return c.json({ docs:docs.filter(doc => (c.req.query('missingAlt')!=='1' || String((doc.draft as {mime?:string}).mime).startsWith('image/') && !String((doc.draft as {alt?:string}).alt ?? '').trim()) && (c.req.query('unused')!=='1' || !referenceUsage(capture!.docs,'media',doc.id,capture!.snapshot?.scheduled).length)) });
   });
-  app.get('/api/admin/media/:id/usage', requirePermission('content.read'), async c => c.json({ usage:referenceUsage(await allDocs(c.get('store')),'media',c.req.param('id')) }));
+  app.get('/api/admin/media/:id/usage', requirePermission('content.read'), async c => {
+    const capture = await c.get('store').capturePublication();
+    return c.json({ usage: referenceUsage(capture.docs, 'media', c.req.param('id'), capture.snapshot?.scheduled) });
+  });
   app.get('/api/admin/media/:id', requirePermission('content.read'), async c => {
     const doc = await c.get('store').getDoc('media',c.req.param('id'));
     if (!doc) throw new ApiError(404,'not_found','Media not found'); return c.json({doc});

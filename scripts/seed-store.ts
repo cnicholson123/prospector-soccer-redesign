@@ -13,7 +13,6 @@ import { purgeContent } from '../server/render/cdn.js';
 import { loadSeed } from './seed.js';
 
 const actor = { id: 'seed', displayName: 'Store showcase seed' };
-const marker = 'seed:store';
 /** Deliberately excludes every legacy site document, FAQ and media record. */
 export function isStoreSeed(doc: Doc): boolean {
   return ['products', 'bundles', 'categories', 'shopPage', 'storeSettings'].includes(doc.collection)
@@ -27,12 +26,17 @@ const publication = (doc: Doc, now: Date): Doc => ({ ...doc, version: doc.versio
   status: 'published', updatedAt: now.toISOString(), updatedBy: actor.id });
 
 /** Add missing showcase content to an initialized store; never reset existing content. */
-export async function seedStoreShowcase(store: Store): Promise<{ created: number; published: number; preserved: number; siteVersion: number }> {
+export async function seedStoreShowcase(store: Store) {
+  return seedAdditive(store, (await loadSeed()).filter(isStoreSeed), 'seed:store', 'Add missing store showcase content');
+}
+
+/** Shared additive seed transaction: existing records are never overwritten or published. */
+export async function seedAdditive(store: Store, seeds: Doc[], marker: string, summary: string, actorName = actor.displayName): Promise<{ created: number; published: number; preserved: number; siteVersion: number }> {
+  const actor = { id: 'seed', displayName: actorName };
   await store.recoverPublish();
-  const seeds = (await loadSeed()).filter(isStoreSeed);
   const initial = await store.capturePublication();
   const previous = initial.snapshot && await store.getPublish(initial.snapshot.siteVersion);
-  if (!initial.snapshot || !previous) throw new Error('seed:store requires an initialized store with publication history; use seed only for a new empty store');
+  if (!initial.snapshot || !previous) throw new Error(`${marker} requires an initialized store with publication history; use seed only for a new empty store`);
   const now = new Date();
   // Only this command's untouched, unpublished creations can resume after interruption.
   const eligible = async (doc: Doc, seed: Doc) => {
@@ -57,7 +61,7 @@ export async function seedStoreShowcase(store: Store): Promise<{ created: number
   for (const doc of proposed.filter(doc => pending.has(doc.id))) {
     const result = validate(doc.collection, doc.published, { mode: 'publish', id: doc.id, documents: proposed,
       resolve: (collection, id) => proposed.find(target => target.collection === collection && target.id === id) ?? null });
-    if (!result.valid) throw new Error(`Invalid store seed ${doc.collection}/${doc.id}: ${JSON.stringify(result.errors)}`);
+    if (!result.valid) throw new Error(`Invalid seed ${doc.collection}/${doc.id}: ${JSON.stringify(result.errors)}`);
   }
   let created = 0;
   for (const seed of missing) {
@@ -98,7 +102,7 @@ export async function seedStoreShowcase(store: Store): Promise<{ created: number
     docs: publish.map(nextDoc => ({ expectedVersion: nextDoc.version - 1, nextDoc })),
     snapshot, revisions,
     record: { siteVersion: siteVersion + 1, at: now.toISOString(), actorId: actor.id,
-      kind: 'publish', summary: 'Add missing store showcase content', manifest },
+      kind: 'publish', summary, manifest },
     audit: [audit(actor, 'content.publish', { meta: { source: marker, siteVersion: siteVersion + 1,
       items: publish.map(doc => ({ collection: doc.collection, id: doc.id })) } }, now)],
   });

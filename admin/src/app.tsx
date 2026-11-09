@@ -18,6 +18,7 @@ import { PageEditor } from './routes/PageEditor.js';
 import { Pages } from './routes/Pages.js';
 import { History } from './routes/History.js';
 import { Audit } from './routes/Audit.js';
+import { Media } from './routes/Media.js';
 import { Profile } from './routes/Profile.js';
 function Workspace() {
   const { path, route } = useLocation();
@@ -78,6 +79,8 @@ function Workspace() {
       <Route key={d.name} component={CollectionList} path={`/admin/${d.name}`} collection={d.name} publish={(ids?: string[]) => openPublish(ids ?? [])} refresh={revision} />,
       <Route key={`${d.name}-${path}`} component={DocEditor} path={`/admin/${d.name}/:id`} collection={d.name} id={path.split('/').at(-1)!} publish={(mode?: PublishMode) => openPublish([], mode)} refresh={revision} />,
     ])}
+    <Route component={Media} path="/admin/media" refresh={revision} />
+    <Route component={Media} path="/admin/media/:id" id={path.split('/').at(-1)!} refresh={revision} />
     <Route component={History} path="/admin/history" refresh={revision} />
     <Route component={Audit} path="/admin/audit" />
     <Route component={Profile} path="/admin/profile" />

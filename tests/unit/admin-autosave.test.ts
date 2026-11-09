@@ -93,3 +93,18 @@ it('waits for a clean-draft checkpoint before preparing a publish or navigation'
   expect(await checkpoint).toBe(true); expect(await flush).toBe(true); expect(state.doc.value?.version).toBe(2);
   expect(fetch).toHaveBeenCalledTimes(2); state.dispose();
 });
+
+it('keeps flushing when edits arrive during each of two successive saves', async () => {
+  const state = new EditorState(original.id); state.accept(original);
+  const finishes: ((response: Response) => void)[] = [];
+  const fetch = vi.fn(() => new Promise<Response>(resolve => { finishes.push(resolve); }));
+  vi.stubGlobal('fetch', fetch);
+  state.update('title', 'First'); const flush = state.flush();
+  state.update('title', 'Second'); finishes[0](reply({ doc: { ...original, version: 2, draft: { ...original.draft, title: 'First' } } }));
+  await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(2));
+  state.update('title', 'Third'); finishes[1](reply({ doc: { ...original, version: 3, draft: { ...original.draft, title: 'Second' } } }));
+  await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(3));
+  finishes[2](reply({ doc: { ...original, version: 4, draft: { ...original.draft, title: 'Third' } } }));
+  expect(await flush).toBe(true); expect(state.dirty.value).toBe(false);
+  expect(state.doc.value?.draft.title).toBe('Third'); state.dispose();
+});

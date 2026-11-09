@@ -118,7 +118,7 @@ export const collections: Record<CollectionName, Collection> = {
   documents: collection('documents', 'Document', 'Documents', 'title', {
     title: text({ required: true }), description: text(), category: select(['club', 'safety', 'coaching', 'forms', 'policies'], true), kind: select(['pdf', 'form', 'link']),
     showInLibrary: { type: 'boolean', default: true },
-    source: object({ mode: select(['url', 'upload'], true), url, fileId: { type: 'file' } }, { required: true }), external: { type: 'boolean' },
+    source: object({ mode: { ...select(['url', 'upload'], true), label: 'Source type' }, url, fileId: { type: 'file', label: 'Document file' } }, { required: true }), external: { type: 'boolean' },
   }, 'resources'),
   faqs: collection('faqs', 'FAQ', 'FAQs', 'question', { page: select(['competitive', 'recreational', 'referees', 'sponsors', 'shop'], true), question: text({ required: true }), answer: rich(false, true) }),
   categories: collection('categories', 'Category', 'Categories', 'name', {

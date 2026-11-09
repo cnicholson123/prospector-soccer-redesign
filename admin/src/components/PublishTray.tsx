@@ -17,12 +17,15 @@ export function PublishTray({ close, published, selectedIds = [], initialMode = 
   const [mode, setMode] = useState<PublishMode>(allowed('content.publish') ? initialMode : 'review'), [at, setAt] = useState('');
   const [problems, setProblems] = useState<ValidationIssue[]>([]);
   const publisher = allowed('content.publish'), editor = allowed('content.edit');
+  const canSelect = (doc: PendingDoc, action = mode) => editor &&
+    (!['site', 'storeSettings'].includes(doc.collection) || allowed('site.settings')) &&
+    (action !== 'review' || !collections[doc.collection].systemManaged);
   async function load(conflict = false) {
     setLoading(true);
     try {
-      if (!conflict && editorFlush.value && !await editorFlush.value()) throw new Error('Resolve your unsaved changes before publishing.');
+      if (editorFlush.value && !await editorFlush.value()) throw new Error('Resolve your unsaved changes before publishing.');
       const result = await api<{ docs: PendingDoc[] }>('/pending');
-      setDocs(result.docs); setSelected(conflict ? [] : result.docs.filter(d => !selectedIds.length || selectedIds.includes(d.id)).map(d => d.id));
+      setDocs(result.docs); setSelected(conflict ? [] : result.docs.filter(d => canSelect(d) && (!selectedIds.length || selectedIds.includes(d.id))).map(d => d.id));
       setError('');
     } catch (error) { setError(message(error)); } finally { setLoading(false); }
   }
@@ -40,7 +43,7 @@ export function PublishTray({ close, published, selectedIds = [], initialMode = 
   async function submit() {
     setBusy(true); setError(''); setNotice(''); setProblems([]);
     try {
-      const items = docs.filter(d => selected.includes(d.id)).map(d => ({ collection: d.collection, id: d.id, expectedVersion: d.version }));
+      const items = docs.filter(d => canSelect(d) && selected.includes(d.id)).map(d => ({ collection: d.collection, id: d.id, expectedVersion: d.version }));
       if (mode === 'review') {
         // Review mutations are individually versioned. Remove successful items
         // so a later failure cannot hide partial completion or submit twice.
@@ -85,17 +88,18 @@ export function PublishTray({ close, published, selectedIds = [], initialMode = 
       const href = collectionNames.includes(collection) && id ? `${editorPath(collection, id)}#${collections[collection].kind === 'singleton' ? 'section-' + field[0] : 'field-' + field.join('.')}` : undefined;
       return <li key={problem.path}>{href ? <a href={href} target="_self" onClick={close}>{problem.path}: {problem.message}</a> : `${problem.path}: ${problem.message}`}</li>;
     })}</ul>}<button class="button secondary" disabled={busy || loading} onClick={() => { setProblems([]); void load(true); }}>Reload pending changes</button></div>}
-    {editor && <div class="publish-selection"><button class="text-button" disabled={busy || loading} onClick={() => setSelected(docs.map(d => d.id))}>Select all</button><button class="text-button" disabled={busy || loading} onClick={() => setSelected([])}>Deselect all</button><span>{selected.length} selected</span></div>}
-    {loading ? <p role="status">Loading saved changes…</p> : !docs.length ? <div class="empty-state"><h3>All caught up</h3><p>Your saved content is already published.</p></div> : Object.entries(collections).map(([collection, definition]) => {
+    {editor && <div class="publish-selection"><button class="text-button" disabled={busy || loading} onClick={() => setSelected(docs.filter(d => canSelect(d)).map(d => d.id))}>Select all</button><button class="text-button" disabled={busy || loading} onClick={() => setSelected([])}>Deselect all</button><span>{selected.length} selected</span></div>}
+    {loading ? <p role="status">Loading saved changes…</p> : !docs.length && !error ? <div class="empty-state"><h3>All caught up</h3><p>Your saved content is already published.</p></div> : Object.entries(collections).map(([collection, definition]) => {
       const items = docs.filter(d => d.collection === collection); return !items.length ? null : <section class="publish-group" key={collection}><h3>{definition.labelPlural}</h3>{items.map(doc => <article class="publish-item" key={doc.id}>
-        <label class="publish-select"><input type="checkbox" checked={selected.includes(doc.id)} disabled={!editor || busy} onChange={event => setSelected(event.currentTarget.checked ? [...selected, doc.id] : selected.filter(id => id !== doc.id))} /><strong>{docTitle(doc)}</strong><span class="badge">{doc.trashedAt ? 'Remove from site' : doc.status}</span></label>
+        <label class="publish-select"><input type="checkbox" checked={selected.includes(doc.id)} disabled={!canSelect(doc) || busy || loading} onChange={event => setSelected(event.currentTarget.checked ? [...selected, doc.id] : selected.filter(id => id !== doc.id))} /><strong>{docTitle(doc)}</strong><span class="badge">{doc.trashedAt ? 'Remove from site' : doc.status}</span></label>
+        {editor && !canSelect(doc) && <p class="muted">{collections[doc.collection].systemManaged && mode === 'review' ? 'Media is published with the content that uses it.' : 'Your role can view these changes. An Editor or Owner can submit them.'}</p>}
         {doc.scheduledAt && <p class="muted">Scheduled for {localDateTime(doc.scheduledAt).replace('T', ' ')} Pacific. Publishing now replaces this schedule. {publisher && <button class="text-button" disabled={busy} onClick={() => void cancelSchedule(doc)}>Cancel schedule</button>}</p>}
         <p class="publish-summary">{doc.trashedAt ? 'Remove this item from the live site.' : doc.diff.length ? doc.diff.slice(0, 3).map(d => `${d.label}: ${displayValue(d.before).slice(0, 80)} → ${displayValue(d.after).slice(0, 80)}`).join(' · ') + (doc.diff.length > 3 ? ` · +${doc.diff.length - 3} more` : '') : 'Publication status or order changed.'}</p>
         <details><summary>{doc.diff.length} field {doc.diff.length === 1 ? 'change' : 'changes'} · Review details</summary><DiffView changes={doc.diff} beforeLabel="Live" afterLabel="Draft" /></details>
       </article>)}</section>;
     })}
     {editor ? <>
-      <label class="note-label" for="publish-action">Action</label><select id="publish-action" disabled={busy} value={mode} onChange={e => setMode(e.currentTarget.value as PublishMode)}>{publisher && <><option value="publish">Publish now</option><option value="schedule">Schedule for later</option></>}<option value="review">Request review</option></select>
+      <label class="note-label" for="publish-action">Action</label><select id="publish-action" disabled={busy || loading} value={mode} onChange={e => { const action = e.currentTarget.value as PublishMode; setMode(action); setSelected(selected.filter(id => docs.some(doc => doc.id === id && canSelect(doc, action)))); }}>{publisher && <><option value="publish">Publish now</option><option value="schedule">Schedule for later</option></>}<option value="review">Request review</option></select>
       {mode === 'schedule' && <><label class="note-label" for="publish-at">Publish date and time (Pacific)</label><input id="publish-at" type="datetime-local" value={at} disabled={busy} onInput={e => setAt(e.currentTarget.value)} /><p class="muted">America/Los_Angeles · Daylight saving time is applied automatically. This schedules the selected saved versions.</p></>}
       <label class="note-label" for="publish-note">{mode === 'review' ? 'Review note' : 'Publication note'} <span class="muted">(optional)</span></label><textarea id="publish-note" rows={2} maxLength={1000} value={note} disabled={busy} onInput={event => setNote(event.currentTarget.value)} placeholder="What changed for the club?" />
       <div class="dialog-actions"><button class="button secondary" disabled={busy} onClick={close}>Keep as draft</button><button class="button" disabled={busy || loading || !selected.length || !!error} onClick={() => void submit()}>{busy ? 'Working…' : mode === 'review' ? `Request review for ${selected.length}` : `${mode === 'schedule' ? 'Schedule' : 'Publish'} ${selected.length} ${selected.length === 1 ? 'change' : 'changes'}`}</button></div>

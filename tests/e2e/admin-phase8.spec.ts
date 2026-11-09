@@ -83,6 +83,38 @@ test('schedule with Pacific date/time stays private until due and settles on adm
   expect(await (await context.request.get('/')).text()).toContain(text);
 });
 
+test('schedules restored uploads with their referring drafts without a false conflict', async ({ page, context }) => {
+  await login(page);
+  const { csrfToken } = await (await context.request.get('/api/admin/auth/me')).json();
+  const headers = { 'X-CSRF-Token': csrfToken, Origin: 'http://localhost:3000' };
+  const bytes = Buffer.from('%PDF-1.7\n%%EOF');
+  const issued = await context.request.post('/api/admin/media/upload-url', { headers, data: { filename: 'restored-schedule.pdf', mime: 'application/pdf', size: bytes.length } });
+  expect(issued.ok()).toBe(true); const grant = await issued.json();
+  expect((await context.request.put(grant.uploadUrl, { headers: { ...headers, 'Content-Type': 'application/pdf' }, data: bytes })).ok()).toBe(true);
+  const finalized = await context.request.post('/api/admin/media', { headers, data: { ticket: grant.ticket } });
+  expect(finalized.status()).toBe(201); const media = (await finalized.json()).doc;
+  const created = await context.request.post('/api/admin/docs/documents', { headers, data: { draft: { title: marker('Restored schedule guide'), category: 'club', kind: 'pdf', source: { mode: 'upload', fileId: { mediaId: media.id } } } } });
+  expect(created.status()).toBe(201); const doc = (await created.json()).doc;
+  expect((await context.request.post('/api/admin/publish', { headers, data: { items: [{ collection: doc.collection, id: doc.id, expectedVersion: doc.version }] } })).ok()).toBe(true);
+  expect((await context.request.post('/api/admin/publishes/1/restore', { headers, data: {} })).ok()).toBe(true);
+  const text = marker('Scheduled after whole-site restore'); await writeLead(context, text);
+  await page.goto('/admin/pages/home');
+  await page.getByRole('button', { name: 'Publish options', exact: true }).click();
+  await page.getByRole('button', { name: 'Schedule for later', exact: true }).click();
+  const tray = page.getByRole('dialog', { name: 'Review & publish' });
+  await expect(tray).toContainText(doc.draft.title);
+  await expect(tray.getByRole('checkbox', { name: /^restored-schedule\.pdf\b/ })).toBeChecked();
+  await tray.getByLabel('Publish date and time (Pacific)').fill(localDateTime(new Date(Date.now() + 3600000).toISOString()));
+  const submitted = page.waitForResponse(r => r.url().endsWith('/api/admin/schedule') && r.request().method() === 'POST');
+  await tray.getByRole('button', { name: /Schedule \d+ changes?/ }).click();
+  const response = await submitted;
+  expect(response.status(), await response.text()).toBe(200);
+  await expect(tray).toHaveCount(0);
+  expect(await (await context.request.get('/')).text()).not.toContain(text);
+  const { scheduled } = await (await context.request.get('/api/admin/dashboard')).json();
+  expect(scheduled.map((entry: { id: string }) => entry.id)).toEqual(expect.arrayContaining(['home', doc.id, media.id]));
+});
+
 test('concurrent publish explains the 409, refreshes pending changes, and permits a reviewed retry', async ({ page, context, browser }) => {
   await login(page); await writeLead(context, marker('First draft')); await page.goto('/admin/pages/home');
   await page.getByRole('button', { name: 'Review & publish', exact: true }).click();
@@ -104,9 +136,66 @@ test('concurrent publish explains the 409, refreshes pending changes, and permit
   } finally { await second.close(); }
 });
 
+test('publish tray flushes autosave and bypasses an older pending request', async ({ page, context }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await login(page); await page.goto('/admin/pages/home');
+  let releaseOld!: () => void, releaseSave!: () => void;
+  let pendingReads = 0, saveStarted = false;
+  const oldGate = new Promise<void>(resolve => { releaseOld = resolve; });
+  const saveGate = new Promise<void>(resolve => { releaseSave = resolve; });
+  let oldCaptured = false;
+  await page.route('**/api/admin/pending', async route => {
+    const first = ++pendingReads === 1;
+    const result = await route.fetch();
+    if (first) { oldCaptured = true; await oldGate; }
+    await route.fulfill({ response: result });
+  });
+  await page.route('**/api/admin/docs/home/home', async route => {
+    if (route.request().method() === 'PUT') { saveStarted = true; await saveGate; }
+    await route.continue();
+  });
+  try {
+    await page.getByRole('button', { name: 'Review & publish', exact: true }).click();
+    const tray = page.getByRole('dialog', { name: 'Review & publish', exact: true });
+    await expect.poll(() => oldCaptured).toBe(true);
+    await tray.getByRole('button', { name: 'Keep as draft', exact: true }).click();
+    await expect(tray).toHaveCount(0);
+    await page.locator('#section-hero > summary').click();
+    const lead = marker('Saved before fresh pending');
+    await page.locator('#section-hero').getByLabel('Lead', { exact: true }).fill(lead);
+    await page.getByRole('button', { name: 'Review & publish', exact: true }).click();
+    await expect.poll(() => saveStarted).toBe(true);
+    await expect(tray.getByRole('status')).toHaveText('Loading saved changes…');
+    await expect(tray.getByText('All caught up', { exact: true })).toHaveCount(0);
+    expect(pendingReads).toBe(1);
+    releaseSave();
+    await expect.poll(() => pendingReads).toBe(2);
+    await expect(tray).toContainText(lead);
+    releaseOld();
+    await tray.getByRole('button', { name: 'Deselect all', exact: true }).click();
+    await tray.locator('.publish-group').filter({ has: page.getByRole('heading', { name: 'Home', exact: true }) }).getByRole('checkbox').check();
+    await tray.getByRole('button', { name: 'Publish 1 change', exact: true }).click();
+    await expect(tray).toHaveCount(0);
+    expect(await (await context.request.get('/')).text()).toContain(lead);
+  } finally {
+    releaseOld(); releaseSave();
+    await page.unrouteAll({ behavior: 'wait' });
+  }
+});
+
 test('Contributor can preview and request review; Viewer sees a read-only tray', async ({ page, context, browser }) => {
   await login(page);
   const { csrfToken } = await (await context.request.get('/api/admin/auth/me')).json();
+  // Seed unrelated pending media explicitly, so this regression is independent
+  // of earlier specs and still exercises the global tray's Select all behavior.
+  const headers = { 'X-CSRF-Token': csrfToken, Origin: 'http://localhost:3000' };
+  const bytes = Buffer.from('%PDF-1.7\n%%EOF');
+  const issued = await context.request.post('/api/admin/media/upload-url', { headers, data: { filename: 'pending-review.pdf', mime: 'application/pdf', size: bytes.length } });
+  expect(issued.ok()).toBe(true); const grant = await issued.json();
+  expect((await context.request.put(grant.uploadUrl, { headers: { ...headers, 'Content-Type': 'application/pdf' }, data: bytes })).ok()).toBe(true);
+  const finalized = await context.request.post('/api/admin/media', { headers, data: { ticket: grant.ticket } });
+  expect(finalized.status()).toBe(201);
+  const mediaId = (await finalized.json()).doc.id;
   for (const role of ['Contributor', 'Viewer']) {
     const username = `${role}${randomBytes(3).toString('hex')}`, password = randomBytes(24).toString('base64url');
     expect((await context.request.post('/api/admin/users', { headers: { 'X-CSRF-Token': csrfToken, Origin: 'http://localhost:3000' }, data: { username, displayName: role, role, password } })).status()).toBe(201);
@@ -123,7 +212,15 @@ test('Contributor can preview and request review; Viewer sees a read-only tray',
         await tray.getByRole('button', { name: 'Keep as draft' }).click(); await writeLead(other, marker('Review this lead'));
         await otherPage.getByRole('button', { name: 'Request review', exact: true }).click();
         await expect(tray.locator('#publish-action option')).toHaveCount(1);
-        await tray.getByRole('button', { name: /Request review for \d+/ }).click(); await expect(tray).toHaveCount(0);
+        const mediaBox = tray.getByRole('checkbox', { name: /^pending-review\.pdf\b/ });
+        await expect(mediaBox).toBeDisabled();
+        await expect(mediaBox).not.toBeChecked();
+        const reviewed = otherPage.waitForResponse(r => r.url().endsWith('/docs/home/home/review') && r.request().method() === 'POST');
+        await tray.getByRole('button', { name: /Request review for \d+/ }).click();
+        expect((await reviewed).ok()).toBe(true); await expect(tray).toHaveCount(0);
+        const home = (await (await other.request.get('/api/admin/docs/home/home')).json()).doc;
+        expect(home.status).toBe('review'); expect(home.reviewRequestedBy).toBeTruthy();
+        expect((await (await context.request.get(`/api/admin/media/${mediaId}`)).json()).doc.reviewRequestedBy).toBeUndefined();
       } else {
         await expect(tray).toContainText('Your role can review changes');
         for (const checkbox of await tray.getByRole('checkbox').all()) await expect(checkbox).toBeDisabled();

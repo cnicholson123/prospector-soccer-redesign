@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import { collectionNames, collections, type CollectionName } from '../../../shared/schema.js';
 import { editPath, setEditValue } from '../../../shared/edit-path.js';
 import { allowed, message } from '../api.js';
-import { EditorState, editorFlush, navigationGuard } from '../state/autosave.js';
+import { EditorState, registerEditorFlush } from '../state/autosave.js';
 import { previewPath } from '../state/content.js';
 import { Form, fieldLabel } from './Form/index.js';
 import { DiffView, contentDiff } from './DiffView.js';
@@ -44,8 +44,7 @@ export function InlineEditor({ state, close }: { state: EditorState; close: () =
     else setError('Your draft is safe. Resolve the highlighted issue before continuing.');
   }
   useEffect(() => {
-    const beforeFlush = editorFlush.value, beforeGuard = navigationGuard.value;
-    editorFlush.value = flush; navigationGuard.value = flush;
+    const unregister = registerEditorFlush(flush);
     let disposed = false, request = 0;
     const unload = (event: BeforeUnloadEvent) => {
       if ([...states.current.values()].some(item => item.dirty.value || item.saving.value)) { event.preventDefault(); event.returnValue = ''; }
@@ -93,8 +92,7 @@ export function InlineEditor({ state, close }: { state: EditorState; close: () =
     window.addEventListener('beforeunload', unload);
     return () => {
       disposed = true; window.removeEventListener('message', listener); window.removeEventListener('beforeunload', unload);
-      if (editorFlush.value === flush) editorFlush.value = beforeFlush;
-      if (navigationGuard.value === flush) navigationGuard.value = beforeGuard;
+      unregister();
       for (const [item, timer] of timers.current) { clearTimeout(timer); if (item !== state) item.dispose(); }
       for (const item of states.current.values()) if (item !== state) item.dispose();
     };

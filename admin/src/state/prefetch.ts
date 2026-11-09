@@ -7,6 +7,7 @@ export function prefetchRoute(href: string) {
   if (parts[0] !== 'admin') return;
   const run = prefetch;
   if (!parts[1]) { run('/counts'); run('/dashboard?section=activity'); run('/dashboard?section=health'); return; }
+  if (parts[1] === 'media') { run(parts[2] ? `/media/${parts[2]}` : '/media'); return; }
   if (parts[1] === 'pages' && !parts[2]) {
     Object.values(collections).filter(d => d.kind === 'singleton' && !['site', 'storeSettings'].includes(d.name)).forEach(d => run(`/docs/${d.name}`));
     return;
