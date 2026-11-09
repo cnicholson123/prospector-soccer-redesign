@@ -588,3 +588,11 @@ Review cadence: Fable reviews every phase diff before the next run; phases 3, 5 
 The merch store is a **proof of concept for the local non-profit**. It will **not** go live on the current Vercel (Hobby) plan.
 - The `merch-store` branch is never merged into `admin-cms` and never handed to ChrisBot for deployment. Demo it locally (`npm run start`) with screenshots/recordings.
 - Build phases 1–4 (vertical slice), 6 (pre-order ops + production report) and 7 (pickup fulfillment; notifier stays `log`). Phase 5 Stripe: implement only the adapter shape + a mocked provider for the demo; no live/test Stripe account. **Skip** phase 8 (discounts/tax/retention). Phase 9: only the hardening items needed for a credible demo.
+
+## Scope revision (Chris, 2026-11-09, supersedes the POC section above)
+
+The store goes **live but unusable**: deployed to production as a browsable showcase, clearly labeled **"Proof of concept only"**, with **checkout disabled**.
+- Visible: nav link "Merch (concept)", /shop, product pages, bundles, cart (add/remove/quantities work).
+- Every shop page carries a prominent "Proof of concept only — no orders are accepted" banner/label; product pages say prices are illustrative.
+- Checkout is disabled defence-in-depth: (1) env `SHOP_CHECKOUT=disabled` (default when unset in production) — server refuses checkout/order creation/payment/webhook routes with a 403 `checkout_disabled` and the admin cannot override it; (2) UI replaces checkout CTAs with a disabled "Checkout disabled — proof of concept" state; (3) no payment provider credentials exist.
+- Build scope: phases 1–2 + this POC mode, then merge `merch-store` into `admin-cms` for deployment by ChrisBot. Phases 3–9 (orders, payments, pickup, reports) are deferred unless Chris asks later.
