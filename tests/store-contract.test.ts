@@ -57,6 +57,22 @@ export function storeContract(name: string, setup: () => Promise<{ store: Store;
       expect(await store.listDocs('events', { includeTrashed: true })).toHaveLength(2);
       expect(await reopen().getDoc('events', 'evt_b')).toEqual(first.doc);
     });
+    it('paginates global revisions deterministically and includes publication targets in audit filters', async () => {
+      const first = creation(doc('evt_one')), second = creation(doc('evt_two'));
+      second.revision.authorId = 'usr_b';
+      await store.createDoc(first); await store.createDoc(second);
+      const all = await store.queryRevisions({ limit: 1 });
+      expect(all.items).toHaveLength(1); expect(all.cursor).toBeTruthy();
+      const next = await store.queryRevisions({ limit: 1, cursor: all.cursor });
+      expect(next.items).toHaveLength(1); expect(next.items[0].id).not.toBe(all.items[0].id);
+      expect((await store.queryRevisions({ limit: 10, authorId: 'usr_b', collection: 'events' })).items.map(r => r.docId)).toEqual(['evt_two']);
+      expect((await store.queryRevisions({ limit: 10, collection: 'home' })).items).toEqual([]);
+      await expect(store.queryRevisions({ limit: 10, cursor: 'rev_missing' })).rejects.toThrow('cursor');
+      const entry = { ...audit(), action: 'content.publish', collection: undefined, docId: undefined, meta: { items: [{ collection: 'events', id: 'evt_one' }] } };
+      await store.recordAudit(entry);
+      expect((await store.queryAudit({ limit: 10, actionGroup: 'content', action: 'content.publish', collection: 'events', docId: 'evt_one' })).items).toEqual([entry]);
+      expect((await store.queryAudit({ limit: 10, actionGroup: 'auth' })).items).toEqual([]);
+    });
     it('requires audit and matching revision on creation', async () => {
       const input = creation();
       await expect(store.createDoc({ ...input, revision: { ...input.revision, docId: 'wrong' } })).rejects.toThrow('identity');

@@ -7,7 +7,7 @@ import { collectionNames, type CollectionName } from '../../shared/schema.js';
 import { validate, ValidationError } from '../content/validate.js';
 import { buildSnapshot } from '../content/snapshot.js';
 import { referenceUsage } from '../content/references.js';
-import type { AuditEntry, AuditQuery, CreateDoc, Doc, DocMutation, KvPrimitives, PublishRecord, PublishTx, Revision, RunExclusive, Session, Snapshot, Store, User } from './types.js';
+import type { AuditEntry, AuditQuery, CreateDoc, Doc, DocMutation, KvPrimitives, PublishRecord, PublishTx, RevisionQuery, Revision, RunExclusive, Session, Snapshot, Store, User } from './types.js';
 
 const part = (value: string): string => {
   keyPart(value);
@@ -309,6 +309,15 @@ export class KvStore implements Store {
     return revisions.filter(rev => rev.collection === collection && (!before || (boundary ? rev.at < boundary.at || (rev.at === boundary.at && (rev.docVersion < boundary.docVersion || rev.docVersion === boundary.docVersion && rev.id < boundary.id)) : rev.at < before)))
       .sort((a, b) => b.at.localeCompare(a.at) || b.docVersion - a.docVersion || b.id.localeCompare(a.id)).slice(0, pageLimit(limit));
   }
+  async queryRevisions(q: RevisionQuery): Promise<{ items: Revision[]; cursor?: string }> {
+    const limit = pageLimit(q.limit);
+    const all = [...new Map((await this.all<Revision>('revisions/')).map(row => [row.id, row])).values()]
+      .sort((a, b) => b.at.localeCompare(a.at) || b.docVersion - a.docVersion || b.id.localeCompare(a.id));
+    const start = q.cursor ? all.findIndex(row => row.id === q.cursor) + 1 : 0;
+    if (q.cursor && !start) throw new ApiError(422, 'validation', 'Invalid revision cursor');
+    const rows = all.slice(start).filter(row => (!q.collection || row.collection === q.collection) && (!q.authorId || row.authorId === q.authorId)).slice(0, limit + 1);
+    return { items: rows.slice(0, limit), ...(rows.length > limit ? { cursor: rows[limit - 1].id } : {}) };
+  }
   async getRevision(docId: string, revId: string): Promise<Revision | null> {
     const rev = await this.read<Revision>(revKey({ docId, id: revId }));
     if (rev) return rev;
@@ -337,8 +346,8 @@ export class KvStore implements Store {
         if (!afterCursor) { if (key === cursorKey) afterCursor = true; continue; }
         const row = await this.read<AuditEntry>(key);
         if (!row) continue;
-        if ((!q.actorId || row.actorId === q.actorId) && (!q.action || row.action === q.action) &&
-          (!q.collection || row.collection === q.collection) && (!q.docId || row.docId === q.docId) &&
+        if ((!q.actorId || row.actorId === q.actorId) && (!q.action || row.action === q.action) && (!q.actionGroup || row.action.startsWith(q.actionGroup + '.')) &&
+          (!q.collection || row.collection === q.collection || Array.isArray(row.meta?.items) && row.meta.items.some((item: { collection?: string }) => item.collection === q.collection)) && (!q.docId || row.docId === q.docId || Array.isArray(row.meta?.items) && row.meta.items.some((item: { id?: string }) => item.id === q.docId)) &&
           (!q.from || row.at >= q.from) && (!q.to || row.at <= q.to) && (!text || JSON.stringify(row).toLowerCase().includes(text))) rows.push(row);
         if (rows.length > limit) return { items: rows.slice(0, limit), cursor: rows[limit - 1].id };
       }

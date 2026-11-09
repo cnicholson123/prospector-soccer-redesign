@@ -1,8 +1,9 @@
 import type { CollectionName } from '../../shared/schema.js';
 import type { AuditEntry, Doc, PublishRecord, Revision, Session, Snapshot, User } from '../../shared/types.js';
 export type { AuditEntry, Doc, PublishRecord, Revision, Session, Snapshot, User } from '../../shared/types.js';
+export interface RevisionQuery { collection?: CollectionName; authorId?: string; limit: number; cursor?: string }
 export interface AuditQuery {
-  actorId?: string; action?: string; collection?: CollectionName; docId?: string;
+  actorId?: string; action?: string; actionGroup?: string; collection?: CollectionName; docId?: string;
   from?: string; to?: string; text?: string; limit: number; cursor?: string;
 }
 export interface CreateDoc {
@@ -32,6 +33,7 @@ export interface Store {
   listPublishes(limit: number, before?: number): Promise<PublishRecord[]>;
   getPublish(siteVersion: number): Promise<PublishRecord | null>;
   listRevisions(collection: CollectionName, id: string, limit: number, before?: string): Promise<Revision[]>;
+  queryRevisions(q: RevisionQuery): Promise<{ items: Revision[]; cursor?: string }>;
   getRevision(docId: string, revId: string): Promise<Revision | null>;
   queryAudit(q: AuditQuery): Promise<{ items: AuditEntry[]; cursor?: string }>;
   claimMaintenance(key: string, intervalMs: number, now: string): Promise<boolean>;

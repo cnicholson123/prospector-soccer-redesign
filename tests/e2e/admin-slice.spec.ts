@@ -11,7 +11,7 @@ async function keyboardActivate(page: Page, target: Locator) {
     if (await target.evaluate(element => element === document.activeElement)) { await page.keyboard.press('Enter'); return; }
     await page.keyboard.press('Tab');
   }
-  throw new Error('Target not reachable with Tab');
+  throw new Error(`Target not reachable with Tab: ${await target.innerText()}; focused: ${await page.evaluate(() => document.activeElement?.outerHTML.slice(0, 300))}`);
 }
 async function keyboardField(page: Page, target: Locator, value: string) {
   await expect(target).toBeVisible();
@@ -55,6 +55,7 @@ for (const { width, keyboard } of [{ width: 390, keyboard: false }, { width: 128
     const saved = await context.request.get(page.url().replace('/admin/events/', '/api/admin/docs/events/'));
     expect((await saved.json()).doc.draft.location).toBe('Club fields');
     await activate(page.getByRole('button', { name: 'Preview', exact: true }));
+    await expect(page.locator('iframe[title="Draft event preview"]')).toHaveAttribute('tabindex', '-1');
     await expect(page.frameLocator('iframe[title="Draft event preview"]').getByText(title, { exact: true })).toBeVisible();
     for (const device of ['iPad', 'Desktop', 'Phone']) await activate(page.getByRole('button', { name: device, exact: true }));
     await activate(page.getByRole('button', { name: 'Review & publish', exact: true }));
