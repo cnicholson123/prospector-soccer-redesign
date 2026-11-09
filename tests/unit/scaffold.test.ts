@@ -1,3 +1,4 @@
+import { bootstrapEnvironment } from '../helpers/password';
 import { describe, expect, it, vi } from 'vitest';
 import { adminApp } from '../../server/http/hono-app';
 import { loadConfig } from '../../server/config';
@@ -27,8 +28,8 @@ describe('Phase 0 scaffold', () => {
   ])('rejects invalid environment %j', env => {
     expect(() => loadConfig(env, () => undefined)).toThrow('Configuration:');
   });
-  it('accepts explicitly configured production and protects cookies', () => {
-    const env = { NODE_ENV: 'production', STORE_DRIVER: 'fs', SESSION_SECRET: 'a'.repeat(32), PUBLIC_BASE_URL: 'https://example.com', ADMIN_BOOTSTRAP_USER: 'Phil', ADMIN_BOOTSTRAP_PASSWORD: 'configured-secret' };
+  it('accepts explicitly configured production and protects cookies', async () => {
+    const env = { NODE_ENV: 'production', STORE_DRIVER: 'fs', SESSION_SECRET: 'a'.repeat(32), PUBLIC_BASE_URL: 'https://example.com', ...await bootstrapEnvironment() };
     expect(loadConfig(env).cacheSmaxage).toBe(15);
     expect(() => loadConfig({ ...env, COOKIE_SECURE: 'false' })).toThrow('COOKIE_SECURE');
   });

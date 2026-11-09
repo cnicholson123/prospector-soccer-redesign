@@ -16,6 +16,7 @@
     "export:golden": "tsx scripts/export-golden.ts",
     "check-facts": "tsx scripts/check-facts.ts",
     "db:migrate": "tsx --env-file-if-exists=.env scripts/db-migrate.ts",
+    "hash-password": "tsx scripts/hash-password.ts",
     "bootstrap": "tsx --env-file-if-exists=.env scripts/bootstrap.ts",
     "unlock": "tsx --env-file-if-exists=.env scripts/unlock.ts"
   },

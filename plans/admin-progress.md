@@ -259,3 +259,50 @@ Deviations / open issues
 - Signed Blob callbacks now have a dedicated cron-namespace URL to preserve the review's exact default-auth exemptions. This is SDK-configured and covered by mocked token/signature tests; a real Blob callback is not claimed without credentials.
 - Production cookie renaming signs out any pre-6b browser session using the former cookie name. No existing account is automatically rewritten by a later change to the bootstrap-only force-password flag.
 - No commit, push, deployment, hosting credentials, global configuration change or persistent change outside the repository was made. Temporary editing helpers initially created under `/tmp` were moved into the repository's ignored cache and removed from `/tmp`.
+
+## CHANGELOG — Section 19 — Hashed multi-user bootstrap — 2026-11-09
+
+Shipped
+
+- Added secret `ADMIN_BOOTSTRAP_USERS` configuration with canonical scrypt hashes, bounded arrays, case-insensitive duplicate detection, validated usernames/display names/roles, and an Owner requirement. Production requires this hashed configuration. The local single-user fallback supports `ADMIN_BOOTSTRAP_USERNAME`, the earlier `ADMIN_BOOTSTRAP_USER` alias, and `ADMIN_BOOTSTRAP_PASSWORD`.
+- Added `Store.bootstrapUsers` to both adapters. Missing users are created under the existing writer lock/SQL transaction, with a separate `system.bootstrap` audit for each creation. Existing credentials, roles, account status and names remain intact. FS per-account journals allow interrupted runs to resume safely. The earlier single-user Store method remains for its existing callers.
+- Added `npm run hash-password` / `scripts/hash-password.ts`. It consumes stdin, disables terminal echo for interactive input, restores terminal mode, bounds input, never accepts a command-line password, prints only the scrypt hash to stdout, and uses generic input errors. Production guidance explicitly sets `ADMIN_FORCE_PASSWORD_CHANGE=false`; false is now also the default in every environment.
+- Configured Playwright's isolated FS server with generated credentials and hashes for Phil and Chris (Owners), plus a generated short-password reminder fixture. New unit tests also generate passwords. No real password or credential was introduced into source, examples, logs or test fixtures.
+
+Verification
+
+- `npm run build` — PASS. `npm test` — PASS with the Phase 7a changes, 453 tests and 17 hosted-service skips. Tests cover concurrent/idempotent bootstrap, preservation of existing accounts, later missing-account creation, secret-free audit/config errors, canonical hash validation, generated-password login and the stdin hashing CLI. The shared bootstrap contract is included for FS and for Postgres when an environment is supplied.
+- Local real HTTP smoke — PASS for both configured Owners, authenticated APIs and the content lifecycle. No password appeared in child-process logs.
+- Real Neon/Postgres and private Blob services — **not run (no env)**. No database container, credential acquisition or deployment was attempted in this run.
+
+Decisions / compatibility
+
+- An explicit old `mustChangePassword` account flag is retained when bootstrap re-runs, as required by the no-overwrite rule. Existing opt-in enforcement remains compatible; new Section 19 hashed accounts have no forced change. Hash strength cannot be determined without plaintext; login re-evaluates weakness and the UI advises accordingly.
+
+## CHANGELOG — Phase 7a — Events vertical slice — 2026-11-09
+
+Shipped against §18.4 and the expanded dashboard request
+
+- Replaced the placeholder with the Preact/TypeScript admin SPA. It has a navy sidebar, gold active markers, cream canvas, white cards, Barlow Condensed headings, Manrope body, a top bar and phone bottom navigation. Only Dashboard, Events and Profile navigation is exposed in this slice.
+- Added the public utility-bar Admin link before the social icons, with the existing key SVG and all-width styling. The local sign-in hint enables the specified “Edit this page” link; page editors are still Phase 7b and that route explicitly identifies the upcoming workspace. Original public markup/styles/assets are retained except these authorized entry-link additions. All public golden fixtures are unchanged.
+- Added login with labelled/autocomplete fields, show/hide password, Caps Lock feedback, inline failures, lockout countdown and back-to-site navigation. Cookie-backed session loading and a same-origin CSRF client drive every API write. The optional weak-password banner is persistent across screens, dismissible per browser session, and links to a working password-change form.
+- Dashboard displays pending, scheduled and review counts, health findings and the last 15 permitted audit entries. Event/profile health findings link to their screens; findings requiring later-phase editors are identified without inventing those editors. Events list supports search, type/status filters, date/title sorting, status pills and an empty state.
+- Added the generic schema-driven form for every field type used by Events: text, select, date, time, URL, constrained rich text with formatting/preview, and boolean. It shares validation and rich-text rendering with the server. The editor provides field errors, autosave after 1.5 seconds and on blur/navigation, serialized in-flight saves, retry/backoff, per-user/document local recovery, navigation/unload protection and explicit checkpoints. Native input undo remains available. A 409 preserves the local draft and shows schema-aware side-by-side comparison with Discard mine / Keep mine; keep-mine retries at the returned version as a new checkpoint.
+- Added draft preview with true 390/820/1280 viewports scaled to the available pane, explicit device controls and open-in-new-tab. A development-only same-origin Vite preview proxy preserves the existing frame CSP while using the :3000 renderer. Preview refreshes on saved versions. Phone editor panels switch between the form, preview and history.
+- Added the global publish tray with collection groups, versioned selections, field/word comparisons, optional notes, stale-selection reload, read-only presentation for non-publishers and accurate purge-result copy. “View live” includes the returned site version.
+- Added document History with paginated revisions, authors/times/actions/summaries, schema/word diffs, explicit restore confirmation, version-checked draft restore, then ordinary publication. Restore does not claim automatic publication or hide partial-success contracts.
+- Added Playwright's full create/edit/preview/publish/public-verification/restore/republish flow at 390px and 1280px, plus a 1280px keyboard-only pass, login layout screenshots, and optional reminder coverage. The flow publishes the changed title before restoring, so the final public assertion verifies a real content change.
+
+Verification / remaining acceptance gates
+
+- `npm run build` — PASS, including strict TypeScript. `npm test` — PASS, **453 tests**, 17 explicit hosted-service skips. All eight public golden comparisons pass. New client-state tests verify in-flight keystroke preservation, versioned conflict overwrite, recovery gating and schema validation.
+- `npm run check-facts` — PASS, 122 inventory facts. `git diff --check` — PASS.
+- Real local HTTP smoke — PASS for public Admin markup, built SPA deep links, generated multi-user login, create/edit, private preview, publication, earlier-revision restore, republish/public content and dashboard health/activity.
+- `npm run test:e2e -- --list` — PASS, **19 tests in six specs**. Browser execution — **not run (sandbox)**. Chrome must run these specs afterwards. Visual browser QA and Lighthouse login/editor accessibility scores (required threshold ≥95) — **not run (sandbox)**; no score or browser acceptance pass is claimed.
+- Real Neon/Postgres and private Blob — **not run (no env)**. Later-phase work has not started; the browser acceptance gate for Phase 7b remains open.
+
+Scope / open issues
+
+- Remaining collection/page editors, full media/profile/session administration, bulk/trash/reordering UI, scheduling UI, site-wide history/audit screens, inline editing and the command palette remain in their assigned later phases. No additional dependency was added.
+- Existing must-change flags are honored for compatibility. Production bootstrap guidance and all new hashed accounts use optional password changes.
+- No commit, push, deployment, global configuration edit or persistent edit outside this repository was made. Real account secrets must still be supplied through the deployment environment when hosting is authorized.

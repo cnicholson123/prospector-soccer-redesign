@@ -413,6 +413,19 @@ export class KvStore implements Store {
   recordAudit(entry: AuditEntry): Promise<void> {
     return this.exclusive(async () => { await this.checkAudit(entry); await this.kv.put(auditKey(entry), entry); });
   }
+  bootstrapUsers(entries: { user: User; audit: AuditEntry }[]): Promise<number> {
+    return this.exclusive(async () => {
+      if (!(await this.listUsers()).some(u => u.active && u.role === 'Owner') && !entries.some(e => e.user.active && e.user.role === 'Owner')) throw new Error('Bootstrap requires an active Owner');
+      let created = 0;
+      for (const { user, audit: entry } of entries) {
+        if (await this.getUserByUsername(user.username)) continue;
+        await this.checkAudit(entry);
+        await this.saveUser(user, entry);
+        created++;
+      }
+      return created;
+    });
+  }
   bootstrapOwner(user: User, entry: AuditEntry): Promise<boolean> {
     return this.exclusive(async () => {
       if ((await this.listUsers()).length) return false;

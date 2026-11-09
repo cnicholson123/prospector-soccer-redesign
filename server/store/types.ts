@@ -41,6 +41,7 @@ export interface Store {
   revokeSessions(userId: string, audit: AuditEntry, options?: { hash?: string; except?: string; seal?: boolean }): Promise<boolean>;
   loginFailure(key: string, now: string): Promise<{ failures: number; locks: number; until?: string }>;
   recordAudit(entry: AuditEntry): Promise<void>;
+  bootstrapUsers(entries: { user: User; audit: AuditEntry }[]): Promise<number>;
   bootstrapOwner(user: User, audit: AuditEntry): Promise<boolean>;
   changeUser(user: User, actorId: string, audit: AuditEntry, expected: User | null): Promise<void>;
   sealWorkingRevisions(authorId: string, before: string, audit: AuditEntry): Promise<void>;

@@ -1,3 +1,4 @@
+import { adminPassword } from './credentials';
 import { expect, test } from '@playwright/test';
 // Phase 4/5 exercise the HTTP engine and authenticated public preview. The
 // actual login/editor screens and keyboard UI flow belong to Phase 7a.
@@ -5,9 +6,9 @@ for (const width of [390, 1280]) {
   test(`authenticated content lifecycle and preview at ${width}px`, async ({ page, context }) => {
     await page.setViewportSize({ width, height: 900 });
     const api = context.request;
-    const login = await api.post('/api/admin/auth/login', { data: { username: 'Phil', password: 'Phil' } });
+    const login = await api.post('/api/admin/auth/login', { data: { username: 'Phil', password: adminPassword } });
     expect(login.ok()).toBeTruthy();
-    const session = await login.json(); expect(session.passwordWeak).toBe(true);
+    const session = await login.json(); expect(session.passwordWeak).toBe(false);
     const headers = { 'X-CSRF-Token': session.csrfToken, Origin: 'http://localhost:3000' };
     const draft = { title: `Engine original ${width}`, date: '2099-01-01', showOnHome: true };
     const created = await api.post('/api/admin/docs/events', { headers, data: { draft } });

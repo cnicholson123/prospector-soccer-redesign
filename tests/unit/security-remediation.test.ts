@@ -1,3 +1,4 @@
+import { bootstrapEnvironment } from '../helpers/password';
 import { afterEach, expect, it, vi } from 'vitest';
 import { rm } from 'node:fs/promises';
 import { adminFixture } from '../helpers/admin';
@@ -159,7 +160,7 @@ it('F-M3: overlong keys, invalid doc IDs and invalid login usernames return 4xx 
   for (const username of ['a'.repeat(101), 'a/b', '..']) expect((await f.req('/auth/login', 'POST', { username, password: 'bad' })).status).toBe(422);
   recover.mockClear(); expect((await f.req('/auth/me')).status).toBe(200); expect(recover).not.toHaveBeenCalled();
 });
-it('bootstrap policy defaults by environment and forces only me/password/logout until changed', async () => {
+it('bootstrap policy is opt-in and forced accounts allow only me/password/logout until changed', async () => {
   const f = await fixture(false, { adminForcePasswordChange: true });
   expect((await f.req('/auth/me')).status).toBe(200);
   for (const path of ['/dashboard','/auth/sessions','/future']) {
@@ -169,7 +170,7 @@ it('bootstrap policy defaults by environment and forces only me/password/logout 
   expect((await f.login('Phil', 'Strong replacement phrase')).response.status).toBe(200); expect((await f.req('/dashboard')).status).toBe(200);
   expect(f.config.adminForcePasswordChange).toBe(true);
   expect(loadConfig({}, () => {}).adminForcePasswordChange).toBe(false);
-  expect(loadConfig({ NODE_ENV:'production', STORE_DRIVER:'fs', PUBLIC_BASE_URL:'https://example.com', SESSION_SECRET:'x'.repeat(32), ADMIN_BOOTSTRAP_USER:'Phil', ADMIN_BOOTSTRAP_PASSWORD:'Phil' }).adminForcePasswordChange).toBe(true);
+  expect(loadConfig({ NODE_ENV:'production', STORE_DRIVER:'fs', PUBLIC_BASE_URL:'https://example.com', SESSION_SECRET:'x'.repeat(32), ...await bootstrapEnvironment() }).adminForcePasswordChange).toBe(false);
 });
 it('F-L2: current-password attempts are capped at ten per user per fifteen minutes', async () => {
   const f = await fixture();

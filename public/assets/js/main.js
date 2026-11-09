@@ -6,6 +6,16 @@
   const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
   const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
+  // A local hint only. Authentication is always checked by the admin API.
+  try {
+    const adminLink = $(".utility-bar__admin");
+    if (adminLink && localStorage.psc_admin === "1") {
+      const page = location.pathname.replace(/\.html$/, "").split("/").filter(Boolean)[0] || "home";
+      adminLink.lastChild.textContent = " Edit this page";
+      adminLink.href = `/admin/pages/${page === "index" ? "home" : page}`;
+    }
+  } catch { /* The public link remains usable when storage is disabled. */ }
+
   /* ---------- Header shadow on scroll ---------- */
   const header = $("[data-header]");
   if (header) {

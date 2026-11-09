@@ -7,5 +7,5 @@ export default defineConfig({
   plugins: [preact()],
   build: { outDir: '../public/admin', emptyOutDir: true },
   server: { host: '127.0.0.1', port: 5173, strictPort: true,
-    proxy: { '/media': 'http://localhost:3000', '/api': 'http://localhost:3000', '/assets': 'http://localhost:3000', '/blobs': 'http://localhost:3000' } },
+    proxy: { '/preview': { target: 'http://localhost:3000', rewrite: path => path.replace(/^\/preview/, '/') }, '/media': 'http://localhost:3000', '/api': 'http://localhost:3000', '/assets': 'http://localhost:3000', '/blobs': 'http://localhost:3000' } },
 });

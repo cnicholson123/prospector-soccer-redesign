@@ -1,5 +1,5 @@
 import { randomBytes, scrypt, timingSafeEqual } from 'node:crypto';
-import common from './common-passwords.json';
+import common from './common-passwords.json' with { type: 'json' };
 import { ApiError } from '../http/middleware/errors';
 // First 1,000 entries of SecLists Common-Credentials/10k-most-common.txt.
 // https://github.com/danielmiessler/SecLists (MIT); see common-passwords.LICENSE.
@@ -10,6 +10,16 @@ const derive = (password: string, salt: Buffer): Promise<Buffer> => new Promise(
 export async function hashPassword(password: string): Promise<string> {
   const salt = randomBytes(16);
   return `scrypt$15$8$1$${salt.toString('base64')}$${(await derive(password, salt)).toString('base64')}`;
+}
+/** Only canonical hashes produced by hashPassword are accepted in configuration. */
+export function isPasswordHash(value: unknown): value is string {
+  if (typeof value !== 'string') return false;
+  const parts = value.split('$');
+  return parts.length === 6 && parts.slice(0, 4).join('$') === 'scrypt$15$8$1' &&
+    [16, 64].every((size, i) => {
+      const bytes = Buffer.from(parts[i + 4], 'base64');
+      return bytes.length === size && bytes.toString('base64') === parts[i + 4];
+    });
 }
 const dummySalt = Buffer.alloc(16, 73);
 export async function verifyPassword(password: string, encoded?: string): Promise<boolean> {

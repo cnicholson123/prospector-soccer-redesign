@@ -30,9 +30,9 @@ Official references: [Vercel link](https://vercel.com/docs/cli/link), [CLI scope
 | `DATABASE_URL` | Optional; tests skip without it | Neon pooled TLS URL; server only |
 | `BLOB_READ_WRITE_TOKEN` | Optional; real-service test skips without it | Token for a private Blob store; server only |
 | `SESSION_SECRET` | Ephemeral if absent | Persistent random secret, at least 32 bytes; signs upload tickets |
-| `ADMIN_BOOTSTRAP_USER` | `Phil` | Explicit nonblank initial Owner username |
-| `ADMIN_BOOTSTRAP_PASSWORD` | `Phil` when unset/empty | Explicit nonblank initial password; never commit it |
-| `ADMIN_FORCE_PASSWORD_CHANGE` | `false` | `true`; boolean override, applies at bootstrap |
+| `ADMIN_BOOTSTRAP_USERS` | Optional secret JSON array | Required array of `{username, displayName, role, passwordHash}` for Phil and Chris, both Owner |
+| `ADMIN_BOOTSTRAP_USERNAME` / `ADMIN_BOOTSTRAP_PASSWORD` | Local single-user fallback; legacy `ADMIN_BOOTSTRAP_USER` alias supported | Development only |
+| `ADMIN_FORCE_PASSWORD_CHANGE` | `false` | **`false`**; password changes are optional |
 | `PUBLIC_BASE_URL` | `http://localhost:3000` | Exact HTTPS origin, initially `https://prospector-soccer-redesign.vercel.app` if assigned |
 | `COOKIE_SECURE` | `false` | `true` |
 | `CACHE_SMAXAGE` | `0` | `15` |
@@ -63,7 +63,11 @@ npm test
 
 Run migrations explicitly before seeding or starting the application; HTTP handlers do not perform DDL. Keep schema changes additive for rollback compatibility. `seed` is idempotent and refuses to overwrite edited content unless explicitly forced. Do not use `--force` on a live database as a deployment step. This release seeds a new production database; it does **not** provide a full FS-to-Postgres import of existing edit history/users/sessions. Export and plan that separately if local edited data must be preserved.
 
-`bootstrap` creates one active Owner only if no users exist. The application also bootstraps lazily on its first non-health admin request. Concurrent requests cannot create two bootstrap Owners. Later bootstrap env changes do not reset an existing user. Sign in with those explicit credentials; `POST /api/admin/auth/password` accepts `{ "current": "…", "next": "…" }` with session cookie, Origin and `X-CSRF-Token`. New passwords must meet the policy. `ADMIN_FORCE_PASSWORD_CHANGE` defaults to `true` in production and `false` in development/test. When enabled, a weak bootstrap password sets `mustChangePassword`: that user can access only `/auth/me`, `/auth/password` and `/auth/logout` until changing it; preview is also denied. When disabled, weakness remains advisory (`passwordWeak` and the restricted dashboard health item); the persistent, per-session-dismissible banner/profile UI remains Phase 7a/11 work. This flag only affects initial bootstrap; changing it later does not rewrite existing users. There is no email reset provider; another authorized administrator resets credentials.
+`npm run hash-password` prompts for a password with terminal echo disabled and prints only its scrypt hash to stdout. It also accepts one password through stdin for secret-manager pipelines. Never pass a password as an argument, paste it into a shell command, commit it, or include it in logs. Run the command separately for Phil and Chris, then use the hashes in the secret `ADMIN_BOOTSTRAP_USERS` JSON array. Each entry has `username`, `displayName`, `role` (`Owner` for both initial accounts), and `passwordHash`. The hash must match the canonical scrypt format from `server/auth/password.ts`. The configuration validates the complete array before any creation and rejects duplicate case-insensitive names, invalid roles/hashes and arrays without an Owner. Configure strong passwords. Strength is re-evaluated at login because it cannot be inferred from a hash.
+
+Bootstrap creates missing users only, under the store's writer lock/transaction, and records `system.bootstrap` per creation. Existing users retain their password, role, name and status. Restart or run `npm run bootstrap` to add a later configured account. Removing an entry never deletes an account. The application also bootstraps lazily on its first non-health admin request. Concurrent runs and interrupted FS writes are safe to retry.
+
+Set `ADMIN_FORCE_PASSWORD_CHANGE=false` in production. It also defaults to false. Password changes are always available through Profile. Weak credentials show an optional reminder, dismissible for the browser session, and a restricted dashboard health item. Existing `mustChangePassword` flags are retained for compatibility; changing bootstrap configuration does not rewrite existing users. There is no email reset provider; another authorized administrator resets credentials.
 
 Only after the above checks and separate authorization:
 

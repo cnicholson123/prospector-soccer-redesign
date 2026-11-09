@@ -1,3 +1,4 @@
+import { bootstrapEnvironment } from '../helpers/password';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -32,13 +33,13 @@ async function local() {
 }
 
 describe('Phase 1b config and runtime dispatch', () => {
-  it('requires explicit production bootstrap credentials and preserves dev defaults', () => {
+  it('requires hashed production bootstrap credentials and preserves dev defaults', async () => {
     const env = { NODE_ENV: 'production', STORE_DRIVER: 'fs', SESSION_SECRET: 'x'.repeat(32), PUBLIC_BASE_URL: 'https://example.com' };
     for (const credentials of [{}, { ADMIN_BOOTSTRAP_USER: 'Phil' }, { ADMIN_BOOTSTRAP_PASSWORD: 'secret' }, { ADMIN_BOOTSTRAP_USER: ' ', ADMIN_BOOTSTRAP_PASSWORD: 'secret' }]) {
       expect(() => loadConfig({ ...env, ...credentials })).toThrow('ADMIN_BOOTSTRAP');
     }
-    const prod = loadConfig({ ...env, ADMIN_BOOTSTRAP_USER: 'Owner', ADMIN_BOOTSTRAP_PASSWORD: 'chosen' });
-    expect(prod.adminBootstrapUser).toBe('Owner'); expect(prod.adminBootstrapPassword).toBe('chosen');
+    const prod = loadConfig({ ...env, ...await bootstrapEnvironment() });
+    expect(prod.adminBootstrapUsers?.[0].username).toBe('Owner');
     const dev = loadConfig({ ADMIN_BOOTSTRAP_PASSWORD: '' }, () => undefined);
     expect(dev.adminBootstrapUser).toBe('Phil'); expect(dev.adminBootstrapPassword).toBe('Phil');
   });

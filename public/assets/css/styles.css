@@ -177,6 +177,10 @@ ul, ol { margin: 0; padding: 0; }
 .utility-bar__links a { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; color: rgb(255 255 255 / .8); transition: background .15s, color .15s; }
 .utility-bar__links a:hover { background: rgb(255 255 255 / .1); color: var(--gold-300); }
 .utility-bar__links svg { width: 16px; height: 16px; }
+.utility-bar__admin { display: inline-flex; align-items: center; gap: 6px; flex: none; margin-left: auto; min-height: 38px; color: rgb(255 255 255 / .85); text-decoration: none; font-weight: 700; font-size: 11px; white-space: nowrap; }
+.utility-bar__admin svg { width: 14px; height: 14px; }
+.utility-bar__admin:hover { color: var(--gold-300); }
+.utility-bar__admin:focus-visible { outline: 2px solid var(--gold-300); outline-offset: 2px; }
 @media (max-width: 560px) { .utility-bar__links, .hide-sm { display: none; } }
 
 /* ---------- Header ---------- */

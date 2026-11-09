@@ -1,3 +1,5 @@
+import { generatedPassword } from './helpers/password';
+import { hashPassword } from '../server/auth/password';
 import { postgresFixture } from './helpers/postgres';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises';
@@ -33,6 +35,16 @@ export function storeContract(name: string, setup: () => Promise<{ store: Store;
     let store: Store; let reopen: () => Store; let cleanup: () => Promise<void>; let advance: (ms: number) => void;
     beforeEach(async () => { ({ store, reopen, cleanup, advance } = await setup()); });
     afterEach(async () => { await cleanup?.(); });
+    it('bootstraps missing users once across instances without overwriting accounts', async () => {
+      const passwordHash = await hashPassword(generatedPassword());
+      const entries = ['Phil', 'Chris'].map((name, index) => ({ user: { ...user(`usr_boot${index}`, name), passwordHash }, audit: { ...audit(), action: 'system.bootstrap' } }));
+      const counts = await Promise.all([store.bootstrapUsers(entries), reopen().bootstrapUsers(entries)]);
+      expect(counts.reduce((a, b) => a + b, 0)).toBe(2);
+      expect(await store.listUsers()).toHaveLength(2);
+      expect(await store.bootstrapUsers(entries.map(entry => ({ ...entry, user: { ...entry.user, role: 'Viewer' }, audit: { ...audit(), action: 'system.bootstrap' } })))).toBe(0);
+      expect((await store.listUsers()).every(u => u.role === 'Owner')).toBe(true);
+      expect((await store.queryAudit({ action: 'system.bootstrap', limit: 10 })).items).toHaveLength(2);
+    });
     it('creates with history and audit, orders, trashes and persists documents', async () => {
       const first = creation(doc('evt_b', 2));
       await store.createDoc(first); await store.createDoc(creation(doc('evt_a', 1)));

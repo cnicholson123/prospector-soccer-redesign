@@ -40,6 +40,7 @@ export function layout(view: SnapshotView, pageName: PageName, content: Html, me
   ${site.boolean("utilityBar.enabled") ? html`<div class="utility-bar">
     <div class="container utility-bar__inner">
       <p class="utility-bar__note"><span class="pill pill--gold"${site.edit("utilityBar.pillText")}>${site.text("utilityBar.pillText")}</span> <span class="hide-sm"${site.edit("utilityBar.messageLong")}>${site.text("utilityBar.messageLong")} </span>${site.text("utilityBar.message")}</p>
+      <a class="utility-bar__admin" href="/admin">${icon('key')} Admin</a>
       <ul class="utility-bar__links" aria-label="Social media">
         <li><a href="${site.url("socials.facebook")}" target="_blank" rel="noopener" aria-label="Facebook">${icon("facebook", " viewBox=\"0 0 24 24\" aria-hidden=\"true\"")}</a></li>
         <li><a href="${site.url("socials.instagram")}" target="_blank" rel="noopener" aria-label="Instagram">${icon("instagram", " viewBox=\"0 0 24 24\" aria-hidden=\"true\"")}</a></li>

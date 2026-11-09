@@ -1,1 +1,1 @@
-:root { --navy: #0B2A5B; --blue: #1D5BD6; --gold: #F2B705; --cream: #FBF8F1; --muted: #526173; --font-display: 'Barlow Condensed', 'Arial Narrow', sans-serif; --font-body: 'Manrope', system-ui, sans-serif; }
+:root { --navy: #0B2A5B; --navy-deep: #071D40; --blue: #1D5BD6; --gold: #F2B705; --cream: #FBF8F1; --muted: #526173; --border: #e1e6ec; --green: #156743; --red: #a52a35; --font-display: 'Barlow Condensed', 'Arial Narrow', sans-serif; --font-body: 'Manrope', system-ui, sans-serif; --radius: 16px; --shadow: 0 8px 32px #0b2a5b08; }

@@ -1,8 +1,9 @@
+import { adminPassword } from './credentials';
 import { test, expect } from '@playwright/test';
 // Run with installed Chrome outside the Codex sandbox, like the Phase 6 specs.
 test('security remediation: default auth, bounded input, tokens, audit and retained creation history', async ({ request }) => {
   expect((await request.get('/api/admin/future-admin-route')).status()).toBe(401);
-  const login = await request.post('/api/admin/auth/login', {data:{username:'Phil',password:'Phil'}});
+  const login = await request.post('/api/admin/auth/login', {data:{username:'Phil',password:adminPassword}});
   expect(login.status()).toBe(200);
   const {csrfToken} = await login.json();
   const headers = {'X-CSRF-Token':csrfToken, Origin:'http://localhost:3000'};

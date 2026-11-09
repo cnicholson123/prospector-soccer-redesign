@@ -1,8 +1,9 @@
+import { adminPassword } from './credentials';
 import { expect, test } from '@playwright/test';
 // Phase 6 exercises storage over real HTTP; the dropzone/editor is Phase 10.
 test('quarantines an upload, verifies it and serves only finalized media',async({context})=>{
   const api=context.request;
-  const login=await api.post('/api/admin/auth/login',{data:{username:'Phil',password:'Phil'}});
+  const login=await api.post('/api/admin/auth/login',{data:{username:'Phil',password:adminPassword}});
   expect(login.ok()).toBeTruthy();
   const headers={'X-CSRF-Token':(await login.json()).csrfToken,Origin:'http://localhost:3000'};
   const bytes=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aMsAAAAAASUVORK5CYII=','base64');
