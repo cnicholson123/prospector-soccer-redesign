@@ -28,7 +28,7 @@ const server = createServer(async (req, res) => {
     let size = 0;
     for await (const chunk of req) {
       const bytes = Buffer.from(chunk as Uint8Array); size += bytes.length;
-      if (size > config.maxFileBytes) { res.writeHead(413); res.end('Request too large'); return; }
+      if (size > (url.pathname.startsWith('/api/admin') ? 1024 * 1024 : config.maxFileBytes)) { res.writeHead(413); res.end('Request too large'); return; }
       chunks.push(bytes);
     }
     const request = new Request(url, { method, headers, ...(method === 'GET' || method === 'HEAD' ? {} : { body: Buffer.concat(chunks) }) });
@@ -41,6 +41,7 @@ const server = createServer(async (req, res) => {
     else if (url.pathname.startsWith('/assets/')) response = await staticFile('public', decodeURIComponent(url.pathname.slice(1)));
     else response = await renderPublic(request);
     response ??= new Response('Not found', { status: 404 });
+    if ((url.pathname === '/admin' || url.pathname.startsWith('/admin/')) && !url.pathname.startsWith('/admin/assets/')) response.headers.set('Cache-Control', 'no-store');
     res.writeHead(response.status, Object.fromEntries(response.headers));
     res.end(method === 'HEAD' ? undefined : Buffer.from(await response.arrayBuffer()));
   } catch (error) { console.error(error); if (!res.headersSent) res.writeHead(500); res.end('Internal server error'); }

@@ -458,7 +458,7 @@ Retired at Phase 12: `build.py`, `src/`, `docs/`, root `assets/` (moved to `publ
 
 ## 13. Conventions for Codex
 
-- TypeScript strict, ESM, Node ≥ 22 (`engines`), no `any` in `server/` and `shared/`. No new dependencies beyond: `hono`, `@neondatabase/serverless`, `@vercel/blob`, `@vercel/functions`, `diff`, `preact`, `@preact/signals`, `preact-iso`; dev: `typescript`, `vite`, `@preact/preset-vite`, `vitest`, `@playwright/test`, `tsx`. Ask (stop and report) before adding anything else.
+- TypeScript strict, ESM, Node ≥ 22 (`engines`), no `any` in `server/` and `shared/`. No new dependencies beyond: `hono`, `@neondatabase/serverless`, `@vercel/blob`, `@vercel/functions`, `diff`, `preact`, `@preact/signals`, `preact-iso`; dev: `@types/node@^22`, `typescript`, `vite`, `@preact/preset-vite`, `vitest`, `@playwright/test`, `tsx`. Ask (stop and report) before adding anything else.
 - Every API route: `requirePermission` → validate → store → audit. Every store call goes through the `Store` interface; no driver-specific code outside `server/store`.
 - Public HTML must keep every class name, attribute and structure from the existing pages; the golden test is the arbiter. Do not "improve" markup.
 - No emojis in UI copy. Sentence case. Toast copy ≤ 60 chars.

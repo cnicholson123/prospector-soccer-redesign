@@ -8,10 +8,13 @@ export interface Doc<T = unknown> {
   trashedAt?: string; trashedBy?: string;
   createdAt: string; createdBy: string; updatedAt: string; updatedBy: string;
 }
-export interface PublishedDoc<T = unknown> { id: string; collection: CollectionName; data: T; version: number; order?: number }
-export interface ScheduledItem { collection: CollectionName; id: string; at: string; data: unknown; version: number; order?: number }
+export interface PublishedDoc<T = unknown> { id: string; collection: CollectionName; data: T; version: number; order: number }
+export interface ScheduledItem { collection: CollectionName; id: string; at: string; data: unknown; version: number; order: number }
 export interface Snapshot {
-  siteVersion: number; publishedAt: string;
+  schemaVersion: number; siteVersion: number; publishedAt: string;
+  /** Latest scheduled time incorporated into this snapshot by settlement. */
+  effectiveAt?: string;
+  media: Record<string, { url: string; mime: string; width: number; height: number; alt: string }>;
   docs: Partial<Record<CollectionName, PublishedDoc[]>>;
   scheduled: ScheduledItem[]; templateHash: string;
 }
@@ -23,8 +26,8 @@ export interface Revision {
 }
 export interface PublishRecord {
   siteVersion: number; at: string; actorId: string; summary?: string;
-  manifest: { collection: CollectionName; id: string; version: number; title: string; revId: string }[];
-  kind: 'publish' | 'restore' | 'schedule'; restoredFrom?: number;
+  manifest: { collection: CollectionName; id: string; version: number; title: string; revId: string; order: number }[];
+  kind: 'publish' | 'unpublish' | 'schedule' | 'restore' | 'rebuild'; restoredFrom?: number;
 }
 export interface AuditEntry {
   id: string; at: string; actorId: string; actorName: string; action: string;

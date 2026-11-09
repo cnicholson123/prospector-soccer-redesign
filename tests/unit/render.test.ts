@@ -114,7 +114,7 @@ describe('filesystem seed and HTTP entry point', () => {
     for (const entry of publish!.manifest) {
       const doc = await store.getDoc(entry.collection, entry.id);
       expect(doc?.published).toEqual(doc?.draft);
-      expect((await store.getRevision(entry.revId))?.data).toEqual(doc?.published);
+      expect((await store.getRevision(entry.id, entry.revId))?.data).toEqual(doc?.published);
     }
     expect(await seedStore(store)).toEqual({ changed: false, count: 111 });
     expect((await store.getSnapshot())?.siteVersion).toBe(1);
@@ -196,7 +196,8 @@ describe('filesystem seed and HTTP entry point', () => {
     } finally { read.mockRestore(); }
   });
   it('refuses all seed writes before overwriting edited content, supports explicit force', async () => {
-    await store.updateDoc('home', 'home', 1, { draft: { note: 'Edited' } });
+    await store.mutateDoc({ collection: 'home', id: 'home', expectedVersion: 1, patch: { draft: { note: 'Edited' } },
+      audit: { id: 'aud_test_edit', at: '2026-11-09T00:00:00.000Z', actorId: 'test', actorName: 'Test', action: 'content.edit' } });
     await expect(seedStore(store)).rejects.toThrow('Refusing to overwrite edited home/home');
     expect((await store.getSnapshot())?.siteVersion).toBe(1);
     expect((await store.getDoc('home', 'home'))?.draft).toEqual({ note: 'Edited' });

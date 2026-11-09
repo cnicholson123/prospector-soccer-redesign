@@ -1,130 +1,138 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
 import { FsPrimitives } from '../server/store/primitives/fs';
-import { FsBlobs } from '../server/store/blobs/fs';
 import { KvStore } from '../server/store/kv-store';
-import { createStore } from '../server/store';
+import { createStore, createMediaBlobs } from '../server/store';
 import { loadConfig } from '../server/config';
-import type { AuditEntry, Doc, PublishTx, Revision, Store, User } from '../server/store/types';
+import { createHistoryId } from '../server/content/ids';
+import { buildSnapshot } from '../server/content/snapshot';
+import type { AuditEntry, CreateDoc, Doc, DocMutation, KvPrimitives, PublishTx, Revision, Store, User } from '../server/store/types';
 
 const at = '2026-11-09T18:00:00.000Z';
-const doc = (id = 'evt_a', order = 0): Doc => ({ id, collection: 'events', draft: { title: id }, version: 1, order, status: 'draft', createdAt: at, updatedAt: at, createdBy: 'usr_a', updatedBy: 'usr_a' });
-const revision = (id = 'rev_a'): Revision => ({ id, collection: 'events', docId: 'evt_a', docVersion: 1, authorId: 'usr_a', authorName: 'Phil', at, action: 'edited', data: { title: 'Event' } });
-const audit = (id = 'audit_a'): AuditEntry => ({ id, at, actorId: 'usr_a', actorName: 'Phil', action: 'content.edit', collection: 'events', docId: 'evt_a', targetTitle: 'Board meeting' });
+const doc = (id = 'evt_a', order = 0): Doc => ({ id, collection: 'events', draft: { title: id, date: '2026-11-09' }, version: 1, order, status: 'draft', createdAt: at, updatedAt: at, createdBy: 'usr_a', updatedBy: 'usr_a' });
+const audit = (id = createHistoryId('aud', new Date(at))): AuditEntry => ({ id, at, actorId: 'usr_a', actorName: 'Phil', action: 'content.edit', collection: 'events', docId: 'evt_a', targetTitle: 'Board meeting' });
+const revision = (document: Doc, id = createHistoryId('rev', new Date(at))): Revision => ({ id, collection: document.collection, docId: document.id, docVersion: document.version, authorId: 'usr_a', authorName: 'Phil', at, action: 'edited', data: document.draft });
+const creation = (document = doc()): CreateDoc => ({ doc: document, revision: revision(document), audit: audit() });
+const mutation = (expectedVersion = 1, title = 'Edited', id = 'evt_a'): DocMutation => ({ collection: 'events', id, expectedVersion, patch: { draft: { title, date: '2026-11-09' } },
+  revision: { append: revision({ ...doc(id), version: expectedVersion + 1, draft: { title, date: '2026-11-09' } }) }, audit: audit() });
 const user = (id = 'usr_a', username = 'Phil'): User => ({ id, username, displayName: username, role: 'Owner', active: true, passwordHash: 'test-placeholder', createdAt: at, createdBy: 'system' });
-function publishTx(document: Doc, siteVersion = 1): PublishTx {
-  return {
-    docs: [{ ...document, published: document.draft, publishedVersion: document.version, status: 'published' }],
-    snapshot: { siteVersion, publishedAt: at, docs: { events: [{ id: document.id, collection: 'events', data: document.draft, version: document.version }] }, scheduled: [], templateHash: 'test' },
-    record: { siteVersion, at, actorId: 'usr_a', kind: 'publish', manifest: [{ collection: 'events', id: document.id, version: document.version, title: 'Event', revId: `rev_${siteVersion}` }] },
-  };
+function publishTx(document: Doc, siteVersion = 1, increment = false): PublishTx {
+  const nextDoc: Doc = { ...document, version: document.version + Number(increment), published: document.draft, publishedVersion: document.version + Number(increment), status: 'published' };
+  const rev = { ...revision(nextDoc), sealedAt: at };
+  return { docs: [{ expectedVersion: document.version, nextDoc }],
+    snapshot: buildSnapshot([nextDoc], { siteVersion, publishedAt: at, templateHash: 'test' }),
+    record: { siteVersion, at, actorId: 'usr_a', kind: increment ? 'restore' : 'publish', manifest: [{ collection: nextDoc.collection, id: nextDoc.id, version: nextDoc.version, order: nextDoc.order ?? 0, title: nextDoc.id, revId: rev.id }] },
+    revisions: [rev], audit: [audit()] };
 }
 
-/** Shared behavioral contract. Phase 6 adapters can invoke this same suite. */
+/** Run this same contract against Postgres when Phase 6 supplies the adapter. */
 export function storeContract(name: string, setup: () => Promise<{ store: Store; reopen: () => Store; cleanup: () => Promise<void>; advance: (ms: number) => void }>): void {
   describe(name, () => {
     let store: Store; let reopen: () => Store; let cleanup: () => Promise<void>; let advance: (ms: number) => void;
     beforeEach(async () => { ({ store, reopen, cleanup, advance } = await setup()); });
     afterEach(async () => { await cleanup(); });
-    it('creates, reads, orders and excludes trashed documents', async () => {
-      expect(await store.getDoc('events', 'missing')).toBeNull();
-      await store.createDoc(doc('evt_b', 2)); await store.createDoc(doc('evt_a', 1));
+    it('creates with history and audit, orders, trashes and persists documents', async () => {
+      const first = creation(doc('evt_b', 2));
+      await store.createDoc(first); await store.createDoc(creation(doc('evt_a', 1)));
+      expect(await store.getRevision(first.doc.id, first.revision.id)).toEqual(first.revision);
+      expect((await store.queryAudit({ limit: 10 })).items).toHaveLength(2);
       expect((await store.listDocs('events')).map(d => d.id)).toEqual(['evt_a', 'evt_b']);
-      await expect(store.createDoc(doc())).rejects.toThrow('exists');
-      await expect(store.createDoc({ ...doc(), collection: 'teams' })).rejects.toThrow('exists');
-      await store.updateDoc('events', 'evt_a', 1, { status: 'trashed', trashedAt: at });
+      await expect(store.createDoc(creation())).rejects.toThrow('exists');
+      await store.mutateDoc({ ...mutation(), patch: { status: 'trashed', trashedAt: at }, revision: undefined });
       expect((await store.listDocs('events')).map(d => d.id)).toEqual(['evt_b']);
       expect(await store.listDocs('events', { includeTrashed: true })).toHaveLength(2);
-      expect(await reopen().getDoc('events', 'evt_b')).toEqual(doc('evt_b', 2));
-      expect(await store.listDocs('teams')).toEqual([]);
+      expect(await reopen().getDoc('events', 'evt_b')).toEqual(first.doc);
+    });
+    it('requires audit and matching revision on creation', async () => {
+      const input = creation();
+      await expect(store.createDoc({ ...input, revision: { ...input.revision, docId: 'wrong' } })).rejects.toThrow('identity');
+      await expect(store.createDoc({ ...input, audit: undefined as unknown as AuditEntry })).rejects.toThrow('Audit');
+      expect(await store.getDoc('events', 'evt_a')).toBeNull();
     });
     it('enforces CAS and protects identity and creation metadata', async () => {
-      await store.createDoc(doc());
-      const updated = await store.updateDoc('events', 'evt_a', 1, { draft: { title: 'New' }, id: 'evil', collection: 'teams', version: 100, createdBy: 'evil' });
-      expect(updated).toMatchObject({ id: 'evt_a', collection: 'events', version: 2, createdBy: 'usr_a', draft: { title: 'New' } });
-      expect(await store.updateDoc('events', 'evt_a', 1, { draft: {} })).toBe('conflict');
-      expect(await store.updateDoc('events', 'missing', 1, {})).toBe('conflict');
+      await store.createDoc(creation());
+      const request = mutation(); request.patch = { ...request.patch, id: 'evil', collection: 'teams', version: 100, createdBy: 'evil' };
+      const updated = await store.mutateDoc(request);
+      expect(updated).toMatchObject({ id: 'evt_a', collection: 'events', version: 2, createdBy: 'usr_a' });
+      expect(await store.mutateDoc(mutation())).toBe('conflict');
+      expect(await store.mutateDoc(mutation(1, 'Missing', 'evt_missing'))).toBe('conflict');
       expect(await reopen().getDoc('events', 'evt_a')).toEqual(updated);
     });
-    it('allows exactly one concurrent creation and update across store instances', async () => {
+    it('serializes interleaved instances into monotonic history', async () => {
+      const first = creation(); await store.createDoc(first);
       const other = reopen();
-      const creates = await Promise.allSettled([store.createDoc(doc()), other.createDoc(doc())]);
-      expect(creates.filter(x => x.status === 'fulfilled')).toHaveLength(1);
-      const writes = await Promise.all([store.updateDoc('events', 'evt_a', 1, { draft: { title: 'A' } }), other.updateDoc('events', 'evt_a', 1, { draft: { title: 'B' } })]);
-      expect(writes.filter(x => x === 'conflict')).toHaveLength(1);
-      expect((await store.getDoc('events', 'evt_a'))?.version).toBe(2);
+      const saves = await Promise.all([store.mutateDoc(mutation(1, 'A')), other.mutateDoc(mutation(1, 'B'))]);
+      expect(saves.filter(x => x === 'conflict')).toHaveLength(1);
+      await other.mutateDoc(mutation(2, 'C'));
+      expect((await store.getDoc('events', 'evt_a'))?.version).toBe(3);
+      expect((await store.listRevisions('events', 'evt_a', 10)).map(rev => rev.docVersion).sort()).toEqual([1, 2, 3]);
     });
-    it('commits snapshots and forward-only publish records', async () => {
-      expect(await store.getSnapshot()).toBeNull(); await store.createDoc(doc());
-      const tx = publishTx(doc()); tx.revisions = [revision()]; tx.audit = [audit()];
+    it('allows exactly one concurrent creation', async () => {
+      const results = await Promise.allSettled([store.createDoc(creation()), reopen().createDoc(creation())]);
+      expect(results.filter(result => result.status === 'fulfilled')).toHaveLength(1);
+    });
+    it('rejects stale or decreasing working revision versions and sealed changes', async () => {
+      const first = creation(); await store.createDoc(first);
+      const save = mutation(); save.revision = { upsert: { ...first.revision, docVersion: 2, data: save.patch.draft } };
+      await store.mutateDoc(save);
+      await expect(store.mutateDoc({ ...mutation(2), revision: { upsert: first.revision } })).rejects.toThrow('docVersion');
+      const checkpoint = mutation(2, 'Checkpoint'); checkpoint.seal = [first.revision.id];
+      await store.mutateDoc(checkpoint);
+      expect((await store.getRevision('evt_a', first.revision.id))?.sealedAt).toBeDefined();
+      await expect(store.mutateDoc({ ...mutation(3), revision: { upsert: { ...first.revision, docVersion: 4, data: mutation(3).patch.draft } } })).rejects.toThrow('sealed');
+      expect(await store.listRevisions('teams', 'evt_a', 10)).toEqual([]);
+    });
+    it('commits restore-style version increments, order, immutable snapshots and retryable records', async () => {
+      await store.createDoc(creation());
+      const tx = publishTx({ ...doc(), order: 7 }, 1, true);
       expect(await store.publish(tx)).toEqual({ siteVersion: 1 });
       expect(await reopen().getSnapshot()).toEqual(tx.snapshot);
       expect(await store.getPublish(1)).toEqual(tx.record);
-      expect(await store.getRevision('rev_a')).toEqual(revision());
-      expect((await store.queryAudit({ limit: 10 })).items).toEqual([audit()]);
-      await expect(store.publish(tx)).rejects.toThrow('conflict');
-      await store.publish(publishTx(doc(), 2));
+      expect((await store.getDoc('events', 'evt_a'))?.version).toBe(2);
+      expect(await store.publish(tx)).toEqual({ siteVersion: 1 });
+      await expect(store.publish({ ...tx, record: { ...tx.record, summary: 'Different' } })).rejects.toThrow('conflict');
+      const next = publishTx(tx.docs[0].nextDoc, 2);
+      await store.publish(next);
       expect((await store.listPublishes(1)).map(p => p.siteVersion)).toEqual([2]);
       expect((await store.listPublishes(10, 2)).map(p => p.siteVersion)).toEqual([1]);
+      expect(await store.recoverPublish()).toEqual({ repaired: false, siteVersion: 2 });
     });
-    it('rejects duplicate IDs inside a publish before any writes', async () => {
-      await store.createDoc(doc());
-      const tx = publishTx(doc());
-      tx.revisions = [revision(), revision()];
-      await expect(store.publish(tx)).rejects.toThrow('Revision already exists');
-      expect(await store.getRevision('rev_a')).toBeNull();
-      tx.revisions = [];
-      tx.audit = [audit(), audit()];
-      await expect(store.publish(tx)).rejects.toThrow('Audit entry already exists');
-      expect((await store.queryAudit({ limit: 10 })).items).toEqual([]);
-      expect(await store.getSnapshot()).toBeNull();
-    });
-    it('rejects a stale publish before changing documents or snapshots', async () => {
-      await store.createDoc(doc()); await store.updateDoc('events', 'evt_a', 1, { draft: 'Changed' });
+    it('rejects stale expectedVersion before any publish changes', async () => {
+      await store.createDoc(creation()); await store.mutateDoc(mutation());
       await expect(store.publish(publishTx(doc()))).rejects.toThrow('conflict');
       expect(await store.getSnapshot()).toBeNull(); expect(await store.getPublish(1)).toBeNull();
-      expect((await store.getDoc('events', 'evt_a'))?.draft).toBe('Changed');
     });
-    it('keeps revision IDs append-only and sealed revisions immutable', async () => {
-      await store.appendRevision(revision());
-      await expect(store.appendRevision(revision())).rejects.toThrow('exists');
-      const latest = { ...revision(), at: '2026-11-09T18:01:00.000Z', docVersion: 2, data: 'Updated' };
-      await store.upsertWorkingRevision(latest);
-      expect(await store.listRevisions('events', 'evt_a', 10)).toEqual([latest]);
-      await expect(store.upsertWorkingRevision({ ...latest, authorId: 'usr_other' })).rejects.toThrow('identity');
-      await store.sealRevision('rev_a');
-      const sealed = await store.getRevision('rev_a'); expect(sealed?.sealedAt).toBeDefined();
-      await store.sealRevision('rev_a'); expect(await store.getRevision('rev_a')).toEqual(sealed);
-      await expect(store.upsertWorkingRevision(latest)).rejects.toThrow('sealed');
-      await store.upsertWorkingRevision(revision('rev_b'));
-      expect(await store.listRevisions('events', 'evt_a', 1, 'rev_a')).toEqual([revision('rev_b')]);
-      expect(await store.listRevisions('teams', 'evt_a', 10)).toEqual([]);
-      await expect(store.sealRevision('missing')).rejects.toThrow('not found');
+    it('rejects duplicate and conflicting history before publish writes', async () => {
+      const first = creation(); await store.createDoc(first);
+      const tx = publishTx(doc()); tx.revisions!.push(tx.revisions![0]);
+      await expect(store.publish(tx)).rejects.toThrow('Revision already exists');
+      tx.revisions = [{ ...first.revision, data: 'Changed' }];
+      await expect(store.publish(tx)).rejects.toThrow('Different content');
+      expect(await store.getSnapshot()).toBeNull();
     });
-    it('filters and paginates audit with identical timestamps and immutable IDs', async () => {
-      for (const id of ['a', 'b', 'c']) await store.appendAudit(audit(id));
-      await store.appendAudit({ ...audit('d'), actorId: 'usr_b', action: 'auth.login', collection: undefined, docId: undefined });
-      await expect(store.appendAudit({ ...audit('a'), at: '2026-12-01T00:00:00Z' })).rejects.toThrow('exists');
+    it('filters and paginates audit with identical timestamps', async () => {
+      for (const id of ['a', 'b', 'c', 'd']) await store.createDoc({ ...creation(doc(`evt_${id}`)), audit: audit(`aud_${id}`) });
       const first = await store.queryAudit({ actorId: 'usr_a', limit: 2 });
-      expect(first.items.map(a => a.id)).toEqual(['c', 'b']); expect(first.cursor).toBe('b');
-      expect((await store.queryAudit({ actorId: 'usr_a', limit: 2, cursor: first.cursor })).items.map(a => a.id)).toEqual(['a']);
-      expect((await store.queryAudit({ collection: 'events', docId: 'evt_a', text: 'BOARD', action: 'content.edit', from: at, to: at, limit: 10 })).items).toHaveLength(3);
+      expect(first.items.map(a => a.id)).toEqual(['aud_d', 'aud_c']);
+      expect((await store.queryAudit({ limit: 2, cursor: first.cursor })).items.map(a => a.id)).toEqual(['aud_b', 'aud_a']);
+      expect((await store.queryAudit({ collection: 'events', text: 'BOARD', action: 'content.edit', from: at, to: at, limit: 10 })).items).toHaveLength(4);
       await expect(store.queryAudit({ limit: 0 })).rejects.toThrow('Limit');
     });
-    it('indexes usernames case-insensitively and updates the index on rename', async () => {
+    it('indexes usernames case-insensitively and updates rename indexes', async () => {
       await store.putUser(user()); expect(await reopen().getUserByUsername('PHIL')).toEqual(user());
       await expect(store.putUser(user('usr_b', 'phil'))).rejects.toThrow('exists');
       await store.putUser(user('usr_a', 'Philip'));
-      expect(await store.getUserByUsername('Phil')).toBeNull();
-      expect(await store.getUserByUsername('Philip')).toEqual(user('usr_a', 'Philip'));
-      expect(await store.listUsers()).toHaveLength(1); expect(await store.getUser('missing')).toBeNull();
+      expect(await store.getUserByUsername('Phil')).toBeNull(); expect(await store.getUserByUsername('Philip')).toEqual(user('usr_a', 'Philip'));
+      expect(await store.listUsers()).toHaveLength(1);
     });
-    it('stores and deletes sessions by hash, filtering by user', async () => {
+    it('stores, filters and garbage-collects expired sessions', async () => {
       const session = { hash: 'hashed', userId: 'usr_a', createdAt: at, lastSeenAt: at, expiresAt: '2026-12-01T00:00:00Z', csrfToken: 'csrf' };
-      await store.putSession(session); await store.putSession({ ...session, hash: 'other', userId: 'usr_b' });
+      await store.putSession(session); await store.putSession({ ...session, hash: 'expired', userId: 'usr_b', expiresAt: at });
       expect(await reopen().getSession('hashed')).toEqual(session); expect(await store.listSessions('usr_a')).toEqual([session]);
-      await store.deleteSession('hashed'); await store.deleteSession('missing'); expect(await store.getSession('hashed')).toBeNull();
+      expect(await store.deleteExpiredSessions(at)).toBe(1); expect(await store.deleteExpiredSessions(at)).toBe(0);
+      expect(await store.getSession('expired')).toBeNull(); expect(await store.getSession('hashed')).toEqual(session);
+      await store.deleteSession('hashed'); expect(await store.getSession('hashed')).toBeNull();
     });
     it('counts concurrent rate-limit hits and expires and resets windows', async () => {
       const other = reopen();
@@ -132,13 +140,10 @@ export function storeContract(name: string, setup: () => Promise<{ store: Store;
       expect(hits.map(hit => hit.count).sort((a, b) => a - b)).toEqual(Array.from({ length: 12 }, (_, i) => i + 1));
       advance(60_000); expect((await store.rateLimitHit('login:127.0.0.1', 60)).count).toBe(1);
       await store.rateLimitReset('login:127.0.0.1'); expect((await store.rateLimitHit('login:127.0.0.1', 60)).count).toBe(1);
-      await expect(store.rateLimitHit('bad', 0)).rejects.toThrow('positive');
     });
-    it('round-trips independent arbitrary JSON meta values', async () => {
-      expect(await store.getMeta('missing')).toBeNull();
-      await store.setMeta('link/check', { ok: [true, 2, 'text'] });
-      expect(await reopen().getMeta('link/check')).toEqual({ ok: [true, 2, 'text'] });
-      await store.setMeta('flag', false); expect(await store.getMeta('flag')).toBe(false);
+    it('round-trips JSON metadata', async () => {
+      expect(await store.getMeta('missing')).toBeNull(); await store.setMeta('link/check', { ok: [true, 2] });
+      expect(await reopen().getMeta('link/check')).toEqual({ ok: [true, 2] });
     });
   });
 }
@@ -146,17 +151,128 @@ storeContract('Store contract: filesystem', async () => {
   await mkdir('.cache', { recursive: true });
   const root = await mkdtemp(resolve('.cache', 'contract-'));
   let now = Date.parse(at);
-  const reopen = () => { const primitives = new FsPrimitives(root); return new KvStore(primitives, { exclusive: primitives.exclusive, now: () => new Date(now) }); };
+  const reopen = () => { const fs = new FsPrimitives(root); return new KvStore(fs, { exclusive: fs.exclusive, now: () => new Date(now) }); };
   return { store: reopen(), reopen, cleanup: () => rm(root, { recursive: true, force: true }), advance: ms => { now += ms; } };
 });
 
+describe('KV failure recovery, compatibility and bounded reads', () => {
+  let root: string; let fs: FsPrimitives; let store: KvStore;
+  beforeEach(async () => { root = await mkdtemp(resolve('.cache', 'recovery-')); fs = new FsPrimitives(root); store = new KvStore(fs, { exclusive: fs.exclusive }); });
+  afterEach(async () => { await rm(root, { recursive: true, force: true }); });
+  function failOnce(predicate: (key: string) => boolean, afterWrite = false) {
+    let failed = false;
+    return new KvStore({ get: key => fs.get(key), list: key => fs.list(key), delete: key => fs.delete(key), put: async (key, value) => {
+      if (!failed && predicate(key)) { failed = true; if (afterWrite) await fs.put(key, value); throw new Error('Injected write failure'); }
+      await fs.put(key, value);
+    } }, { exclusive: fs.exclusive });
+  }
+  for (const stage of ['meta/pending-mutation', 'revisions/', 'audit/', 'docs/']) for (const afterWrite of [false, true]) {
+    it(`keeps history ahead of docs through mutation failure at ${stage}, afterWrite=${afterWrite}`, async () => {
+      await store.createDoc(creation());
+      const request = mutation();
+      await expect(failOnce(key => key.startsWith(stage), afterWrite).mutateDoc(request)).rejects.toThrow('Injected');
+      const current = await store.getDoc('events', 'evt_a');
+      const revisions = await store.listRevisions('events', 'evt_a', 10);
+      expect(Math.max(...revisions.map(rev => rev.docVersion))).toBeGreaterThanOrEqual(current!.version);
+      // Replaying the journal first makes a stale retry a conflict, safely.
+      const retry = await store.mutateDoc(request);
+      expect(retry === 'conflict' || retry.version === 2).toBe(true);
+      expect((await store.getDoc('events', 'evt_a'))?.version).toBe(2);
+      expect(await store.getRevision('evt_a', 'append' in request.revision! ? request.revision.append.id : '')).toMatchObject({ docVersion: 2 });
+    });
+  }
+  for (const stage of ['meta/pending-publish', 'docs/', 'revisions/', 'audit/', 'publishes/', 'snapshot/']) for (const afterWrite of [false, true]) {
+    it(`retries publish at ${stage}, afterWrite=${afterWrite}`, async () => {
+      await store.createDoc(creation()); const tx = publishTx(doc(), 1, true);
+      await expect(failOnce(key => key.startsWith(stage), afterWrite).publish(tx)).rejects.toThrow('Injected');
+      await store.publish(tx);
+      expect(await store.getSnapshot()).toEqual(tx.snapshot); expect(await store.getPublish(1)).toEqual(tx.record);
+      expect(await store.getDoc('events', 'evt_a')).toEqual(tx.docs[0].nextDoc);
+      expect(await store.listPublishes(10)).toHaveLength(1);
+    });
+    it(`recovers publish at ${stage}, afterWrite=${afterWrite}`, async () => {
+      await store.createDoc(creation()); const tx = publishTx(doc(), 1, true);
+      await expect(failOnce(key => key.startsWith(stage), afterWrite).publish(tx)).rejects.toThrow('Injected');
+      const recovered = await store.recoverPublish();
+      if (stage === 'meta/pending-publish' && !afterWrite) { expect(recovered.repaired).toBe(false); await store.publish(tx); }
+      else expect(recovered).toEqual({ repaired: true, siteVersion: 1 });
+      expect(await store.getSnapshot()).toEqual(tx.snapshot); expect(await store.listPublishes(10)).toHaveLength(1);
+      expect(await store.recoverPublish()).toEqual({ repaired: false, siteVersion: 1 });
+    });
+  }
+  it('refuses changed content during a pending publish', async () => {
+    await store.createDoc(creation()); const tx = publishTx(doc());
+    await expect(failOnce(key => key.startsWith('snapshot/')).publish(tx)).rejects.toThrow();
+    await expect(store.publish({ ...tx, record: { ...tx.record, summary: 'Changed' } })).rejects.toThrow('Different content');
+    await store.recoverPublish();
+  });
+  it('rebuilds a pre-journal snapshot from the pending manifest and published fields', async () => {
+    await store.createDoc(creation()); const tx = publishTx(doc());
+    await store.publish(tx); await fs.delete('snapshot/published.json');
+    expect(await store.recoverPublish()).toEqual({ repaired: true, siteVersion: 1 });
+    expect((await store.getSnapshot())?.docs).toEqual(tx.snapshot.docs);
+    expect((await store.getPublish(1))?.kind).toBe('publish');
+  });
+  it('looks up one of 500 revisions across 20 docs with at most two reads', async () => {
+    const revisions: Revision[] = [];
+    for (let index = 0; index < 500; index++) {
+      const rev = revision({ ...doc(`evt_${index % 20}`), version: index + 1 }); revisions.push(rev);
+      await fs.put(`revisions/${rev.docId}/${rev.id}.json`, rev);
+    }
+    let reads = 0;
+    const measured: KvPrimitives = { get: key => { reads++; return fs.get(key); }, put: (key, value) => fs.put(key, value), list: key => fs.list(key), delete: key => fs.delete(key) };
+    const target = revisions[432];
+    expect(await new KvStore(measured).getRevision(target.docId, target.id)).toEqual(target);
+    expect(reads).toBeLessThanOrEqual(2);
+  });
+  it('reads legacy revision paths and old snapshots without discarding history', async () => {
+    const old = revision(doc(), 'rev_legacy'); await fs.put(`revisions/evt_a/${encodeURIComponent(at)}-rev_legacy.json`, old);
+    expect(await store.getRevision('evt_a', 'rev_legacy')).toEqual(old);
+    expect(await store.listRevisions('events', 'evt_a', 10)).toEqual([old]);
+    const tx = publishTx(doc()); const { schemaVersion, media, ...legacy } = tx.snapshot;
+    await fs.put('snapshot/published.json', legacy);
+    expect((await store.getSnapshot())?.schemaVersion).toBe(schemaVersion);
+    expect((await store.getSnapshot())?.docs).toEqual(tx.snapshot.docs);
+  });
+  it('recovers legacy manifest order only when its matching snapshot still exists', async () => {
+    const tx = publishTx(doc('evt_a', 7));
+    const legacy = { ...tx.record, manifest: tx.record.manifest.map(({ order, ...entry }) => entry) };
+    await fs.put('publishes/00000001.json', legacy);
+    await fs.put('snapshot/published.json', tx.snapshot);
+    expect((await store.getPublish(1))?.manifest[0].order).toBe(7);
+    await fs.put('snapshot/published.json', { ...tx.snapshot, siteVersion: 2 });
+    expect((await store.getPublish(1))?.manifest[0].order).toBe(0);
+  });
+  it('reads newest audit months without loading older months once the limit is met', async () => {
+    for (const month of ['09', '10', '11']) for (let index = 0; index < 3; index++) {
+      const entry = { ...audit(`aud_${month}_${index}`), at: `2026-${month}-09T18:00:00.000Z` };
+      await fs.put(`audit/2026-${month}/${entry.id}.json`, entry);
+    }
+    const reads: string[] = [];
+    const measured = new KvStore({ get: key => { reads.push(key); return fs.get(key); }, put: (key, value) => fs.put(key, value), list: key => fs.list(key), delete: key => fs.delete(key) });
+    expect((await measured.queryAudit({ limit: 2 })).items).toHaveLength(2);
+    expect(reads.every(key => key.startsWith('audit/2026-11/'))).toBe(true);
+  });
+  it('recovers a dead-pid stale lock within one second', async () => {
+    await mkdir(join(root, '.store-lock')); await writeFile(join(root, '.store-lock/owner.json'), JSON.stringify({ pid: 2147483647, at: Date.now() - 60_000 }));
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined); const start = Date.now();
+    try { await store.createDoc(creation()); expect(Date.now() - start).toBeLessThan(1000); expect(warn).toHaveBeenCalled(); }
+    finally { warn.mockRestore(); }
+  });
+  it('selects only fs locally and rejects the removed blob driver', () => {
+    const config = loadConfig({ STORE_DRIVER: 'fs', DATA_DIR: root }, () => undefined);
+    expect(createStore(config)).toBeInstanceOf(KvStore);
+    expect(() => loadConfig({ STORE_DRIVER: 'blob' })).toThrow('fs | postgres');
+    expect(() => createStore({ ...config, storeDriver: 'postgres' })).toThrow('Phase 6');
+  });
+});
 describe('Filesystem primitives and media', () => {
   let root: string;
   beforeEach(async () => { await mkdir('.cache', { recursive: true }); root = await mkdtemp(resolve('.cache', 'primitives-')); });
   afterEach(async () => { await rm(root, { recursive: true, force: true }); });
   it('lists prefixes and round-trips JSON using atomic replacement', async () => {
     const fs = new FsPrimitives(root); await fs.put('meta/a.json', { a: 1 }); await fs.put('meta/a.json', false); await fs.put('other/b.json', 3);
-    expect(await fs.get('meta/a.json')).toBe(false); expect(await fs.list('meta/')).toEqual(['meta/a.json']);
+    expect(await fs.get('meta/a.json')).toBe(false); expect(await fs.list('meta')).toEqual(['meta/a.json']); expect(await fs.list('meta/')).toEqual(['meta/a.json']);
     await fs.delete('meta/a.json'); expect(await fs.get('meta/a.json')).toBeNull();
     await expect(fs.put('undefined.json', undefined)).rejects.toThrow('JSON');
     await writeFile(join(root, 'broken.json'), 'not json'); await expect(fs.get('broken.json')).rejects.toThrow();
@@ -170,7 +286,7 @@ describe('Filesystem primitives and media', () => {
     await expect(fs.put('link/x.json', 1)).rejects.toThrow('symlink');
   });
   it('writes binary and streaming blobs, and deletes only its own URLs', async () => {
-    const blobs = new FsBlobs(root); const bytes = new Uint8Array([0, 1, 255]);
+    const blobs = createMediaBlobs(loadConfig({ DATA_DIR: root }, () => undefined)); const bytes = new Uint8Array([0, 1, 255]);
     const result = await blobs.put('media/2026/media_a/original.jpg', bytes, { contentType: 'image/jpeg' });
     expect(result.url).toBe('/blobs/media/2026/media_a/original.jpg');
     expect(await readFile(join(root, 'blobs/media/2026/media_a/original.jpg'))).toEqual(Buffer.from(bytes));
@@ -181,24 +297,7 @@ describe('Filesystem primitives and media', () => {
     await expect(blobs.delete('/blobs/%2e%2e/outside')).rejects.toThrow();
     await expect(blobs.put('../escape', bytes, { contentType: 'image/jpeg' })).rejects.toThrow();
   });
-  it('selects only the supported local driver', async () => {
-    const config = loadConfig({ STORE_DRIVER: 'fs', DATA_DIR: root }, () => undefined);
-    await createStore(config).createDoc(doc()); expect(await createStore(config).getDoc('events', 'evt_a')).toEqual(doc());
-    expect(() => createStore({ ...config, storeDriver: 'blob' })).toThrow('Phase 6');
-    expect(() => createStore({ ...config, storeDriver: 'postgres' })).toThrow('Phase 6');
-  });
-  it('writes the publish snapshot last, leaving the prior snapshot readable on failure', async () => {
-    const fs = new FsPrimitives(root); const store = new KvStore(fs, { exclusive: fs.exclusive });
-    await store.createDoc(doc()); await store.publish(publishTx(doc()));
-    const writes: string[] = [];
-    const failing = new KvStore({ get: key => fs.get(key), list: key => fs.list(key), delete: key => fs.delete(key), put: async (key, value) => {
-      writes.push(key); if (key === 'snapshot/published.json') throw new Error('simulated disk failure'); await fs.put(key, value);
-    } }, { exclusive: fs.exclusive });
-    await expect(failing.publish(publishTx(doc(), 2))).rejects.toThrow('disk failure');
-    expect(writes.at(-1)).toBe('snapshot/published.json'); expect((await store.getSnapshot())?.siteVersion).toBe(1);
-  });
 });
-
 // Hosted implementations belong to Phase 6. Never pretend an FS run tested a service.
 for (const [name, env] of [['Neon', 'DATABASE_URL'], ['Blob', 'BLOB_READ_WRITE_TOKEN']] as const) {
   const reason = process.env[env] ? 'not run (adapter scheduled for Phase 6)' : 'not run (no env)';

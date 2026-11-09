@@ -28,7 +28,7 @@ describe('Phase 0 scaffold', () => {
     expect(() => loadConfig(env, () => undefined)).toThrow('Configuration:');
   });
   it('accepts explicitly configured production and protects cookies', () => {
-    const env = { NODE_ENV: 'production', STORE_DRIVER: 'fs', SESSION_SECRET: 'a'.repeat(32), PUBLIC_BASE_URL: 'https://example.com' };
+    const env = { NODE_ENV: 'production', STORE_DRIVER: 'fs', SESSION_SECRET: 'a'.repeat(32), PUBLIC_BASE_URL: 'https://example.com', ADMIN_BOOTSTRAP_USER: 'Phil', ADMIN_BOOTSTRAP_PASSWORD: 'configured-secret' };
     expect(loadConfig(env).cacheSmaxage).toBe(15);
     expect(() => loadConfig({ ...env, COOKIE_SECURE: 'false' })).toThrow('COOKIE_SECURE');
   });

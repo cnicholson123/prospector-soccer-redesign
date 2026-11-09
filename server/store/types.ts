@@ -5,25 +5,30 @@ export interface AuditQuery {
   actorId?: string; action?: string; collection?: CollectionName; docId?: string;
   from?: string; to?: string; text?: string; limit: number; cursor?: string;
 }
-/** Final doc envelopes, CAS-checked against each doc.version, snapshot committed last. */
+export interface CreateDoc {
+  doc: Doc; revision: Revision; audit: AuditEntry;
+}
+export interface DocMutation {
+  collection: CollectionName; id: string; expectedVersion: number; patch: Partial<Doc>;
+  revision?: { upsert: Revision } | { append: Revision };
+  seal?: string[]; audit: AuditEntry;
+}
 export interface PublishTx {
-  docs: Doc[]; snapshot: Snapshot; record: PublishRecord; revisions?: Revision[]; audit?: AuditEntry[];
+  docs: { expectedVersion: number; nextDoc: Doc }[];
+  snapshot: Snapshot; record: PublishRecord; revisions?: Revision[]; audit?: AuditEntry[];
 }
 export interface Store {
   getDoc(collection: CollectionName, id: string): Promise<Doc | null>;
   listDocs(collection: CollectionName, opts?: { includeTrashed?: boolean }): Promise<Doc[]>;
-  createDoc(doc: Doc): Promise<Doc>;
-  updateDoc(collection: CollectionName, id: string, expectedVersion: number, patch: Partial<Doc>): Promise<Doc | 'conflict'>;
+  createDoc(input: CreateDoc): Promise<Doc>;
+  mutateDoc(mutation: DocMutation): Promise<Doc | 'conflict'>;
   getSnapshot(): Promise<Snapshot | null>;
   publish(tx: PublishTx): Promise<{ siteVersion: number }>;
+  recoverPublish(): Promise<{ repaired: boolean; siteVersion: number }>;
   listPublishes(limit: number, before?: number): Promise<PublishRecord[]>;
   getPublish(siteVersion: number): Promise<PublishRecord | null>;
-  appendRevision(rev: Revision): Promise<void>;
-  upsertWorkingRevision(rev: Revision): Promise<void>;
-  sealRevision(revId: string): Promise<void>;
   listRevisions(collection: CollectionName, id: string, limit: number, before?: string): Promise<Revision[]>;
-  getRevision(revId: string): Promise<Revision | null>;
-  appendAudit(entry: AuditEntry): Promise<void>;
+  getRevision(docId: string, revId: string): Promise<Revision | null>;
   queryAudit(q: AuditQuery): Promise<{ items: AuditEntry[]; cursor?: string }>;
   listUsers(): Promise<User[]>;
   getUser(id: string): Promise<User | null>;
@@ -33,6 +38,7 @@ export interface Store {
   putSession(session: Session): Promise<void>;
   deleteSession(hash: string): Promise<void>;
   listSessions(userId: string): Promise<Session[]>;
+  deleteExpiredSessions(now: string): Promise<number>;
   rateLimitHit(key: string, windowSec: number): Promise<{ count: number; resetAt: string }>;
   rateLimitReset(key: string): Promise<void>;
   getMeta(key: string): Promise<unknown>;

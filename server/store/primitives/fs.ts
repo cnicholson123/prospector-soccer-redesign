@@ -1,4 +1,4 @@
-import { lstat, mkdir, readFile, readdir, realpath, rename, rm, writeFile } from 'node:fs/promises';
+import { lstat, mkdir, readFile, readdir, realpath, rename, rm, writeFile, stat } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { setTimeout as delay } from 'node:timers/promises';
@@ -51,21 +51,78 @@ export class FsPrimitives implements KvPrimitives {
         else if (entry.isFile() && key.startsWith(prefix)) keys.push(key);
       }
     };
-    await walk(this.root);
+    const base = prefix.endsWith('/') ? prefix.slice(0, -1) : prefix.includes('/') ? prefix.slice(0, prefix.lastIndexOf('/')) : '';
+    const directory = base ? await safePath(this.root, base) : this.root;
+    try { await walk(directory, base ? base + '/' : ''); }
+    catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error; }
     return keys.sort();
   }
-  /** Cooperating FS stores serialize mutations across instances/processes.
-   * No stale-lock stealing: timeout rather than risking a lost CAS write.
-   * After an ungraceful process death, remove .store-lock only when no server runs.
-   */
+  /** Shared lock with a renewable lease and ownership-checked release. */
   exclusive: RunExclusive = async (operation) => {
     await mkdir(this.root, { recursive: true });
     const lock = join(this.root, '.store-lock');
+    const ownerPath = join(lock, 'owner.json');
+    const token = randomUUID();
     const deadline = Date.now() + 10_000;
+    const owner = () => ({ pid: process.pid, at: Date.now(), token });
     while (true) {
-      try { await mkdir(lock); break; }
-      catch (error) { if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error; if (Date.now() > deadline) throw new Error('Filesystem store lock timed out'); await delay(10); }
+      try {
+        await mkdir(lock);
+        await atomicWrite(ownerPath, JSON.stringify(owner()));
+        break;
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
+        try {
+          const previous = JSON.parse(await readFile(ownerPath, 'utf8')) as { pid: number; at: number; token?: string };
+          let alive = true;
+          try { process.kill(previous.pid, 0); }
+          catch (failure) { alive = (failure as NodeJS.ErrnoException).code !== 'ESRCH'; }
+          if (!alive || Date.now() - previous.at > 30_000) {
+            // Only one waiter may reclaim this particular lock directory.
+            await mkdir(join(lock, '.reclaim'));
+            const current = JSON.parse(await readFile(ownerPath, 'utf8')) as typeof previous;
+            if (current.at === previous.at && current.token === previous.token) {
+              const abandoned = join(this.root, `.abandoned-${token}`);
+              await rename(lock, abandoned);
+              console.warn('Recovering stale filesystem store lock', { pid: previous.pid });
+              await rm(abandoned, { recursive: true, force: true });
+            } else await rm(join(lock, '.reclaim'), { recursive: true, force: true });
+            continue;
+          }
+        } catch (failure) {
+          const code = (failure as NodeJS.ErrnoException).code;
+          if (code === 'ENOENT') {
+            // A process may die between mkdir and writing its owner file.
+            try {
+              if (Date.now() - (await stat(lock)).mtimeMs > 30_000) {
+                const abandoned = join(this.root, `.abandoned-${token}`);
+                await rename(lock, abandoned);
+                console.warn('Recovering ownerless filesystem store lock');
+                await rm(abandoned, { recursive: true, force: true });
+              }
+            } catch (missing) { if ((missing as NodeJS.ErrnoException).code !== 'ENOENT') throw missing; }
+          } else if (code !== 'EEXIST') throw failure;
+        }
+        if (Date.now() > deadline) throw new Error('Filesystem store lock timed out');
+        await delay(10);
+      }
     }
-    try { return await operation(); } finally { await rm(lock, { recursive: true, force: true }); }
+    let heartbeat = Promise.resolve();
+    const timer = setInterval(() => {
+      heartbeat = heartbeat.then(async () => {
+        const current = JSON.parse(await readFile(ownerPath, 'utf8')) as { token: string };
+        if (current.token === token) await atomicWrite(ownerPath, JSON.stringify(owner()));
+      }).catch(() => undefined);
+    }, 5_000);
+    timer.unref();
+    try { return await operation(); }
+    finally {
+      clearInterval(timer);
+      await heartbeat;
+      try {
+        const current = JSON.parse(await readFile(ownerPath, 'utf8')) as { token: string };
+        if (current.token === token) await rm(lock, { recursive: true, force: true });
+      } catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error; }
+    }
   };
 }

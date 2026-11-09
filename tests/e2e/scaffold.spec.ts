@@ -17,3 +17,20 @@ for (const width of [390, 1280]) {
     await back.click(); await expect(page).toHaveTitle('Prospector Soccer Club');
   });
 }
+
+// These HTTP assertions run with the same isolated filesystem server as browser specs.
+test('admin assets are cacheable while the SPA shell is no-store', async ({ request }) => {
+  const shell = await request.get('/admin/index.html');
+  expect(shell.status()).toBe(200);
+  expect(shell.headers()['cache-control']).toBe('no-store');
+  const source = await shell.text();
+  const asset = source.match(/src="([^" ]+\.js)"/)?.[1];
+  expect(asset).toBeTruthy();
+  const response = await request.get(asset!);
+  expect(response.status()).toBe(200);
+  expect(response.headers()['cache-control'] ?? '').not.toContain('no-store');
+});
+test('admin rejects oversized requests', async ({ request }) => {
+  const response = await request.post('/api/admin/missing', { data: 'x'.repeat(1024 * 1024 + 1) });
+  expect(response.status()).toBe(413);
+});

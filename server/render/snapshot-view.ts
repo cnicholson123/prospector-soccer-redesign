@@ -65,7 +65,8 @@ export class SnapshotView {
   constructor(readonly snapshot: Snapshot, readonly now = new Date(), readonly edit = false, readonly timeZone = 'America/Los_Angeles') {}
   doc(collection: CollectionName, id: string): DocumentView {
     const doc = this.snapshot.docs[collection]?.find(item => item.id === id);
-    return new DocumentView(this, collection, id, doc?.data ?? {});
+    const media = collection === 'media' ? this.snapshot.media?.[id] : undefined;
+    return new DocumentView(this, collection, id, doc?.data ?? (media ? { ...media, variants: { web: media.url, original: media.url } } : {}));
   }
   collection(collection: CollectionName): DocumentView[] {
     return [...(this.snapshot.docs[collection] ?? [])].sort((a, b) => (a.order ?? 0) - (b.order ?? 0) || a.id.localeCompare(b.id))

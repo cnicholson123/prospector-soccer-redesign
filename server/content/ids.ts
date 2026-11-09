@@ -12,3 +12,12 @@ export function createListKey(): string {
   const alphabet = 'abcdefghijklmnopqrstuvwxyz0123456789';
   return Array.from({ length: 8 }, () => alphabet[randomInt(alphabet.length)]).join('');
 }
+
+/** Fixed-width millisecond base32 prefix sorts chronologically. */
+export function createHistoryId(kind: 'rev' | 'aud', now = new Date()): string {
+  const milliseconds = now.getTime();
+  if (!Number.isSafeInteger(milliseconds) || milliseconds < 0) throw new Error('Invalid history timestamp');
+  const alphabet = '0123456789abcdefghijklmnopqrstuv';
+  const suffix = Array.from({ length: 6 }, () => alphabet[randomInt(32)]).join('');
+  return `${kind}_${milliseconds.toString(32).padStart(10, '0')}_${suffix}`;
+}

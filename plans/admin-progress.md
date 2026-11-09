@@ -103,3 +103,43 @@ Deviations and open issues
 - Continued the Phase 1 `sponsorsPage` singleton naming decision. `/sponsors` is unchanged and `sponsors` remains the collection.
 - Public golden output is unchanged apart from the plan's clean URLs and equivalent escaped/root-relative spellings noted above. CSS, JavaScript, source pages and legacy built pages remain unchanged.
 - Authenticated preview and the admin UI remain assigned to their later phases. Hosted storage and deployment remain Phase 6 work. No credentials, commits, pushes, deployments or global configuration changes were made.
+
+## CHANGELOG — Phase 1b — Store and baseline remediation — 2026-11-09
+
+Shipped against §18.2
+
+1. Added `@types/node` in the v22 range to devDependencies, the lockfile and the §13 allow-list. A clean `npm ci` reinstalls the dependency tree successfully.
+2. Both Vercel entrypoints now export `{ fetch }`. README documents the dispatch shape. Tests import both modules and dispatch Web Requests built from Node-style URL/header inputs, checking HTML and health JSON and rejecting a bare-function export shape.
+3. Replaced the separate public content-write methods with `createDoc({ doc, revision, audit })` and `mutateDoc(...)`. CAS, immutable identity, revision identity/data/version checks, monotonic working revisions, sealing and required audit are enforced. A durable mutation journal writes revisions and audit before the document. Interrupted transactions replay before the next write. Two-instance concurrency and failure injection before/after every write stage are covered.
+4. Publish accepts `{ expectedVersion, nextDoc }` pairs. Restore-style version increments succeed. Stale expectations fail before writes. The seed command and existing tests now use the new API.
+5. Added all five publish kinds, full-transaction retry validation and a durable publish journal. Writes retain the required docs → revisions → audit → record → snapshot order. `recoverPublish()` completes interrupted transactions, including a legacy record-ahead-of-snapshot recovery path, without an extra site version or duplicate record. Publish/dashboard middleware recovers lazily on first use and again after API errors. Tests inject failures before and after each of the five writes and the journal write, then retry or recover.
+6. Snapshots include `SCHEMA_VERSION`, required published order, schedule bookkeeping and a frozen referenced-media map. Manifests include order and validated revision pointers, including every referenced media record so binary retention has a durable history reference. Snapshot assembly copies data and includes referenced media from published or newly uploaded metadata. The renderer can resolve frozen media even when its metadata is absent from published content. FS media operations refuse deletion or overwrite of binaries retained by publication history, including alternate URL encoding.
+7. New revision/audit IDs use fixed-width base32 millisecond prefixes and six random base32 characters. New keys omit timestamps. Revision lookup is doc-scoped, with a bounded legacy-key fallback. Audit queries read months newest-first and stop after satisfying the page. FS listing starts at the requested prefix directory. The 500-revision/20-document lookup test uses one primitive read.
+8. FS locks record pid/time/ownership, recover dead or expired owners with a warning, and renew active leases. The planted dead-pid lock test completes within one second.
+9. Added draft/publish validation tiers, default text/multiline/richtext lengths, recursive creation defaults and the `createDocument` API service. Publish checks references, media kinds, singleton sections and scheduled data. The admin body limit counts actual bytes up to 1 MiB even with a false Content-Length. The API error boundary returns validation 422 with paths. Store rejection and HTTP dispatch of the rejection are tested.
+10. Username indexes use `toLowerCase()`. The existing Playwright configuration already supplies a mkdtemp FS directory and `PW_CHANNEL` defaulting to Chrome, and those settings were retained. Hashed admin assets are exempt from `no-store`, while the SPA shell retains it in local serving and Vercel headers. Added e2e assertions for shell/asset caching and oversized requests.
+
+Additional §18.1 / §18.3 store and config work
+
+- `STORE_DRIVER` accepts only `fs | postgres`. Production bootstrap user/password must be explicit, nonblank values. Local Phil defaults remain, and `.env.example` leaves the password empty with the required comment.
+- Schema-driven reference usage prevents trashing documents used by either drafts or published content, returning `in_use`, status 409 and collection/id/title/path usage details.
+- Added `Store.deleteExpiredSessions(now)` with expiration, preservation and idempotence coverage. Login/cron invocation belongs to their later implementation phases.
+
+Verification
+
+- `npm ci` — PASS, dependency tree reinstalled, audit reports zero vulnerabilities.
+- `npm run build` — PASS, Vite and strict TypeScript.
+- `npm test` — PASS, 278 tests plus two hosted-service skips. All eight renderer goldens remain green.
+- `npm run check-facts` — PASS, all 122 inventory facts.
+- Local HTTP smoke — PASS, fresh FS seed/startup, public HTML/ETag/cache policy, shell `no-store`, cacheable hashed asset and oversized request 413.
+- `npm run test:e2e -- --list` — PASS, 11 tests discovered. Browser execution — **not run (sandbox)**. Claude runs the specs using installed Chrome.
+- Neon and Blob service tests — **not run (no env)**. Production adapters remain Phase 6 work.
+- `git diff --check` — PASS. Public assets, content seed files and golden fixtures have no changes.
+
+Decisions, limitations and later-phase work
+
+- The plan's `effectiveAt` reference points to nonexistent §18.4.4. It is implemented as the optional latest scheduled time incorporated into a snapshot. The Phase 5 scheduler must set it when settling schedules.
+- Pre-1b manifests never stored order. Their read compatibility uses order from a matching retained snapshot when available, otherwise a deterministic zero. Exact historical order cannot be reconstructed when it was never stored. New manifests preserve it.
+- Authenticated create/publish/dashboard routes remain Phase 4/5 scope. Their creation service, recovery middleware and 422 boundary are implemented and tested with HTTP route fixtures. No end-to-end authenticated publish flow is claimed. Bootstrap creation, login audit/password banners, permission ceilings, cron/login session-GC calls, dashboard broken-reference UI and schedule-aware rendering remain in their assigned phases.
+- A transaction journal and renewable lock lease supplement the plan's required write ordering so interrupted FS writes can be resumed safely. Existing legacy revision and snapshot data remain readable.
+- No commit, push, deployment, credentials or global configuration changes were made.

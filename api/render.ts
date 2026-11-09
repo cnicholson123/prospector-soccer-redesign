@@ -1,2 +1,2 @@
 import { renderPublic } from '../server/render/handler';
-export default renderPublic;
+export default { fetch: renderPublic };

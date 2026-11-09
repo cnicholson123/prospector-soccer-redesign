@@ -10,5 +10,6 @@ export function createStore(config: Config = loadConfig()): Store {
 }
 export function createMediaBlobs(config: Config = loadConfig()): MediaBlobs {
   if (config.storeDriver !== 'fs') throw new Error('Hosted media storage is not implemented until Phase 6; use fs locally');
-  return new FsBlobs(config.dataDir);
+  const primitives = new FsPrimitives(config.dataDir);
+  return new FsBlobs(config.dataDir, new KvStore(primitives, { exclusive: primitives.exclusive }), primitives.exclusive);
 }

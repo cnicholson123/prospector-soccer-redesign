@@ -2,10 +2,12 @@ import { readFile } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
 import { resolve } from 'node:path';
 import { collectionNames, collections } from '../shared/schema';
-import type { Doc, PublishedDoc, Revision, Snapshot } from '../shared/types';
+import type { Doc, Revision, Snapshot } from '../shared/types';
 import { validate } from '../server/content/validate';
 import { createStore } from '../server/store';
 import type { Store } from '../server/store/types';
+import { buildSnapshot } from '../server/content/snapshot';
+import { createHistoryId } from '../server/content/ids';
 import { templateHash } from '../server/render/handler';
 
 export async function loadSeed(): Promise<Doc[]> {
@@ -23,16 +25,11 @@ export async function loadSeed(): Promise<Doc[]> {
   return docs;
 }
 export function seedSnapshot(docs: Doc[], siteVersion = 1, at = '2026-11-09T00:00:00.000Z'): Snapshot {
-  const published: Snapshot['docs'] = {};
-  for (const doc of docs) {
-    if (doc.published === undefined || doc.status === 'trashed') continue;
-    (published[doc.collection] ??= []).push({ id: doc.id, collection: doc.collection, data: doc.published,
-      version: doc.publishedVersion ?? doc.version, order: doc.order } satisfies PublishedDoc);
-  }
-  return { siteVersion, publishedAt: at, docs: published, scheduled: [], templateHash };
+  return buildSnapshot(docs, { siteVersion, publishedAt: at, templateHash });
 }
 /** Validate the entire migration and check edit protection before touching storage. */
 export async function seedStore(store: Store, force = false): Promise<{ changed: boolean; count: number }> {
+  await store.recoverPublish();
   const seeds = await loadSeed();
   const existing = await Promise.all(seeds.map(doc => store.getDoc(doc.collection, doc.id)));
   const protectedDoc = existing.find(doc => doc && doc.version > 1);
@@ -44,11 +41,18 @@ export async function seedStore(store: Store, force = false): Promise<{ changed:
   const updated: Doc[] = [];
   for (const [index, seed] of seeds.entries()) {
     const current = existing[index];
-    if (!current) updated.push(await store.createDoc({ ...seed, createdAt: at, updatedAt: at }));
+    if (!current) {
+      const doc = { ...seed, createdAt: at, updatedAt: at };
+      updated.push(await store.createDoc({ doc,
+        revision: { id: createHistoryId('rev'), collection: doc.collection, docId: doc.id, docVersion: 1, authorId: 'seed', authorName: 'Content migration', at, sealedAt: at, action: 'created', data: doc.draft },
+        audit: { id: createHistoryId('aud'), at, actorId: 'seed', actorName: 'Content migration', action: 'content.create', collection: doc.collection, docId: doc.id } }));
+    }
     else if (JSON.stringify(current.draft) === JSON.stringify(seed.draft) && JSON.stringify(current.published) === JSON.stringify(seed.published)) updated.push(current);
     else {
-      const doc = await store.updateDoc(seed.collection, seed.id, current.version, { draft: seed.draft, published: seed.published,
-        publishedVersion: current.version + 1, status: 'published', order: seed.order, updatedAt: at, updatedBy: 'seed' });
+      const doc = await store.mutateDoc({ collection: seed.collection, id: seed.id, expectedVersion: current.version,
+        patch: { draft: seed.draft, published: seed.published, publishedVersion: current.version + 1, status: 'published', order: seed.order, updatedAt: at, updatedBy: 'seed' },
+        revision: { append: { id: createHistoryId('rev'), collection: seed.collection, docId: seed.id, docVersion: current.version + 1, authorId: 'seed', authorName: 'Content migration', at, sealedAt: at, action: 'edited', data: seed.draft } },
+        audit: { id: createHistoryId('aud'), at, actorId: 'seed', actorName: 'Content migration', action: 'content.edit', collection: seed.collection, docId: seed.id } });
       if (doc === 'conflict') throw new Error(`Seed conflict for ${seed.collection}/${seed.id}; retry after stopping other writers`);
       updated.push(doc);
     }
@@ -58,14 +62,15 @@ export async function seedStore(store: Store, force = false): Promise<{ changed:
   const revisions: Revision[] = [];
   const manifest = [];
   for (const doc of allDocs.filter(doc => doc.published !== undefined && doc.status !== 'trashed')) {
-    const revId = `rev_seed_${siteVersion}_${doc.id}`;
+    const revId = createHistoryId('rev');
     revisions.push({ id: revId, collection: doc.collection, docId: doc.id, docVersion: doc.publishedVersion ?? doc.version,
       authorId: 'seed', authorName: 'Content migration', at, sealedAt: at, action: 'published', data: doc.published, publishSiteVersion: siteVersion });
     const titlePath = collections[doc.collection].titleField;
     const title = titlePath.split('.').reduce<unknown>((value, key) => value && typeof value === 'object' ? (value as Record<string, unknown>)[key] : undefined, doc.published);
-    manifest.push({ collection: doc.collection, id: doc.id, version: doc.publishedVersion ?? doc.version, title: typeof title === 'string' ? title : doc.id, revId });
+    manifest.push({ collection: doc.collection, id: doc.id, version: doc.publishedVersion ?? doc.version, order: doc.order ?? 0, title: typeof title === 'string' ? title : doc.id, revId });
   }
-  await store.publish({ docs: updated, snapshot: seedSnapshot(allDocs, siteVersion, at), revisions,
+  await store.publish({ docs: updated.map(nextDoc => ({ expectedVersion: nextDoc.version, nextDoc })), snapshot: seedSnapshot(allDocs, siteVersion, at), revisions,
+    audit: [{ id: createHistoryId('aud'), at, actorId: 'seed', actorName: 'Content migration', action: 'content.publish' }],
     record: { siteVersion, at, actorId: 'seed', summary: 'Seed content migration', kind: 'publish', manifest } });
   return { changed: true, count: seeds.length };
 }

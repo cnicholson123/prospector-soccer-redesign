@@ -1,3 +1,4 @@
+export const SCHEMA_VERSION = 1;
 /** Shared by validation and the admin form engine. System records are separate. */
 export const pageNames = ['home', 'recreational', 'competitive', 'referees', 'sponsors', 'board', 'resources', 'about'] as const;
 export type PageName = typeof pageNames[number];

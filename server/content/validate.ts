@@ -1,5 +1,6 @@
 import { collections, iconNames, type CollectionName, type Field } from '../../shared/schema';
-import type { ValidationIssue, ValidationResult } from '../../shared/types';
+import { references } from './references';
+import type { Doc, ValidationIssue, ValidationResult } from '../../shared/types';
 
 const record = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value);
 const nonempty = (value: unknown): value is string => typeof value === 'string' && value.trim().length > 0;
@@ -44,7 +45,8 @@ export function validateFields(fields: Record<string, Field>, data: unknown, pre
       case 'text': case 'richtext': {
         if (typeof value !== 'string') { error(path, 'Must be text'); break; }
         if (field.required && !value.trim()) error(path, 'Required');
-        if (field.type === 'text' && field.maxLength !== undefined && value.length > field.maxLength) error(path, `Must be at most ${field.maxLength} characters`);
+        const maxLength = field.type === 'richtext' ? 20_000 : field.maxLength ?? (field.multiline ? 5_000 : 500);
+        if (value.length > maxLength) error(path, `Must be at most ${maxLength} characters`);
         if (field.type === 'richtext') {
           // Grammar rendering belongs to Phase 2; reject unsafe Markdown links now.
           for (const match of value.matchAll(/\]\(\s*([^\s)]*)/g)) if (!isSafeUrl(match[1], { allowRelative: true, allowMailto: true })) error(path, 'Link URL is not allowed');
@@ -97,7 +99,11 @@ export function validateFields(fields: Record<string, Field>, data: unknown, pre
   checkObject(fields, data, prefix);
   return { valid: errors.length === 0, errors };
 }
-export function validate(collection: CollectionName, data: unknown): ValidationResult {
+export interface ValidationOptions {
+  mode: 'draft' | 'publish';
+  resolve?: (collection: CollectionName, id: string) => Doc | null;
+}
+export function validate(collection: CollectionName, data: unknown, options: ValidationOptions = { mode: 'draft' }): ValidationResult {
   const schema = Object.hasOwn(collections, collection) ? collections[collection] : undefined;
   if (!schema) return { valid: false, errors: [{ path: '', message: 'Unknown collection' }] };
   const result = validateFields(schema.fields, data);
@@ -113,5 +119,53 @@ export function validate(collection: CollectionName, data: unknown): ValidationR
     if (collection === 'callouts' && typeof data.startsAt === 'string' && typeof data.endsAt === 'string' && Date.parse(data.startsAt) >= Date.parse(data.endsAt)) add('endsAt', 'Must be after startsAt');
     if (collection === 'events' && typeof data.time === 'string' && typeof data.endTime === 'string' && data.endTime <= data.time) add('endTime', 'Must be after time');
   }
+  if (options.mode === 'publish') {
+    if (schema.kind === 'singleton' && record(data)) {
+      for (const [name, field] of Object.entries(schema.fields)) {
+        if (['object', 'list'].includes(field.type) && data[name] === undefined) add(name, 'Required section');
+      }
+    }
+    for (const ref of references(collection, data)) {
+      const target = options.resolve?.(ref.collection, ref.id);
+      if (!target || target.collection !== ref.collection || target.trashedAt || target.status === 'trashed') {
+        add(ref.path, 'Reference must resolve to an existing, non-trashed document');
+      } else if (ref.kind !== 'reference') {
+        const media = record(target.draft) ? target.draft : {};
+        const mime = typeof media.mime === 'string' ? media.mime : '';
+        if (ref.kind === 'image' ? !['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(mime) : mime !== 'application/pdf') add(ref.path, `Must reference ${ref.kind === 'image' ? 'an allowed image' : 'a PDF file'}`);
+      }
+    }
+  }
   return result;
+}
+
+/** Returns a copy. Call only for creation, never while saving an existing draft. */
+export function applyDefaults(collection: CollectionName, data: unknown, resolve: NonNullable<ValidationOptions['resolve']> = () => null): unknown {
+  function fill(fields: Record<string, Field>, value: unknown): unknown {
+    if (!record(value)) return value;
+    const output = structuredClone(value);
+    for (const [key, field] of Object.entries(fields)) {
+      if (output[key] === undefined) {
+        if (field.default !== undefined) output[key] = structuredClone(field.default);
+        else if (field.defaultFrom) {
+          const [name, ...path] = field.defaultFrom.split('.');
+          const source = resolve(name as CollectionName, name)?.draft;
+          const fallback = path.reduce<unknown>((current, part) => record(current) ? current[part] : undefined, source);
+          if (fallback !== undefined) output[key] = structuredClone(fallback);
+        } else if (field.type === 'object') {
+          const nested = fill(field.fields, {});
+          if (record(nested) && Object.keys(nested).length) output[key] = nested;
+        }
+      }
+      if (field.type === 'object' && output[key] !== undefined) output[key] = fill(field.fields, output[key]);
+      if (field.type === 'list' && Array.isArray(output[key])) output[key] = output[key].map((item: unknown) => fill(field.of, item));
+    }
+    return output;
+  }
+  return fill(collections[collection].fields, data);
+}
+export class ValidationError extends Error {
+  readonly code = 'validation';
+  readonly status = 422;
+  constructor(readonly details: ValidationIssue[]) { super('Content validation failed'); }
 }

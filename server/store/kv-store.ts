@@ -1,25 +1,33 @@
-import type { CollectionName } from '../../shared/schema';
-import type { AuditEntry, AuditQuery, Doc, KvPrimitives, PublishRecord, PublishTx, Revision, RunExclusive, Session, Snapshot, Store, User } from './types';
+import { isDeepStrictEqual } from 'node:util';
+import { collectionNames, type CollectionName } from '../../shared/schema';
+import { validate, ValidationError } from '../content/validate';
+import { buildSnapshot } from '../content/snapshot';
+import { referenceUsage } from '../content/references';
+import type { AuditEntry, AuditQuery, CreateDoc, Doc, DocMutation, KvPrimitives, PublishRecord, PublishTx, Revision, RunExclusive, Session, Snapshot, Store, User } from './types';
 
 const part = (value: string): string => {
   if (!value || value === '.' || value === '..') throw new Error('Empty or invalid storage identifier');
   return encodeURIComponent(value).replace(/\./g, '%2E');
 };
+const equal = (a: unknown, b: unknown) => isDeepStrictEqual(JSON.parse(JSON.stringify(a)), JSON.parse(JSON.stringify(b)));
 const docKey = (collection: CollectionName, id: string) => `docs/${part(collection)}/${part(id)}.json`;
-const revKey = (rev: Revision) => `revisions/${part(rev.docId)}/${part(rev.at)}-${part(rev.id)}.json`;
-const auditKey = (entry: AuditEntry) => `audit/${entry.at.slice(0, 7)}/${part(entry.at)}-${part(entry.id)}.json`;
+const revKey = (rev: Pick<Revision, 'docId' | 'id'>) => `revisions/${part(rev.docId)}/${part(rev.id)}.json`;
+const auditKey = (entry: AuditEntry) => `audit/${entry.at.slice(0, 7)}/${part(entry.id)}.json`;
 const publishKey = (version: number) => {
   if (!Number.isSafeInteger(version) || version < 1) throw new Error('Invalid site version');
   return `publishes/${String(version).padStart(8, '0')}.json`;
 };
 const pageLimit = (limit: number) => { if (!Number.isInteger(limit) || limit < 1 || limit > 1000) throw new Error('Limit must be 1–1000'); return limit; };
-/** Blob primitives have no CAS. The default queue only serializes this instance.
- * FS supplies a cross-process lock; Postgres will supply native transactions.
- * Multi-key KV publish is intentionally snapshot-last, not crash-atomic.
+interface MutationJournal { writes: { key: string; value: unknown }[]; doc: Doc }
+const mutationKey = 'meta/pending-mutation.json';
+const pendingPublishKey = 'meta/pending-publish.json';
+/** FS serializes across processes. Journals make interrupted multi-file writes
+ * replayable. The content document and public snapshot are commit points.
  */
 export class KvStore implements Store {
   private queue: Promise<unknown> = Promise.resolve();
   private exclusive: RunExclusive;
+  private now: () => Date;
   constructor(private kv: KvPrimitives, options: { exclusive?: RunExclusive; now?: () => Date } = {}) {
     this.now = options.now ?? (() => new Date());
     this.exclusive = options.exclusive ?? (async <T>(operation: () => Promise<T>): Promise<T> => {
@@ -28,145 +36,302 @@ export class KvStore implements Store {
       return next;
     });
   }
-  private now: () => Date;
   private async read<T>(key: string): Promise<T | null> { return await this.kv.get(key) as T | null; }
   private async all<T>(prefix: string): Promise<T[]> {
     const values = await Promise.all((await this.kv.list(prefix)).map(key => this.read<T>(key)));
     return values.filter((value): value is Awaited<T> => value !== null);
   }
+  private async allDocs(): Promise<Doc[]> { return (await Promise.all(collectionNames.map(name => this.listDocs(name, { includeTrashed: true })))).flat(); }
   getDoc(collection: CollectionName, id: string) { return this.read<Doc>(docKey(collection, id)); }
   async listDocs(collection: CollectionName, opts: { includeTrashed?: boolean } = {}): Promise<Doc[]> {
     const docs = await this.all<Doc>(`docs/${part(collection)}/`);
     return docs.filter(doc => opts.includeTrashed || (!doc.trashedAt && doc.status !== 'trashed'))
       .sort((a, b) => (a.order ?? 0) - (b.order ?? 0) || a.id.localeCompare(b.id));
   }
-  createDoc(doc: Doc): Promise<Doc> {
+  private async resumeMutation(): Promise<void> {
+    const pending = await this.read<MutationJournal>(mutationKey);
+    if (!pending) return;
+    for (const write of pending.writes) await this.kv.put(write.key, write.value);
+    await this.kv.put(docKey(pending.doc.collection, pending.doc.id), pending.doc);
+    await this.kv.delete(mutationKey);
+  }
+  private async readyToMutate(): Promise<void> {
+    if (await this.kv.get(pendingPublishKey)) throw new Error('Pending publish; call recoverPublish before editing');
+    await this.resumeMutation();
+  }
+  private checkRevision(rev: Revision, doc: Doc): void {
+    if (rev.docId !== doc.id || rev.collection !== doc.collection || rev.docVersion !== doc.version || !equal(rev.data, doc.draft)) throw new Error('Revision identity, docVersion or data does not match document');
+  }
+  private async assertIdentical(key: string, value: unknown): Promise<void> {
+    const old = await this.kv.get(key);
+    if (old !== null && !equal(old, value)) throw new Error(`Different content under existing id: ${key}`);
+  }
+  private async checkAudit(entry: AuditEntry): Promise<void> {
+    if (!entry || !entry.id || !Number.isFinite(Date.parse(entry.at))) throw new Error('Audit entry with ISO timestamp is required');
+    await this.assertIdentical(auditKey(entry), entry);
+    // Legacy audit keys contained a timestamp. Preserve their immutability.
+    if (!/^aud_[0-9a-v]{10}_[0-9a-v]{6}$/.test(entry.id)) {
+      const old = (await this.all<AuditEntry>('audit/')).find(item => item.id === entry.id);
+      if (old && !equal(old, entry)) throw new Error('Different content under existing audit id');
+    } else {
+      const time = parseInt(entry.id.split('_')[1], 32);
+      if (new Date(time).toISOString().slice(0, 7) !== entry.at.slice(0, 7)) throw new Error('Audit id timestamp must match its month');
+    }
+  }
+  private async commitMutation(doc: Doc, revisions: Revision[], audit: AuditEntry): Promise<Doc> {
+    await this.checkAudit(audit);
+    if (await this.kv.get(auditKey(audit))) throw new Error('Audit entry already exists');
+    const writes = [...revisions.map(value => ({ key: revKey(value), value })), { key: auditKey(audit), value: audit }];
+    await this.kv.put(mutationKey, { writes, doc } satisfies MutationJournal);
+    await this.resumeMutation();
+    return structuredClone(doc);
+  }
+  createDoc({ doc, revision, audit }: CreateDoc): Promise<Doc> {
     return this.exclusive(async () => {
-      const key = docKey(doc.collection, doc.id);
-      // Match the global docs(id) primary key of the future Postgres adapter.
-      if ((await this.all<Doc>('docs/')).some(existing => existing.id === doc.id)) throw new Error('Document already exists');
+      await this.readyToMutate();
+      if (await this.getDoc(doc.collection, doc.id)) throw new Error('Document already exists');
       if (doc.version !== 1) throw new Error('New document version must be 1');
-      await this.kv.put(key, doc); return structuredClone(doc);
+      this.checkRevision(revision, doc);
+      await this.assertIdentical(revKey(revision), revision);
+      return this.commitMutation(doc, [revision], audit);
     });
   }
-  updateDoc(collection: CollectionName, id: string, expectedVersion: number, patch: Partial<Doc>): Promise<Doc | 'conflict'> {
+  mutateDoc(mutation: DocMutation): Promise<Doc | 'conflict'> {
     return this.exclusive(async () => {
+      await this.readyToMutate();
+      const { collection, id, expectedVersion, patch, audit } = mutation;
       const current = await this.getDoc(collection, id);
       if (!current || current.version !== expectedVersion) return 'conflict';
       const doc = { ...current, ...patch, id: current.id, collection: current.collection,
         createdAt: current.createdAt, createdBy: current.createdBy, version: expectedVersion + 1 };
-      await this.kv.put(docKey(collection, id), doc); return structuredClone(doc);
+      if ((doc.trashedAt || doc.status === 'trashed') && !current.trashedAt && current.status !== 'trashed') {
+        const usage = referenceUsage(await this.allDocs(), collection, id);
+        if (usage.length) throw Object.assign(new Error('Document is in use'), { code: 'in_use', status: 409, details: { usage } });
+      }
+      const revisions: Revision[] = [];
+      for (const revId of new Set(mutation.seal ?? [])) {
+        const rev = await this.getRevision(id, revId);
+        if (!rev || rev.collection !== collection) throw new Error('Revision not found');
+        if (!rev.sealedAt) revisions.push({ ...rev, sealedAt: this.now().toISOString() });
+      }
+      if (mutation.revision) {
+        const rev = 'upsert' in mutation.revision ? mutation.revision.upsert : mutation.revision.append;
+        this.checkRevision(rev, doc);
+        const old = await this.getRevision(id, rev.id);
+        if (old) {
+          if ('append' in mutation.revision) throw new Error('Revision already exists');
+          if (old.sealedAt || mutation.seal?.includes(rev.id)) throw new Error('Cannot modify sealed revision');
+          if (old.authorId !== rev.authorId || old.collection !== collection) throw new Error('Cannot change revision identity');
+          if (rev.docVersion <= old.docVersion) throw new Error('Revision docVersion must increase');
+        }
+        revisions.push(rev);
+      }
+      return this.commitMutation(doc, revisions, audit);
     });
   }
-  getSnapshot() { return this.read<Snapshot>('snapshot/published.json'); }
+  async getSnapshot(): Promise<Snapshot | null> {
+    const snapshot = await this.read<Snapshot>('snapshot/published.json');
+    if (!snapshot) return null;
+    if (snapshot.schemaVersion !== undefined && snapshot.media !== undefined) return snapshot;
+    // Additive upgrade of pre-1b persisted snapshots without changing their data.
+    const docs = Object.values(snapshot.docs).flatMap(items => (items ?? []).map(item => ({ ...item, published: item.data, publishedVersion: item.version, draft: item.data, status: 'published' as const, createdAt: snapshot.publishedAt, updatedAt: snapshot.publishedAt, createdBy: 'legacy', updatedBy: 'legacy' })));
+    return buildSnapshot(docs, snapshot);
+  }
+  private async writePublish(tx: PublishTx): Promise<void> {
+    for (const { nextDoc } of tx.docs) await this.kv.put(docKey(nextDoc.collection, nextDoc.id), nextDoc);
+    for (const rev of tx.revisions ?? []) await this.kv.put(revKey(rev), rev);
+    for (const entry of tx.audit ?? []) await this.kv.put(auditKey(entry), entry);
+    await this.kv.put(publishKey(tx.record.siteVersion), tx.record);
+    await this.kv.put('snapshot/published.json', tx.snapshot);
+    await this.kv.delete(pendingPublishKey);
+  }
   publish(tx: PublishTx): Promise<{ siteVersion: number }> {
     return this.exclusive(async () => {
+      await this.resumeMutation();
+      const pending = await this.read<PublishTx>(pendingPublishKey);
+      if (pending) {
+        if (!equal(pending, tx)) throw new Error('Different content from pending publish; recoverPublish first');
+        await this.writePublish(pending);
+        return { siteVersion: tx.record.siteVersion };
+      }
       const current = await this.getSnapshot();
+      const existingRecord = await this.getPublish(tx.record.siteVersion);
+      if (existingRecord) {
+        if (!equal(existingRecord, tx.record) || !equal(current, tx.snapshot)) throw new Error('Publish version conflict');
+        for (const { nextDoc } of tx.docs) await this.assertIdentical(docKey(nextDoc.collection, nextDoc.id), nextDoc);
+        for (const rev of tx.revisions ?? []) {
+          const stored = await this.getRevision(rev.docId, rev.id);
+          if (!stored || !equal(stored, rev)) throw new Error('Different content under existing revision id');
+        }
+        for (const entry of tx.audit ?? []) {
+          const stored = await this.kv.get(auditKey(entry));
+          if (!stored || !equal(stored, entry)) throw new Error('Different content under existing audit id');
+        }
+        return { siteVersion: tx.record.siteVersion };
+      }
       const siteVersion = (current?.siteVersion ?? 0) + 1;
       if (tx.snapshot.siteVersion !== siteVersion || tx.record.siteVersion !== siteVersion) throw new Error('Publish version conflict');
-      if (await this.getPublish(siteVersion)) throw new Error('Publish record already exists; rebuild snapshot before retrying');
+      const docs = await this.allDocs();
       const seen = new Set<string>();
-      for (const doc of tx.docs) {
-        const key = docKey(doc.collection, doc.id);
+      for (const { expectedVersion, nextDoc } of tx.docs) {
+        const key = docKey(nextDoc.collection, nextDoc.id);
         if (seen.has(key)) throw new Error('Duplicate publish document');
         seen.add(key);
-        const stored = await this.getDoc(doc.collection, doc.id);
-        if (!stored || stored.version !== doc.version) throw new Error('Document version conflict');
+        const index = docs.findIndex(doc => doc.id === nextDoc.id && doc.collection === nextDoc.collection);
+        const stored = docs[index];
+        if (!stored || stored.version !== expectedVersion) throw new Error('Document version conflict');
+        if (![expectedVersion, expectedVersion + 1].includes(nextDoc.version)) throw new Error('Invalid next document version');
+        if (stored.createdAt !== nextDoc.createdAt || stored.createdBy !== nextDoc.createdBy) throw new Error('Cannot change document creation metadata');
+        docs[index] = nextDoc;
       }
       const revisionIds = new Set<string>();
       for (const rev of tx.revisions ?? []) {
-        if (revisionIds.has(rev.id) || await this.getRevision(rev.id)) throw new Error('Revision already exists');
-        revisionIds.add(rev.id);
+        const key = revKey(rev);
+        if (revisionIds.has(key)) throw new Error('Revision already exists');
+        revisionIds.add(key);
+        const old = await this.getRevision(rev.docId, rev.id);
+        if (old && !equal(old, rev)) throw new Error('Different content under existing revision id');
       }
       const auditIds = new Set<string>();
       for (const entry of tx.audit ?? []) {
         if (auditIds.has(entry.id)) throw new Error('Audit entry already exists');
         auditIds.add(entry.id);
-        await this.assertNewAudit(entry);
+        await this.checkAudit(entry);
       }
-      for (const doc of tx.docs) await this.kv.put(docKey(doc.collection, doc.id), doc);
-      for (const rev of tx.revisions ?? []) await this.kv.put(revKey(rev), rev);
-      for (const entry of tx.audit ?? []) await this.kv.put(auditKey(entry), entry);
-      await this.kv.put(publishKey(siteVersion), tx.record);
-      await this.kv.put('snapshot/published.json', tx.snapshot);
+      const manifestIds = new Set<string>();
+      for (const entry of tx.record.manifest) {
+        const key = docKey(entry.collection, entry.id);
+        const doc = docs.find(doc => doc.collection === entry.collection && doc.id === entry.id);
+        if (manifestIds.has(key) || !doc || doc.status === 'trashed' || doc.trashedAt || doc.published === undefined || entry.version !== doc.publishedVersion || entry.order !== (doc.order ?? 0)) throw new Error('Invalid publish manifest');
+        manifestIds.add(key);
+        const rev = tx.revisions?.find(rev => rev.id === entry.revId && rev.docId === entry.id) ?? await this.getRevision(entry.id, entry.revId);
+        if (!rev || rev.collection !== entry.collection || rev.docVersion !== entry.version || !equal(rev.data, doc.published)) throw new Error('Manifest revision does not match published document');
+      }
+      for (const doc of docs.filter(doc => doc.published !== undefined && doc.status !== 'trashed' && !doc.trashedAt)) {
+        if (!manifestIds.has(docKey(doc.collection, doc.id))) throw new Error('Published document missing from manifest');
+        const result = validate(doc.collection, doc.published, { mode: 'publish', resolve: (collection, id) => docs.find(target => target.collection === collection && target.id === id) ?? null });
+        if (!result.valid) throw new ValidationError(result.errors.map(error => ({ ...error, path: `${doc.collection}.${doc.id}.${error.path}` })));
+      }
+      for (const item of tx.snapshot.scheduled) {
+        const target = docs.find(doc => doc.collection === item.collection && doc.id === item.id);
+        if (!target || target.trashedAt || target.status === 'trashed' || !Number.isFinite(Date.parse(item.at))) throw new Error('Invalid scheduled document');
+        const result = validate(item.collection, item.data, { mode: 'publish', resolve: (collection, id) => docs.find(doc => doc.collection === collection && doc.id === id) ?? null });
+        if (!result.valid) throw new ValidationError(result.errors.map(error => ({ ...error, path: `${item.collection}.${item.id}.${error.path}` })));
+      }
+      for (const mediaId of Object.keys(tx.snapshot.media)) {
+        if (!manifestIds.has(docKey('media', mediaId))) throw new Error('Referenced media must have a versioned publish manifest entry');
+      }
+      const built = buildSnapshot(docs, tx.snapshot, tx.record.manifest);
+      if (!equal(built, tx.snapshot)) throw new Error('Snapshot does not match published documents and manifest');
+      await this.kv.put(pendingPublishKey, tx);
+      await this.writePublish(tx);
       return { siteVersion };
     });
   }
+  recoverPublish(): Promise<{ repaired: boolean; siteVersion: number }> {
+    return this.exclusive(async () => {
+      await this.resumeMutation();
+      const pending = await this.read<PublishTx>(pendingPublishKey);
+      if (pending) {
+        await this.writePublish(pending);
+        return { repaired: true, siteVersion: pending.record.siteVersion };
+      }
+      const current = await this.getSnapshot();
+      const siteVersion = (current?.siteVersion ?? 0) + 1;
+      const record = await this.getPublish(siteVersion);
+      if (!record) return { repaired: false, siteVersion: current?.siteVersion ?? 0 };
+      const docs = await this.allDocs();
+      for (const entry of record.manifest) {
+        const doc = docs.find(doc => doc.collection === entry.collection && doc.id === entry.id);
+        if (!doc || doc.publishedVersion !== entry.version) throw new Error('Cannot recover inconsistent publish manifest');
+      }
+      const snapshot = buildSnapshot(docs, { siteVersion, publishedAt: record.at, templateHash: current?.templateHash ?? '', scheduled: current?.scheduled ?? [], effectiveAt: current?.effectiveAt }, record.manifest);
+      await this.kv.put('snapshot/published.json', snapshot);
+      return { repaired: true, siteVersion };
+    });
+  }
   async listPublishes(limit: number, before?: number): Promise<PublishRecord[]> {
-    return (await this.all<PublishRecord>('publishes/')).filter(p => before === undefined || p.siteVersion < before)
+    const records = (await this.all<PublishRecord>('publishes/')).filter(record => before === undefined || record.siteVersion < before)
       .sort((a, b) => b.siteVersion - a.siteVersion).slice(0, pageLimit(limit));
+    return Promise.all(records.map(record => this.normalizePublish(record)));
   }
-  getPublish(siteVersion: number) { return this.read<PublishRecord>(publishKey(siteVersion)); }
-  appendRevision(rev: Revision): Promise<void> {
-    return this.exclusive(async () => { if (await this.getRevision(rev.id)) throw new Error('Revision already exists'); await this.kv.put(revKey(rev), rev); });
+  private async normalizePublish(record: PublishRecord): Promise<PublishRecord> {
+    if (record.manifest.every(entry => entry.order !== undefined)) return record;
+    const snapshot = await this.read<Snapshot>('snapshot/published.json');
+    return { ...record, manifest: record.manifest.map(entry => ({ ...entry,
+      // Earlier manifests never stored order. Only their matching snapshot can
+      // recover it exactly; older unavailable values get a stable zero fallback.
+      order: entry.order ?? (snapshot?.siteVersion === record.siteVersion ? snapshot.docs[entry.collection]?.find(doc => doc.id === entry.id)?.order : undefined) ?? 0,
+    })) };
   }
-  upsertWorkingRevision(rev: Revision): Promise<void> {
-    return this.exclusive(async () => {
-      const old = await this.getRevision(rev.id);
-      if (old && (old.sealedAt || old.docId !== rev.docId || old.collection !== rev.collection || old.authorId !== rev.authorId)) throw new Error('Cannot modify sealed revision or revision identity');
-      await this.kv.put(revKey(rev), rev);
-      if (old && revKey(old) !== revKey(rev)) await this.kv.delete(revKey(old));
-    });
-  }
-  sealRevision(revId: string): Promise<void> {
-    return this.exclusive(async () => {
-      const rev = await this.getRevision(revId);
-      if (!rev) throw new Error('Revision not found');
-      if (!rev.sealedAt) await this.kv.put(revKey(rev), { ...rev, sealedAt: this.now().toISOString() });
-    });
+  async getPublish(siteVersion: number): Promise<PublishRecord | null> {
+    const record = await this.read<PublishRecord>(publishKey(siteVersion));
+    return record ? this.normalizePublish(record) : null;
   }
   async listRevisions(collection: CollectionName, id: string, limit: number, before?: string): Promise<Revision[]> {
-    const revisions = await this.all<Revision>(`revisions/${part(id)}/`);
-    // before may be an ID (stable tie-breaking) or an ISO timestamp.
+    const values = await this.all<Revision>(`revisions/${part(id)}/`);
+    const revisions = [...new Map(values.map(rev => [rev.id, rev])).values()];
     const boundary = before ? revisions.find(rev => rev.id === before) : undefined;
     return revisions.filter(rev => rev.collection === collection && (!before || (boundary ? rev.at < boundary.at || (rev.at === boundary.at && rev.id < boundary.id) : rev.at < before)))
       .sort((a, b) => b.at.localeCompare(a.at) || b.id.localeCompare(a.id)).slice(0, pageLimit(limit));
   }
-  async getRevision(revId: string): Promise<Revision | null> {
-    return (await this.all<Revision>('revisions/')).find(rev => rev.id === revId) ?? null;
-  }
-  private async assertNewAudit(entry: AuditEntry): Promise<void> {
-    if ((await this.all<AuditEntry>('audit/')).some(old => old.id === entry.id)) throw new Error('Audit entry already exists');
-    if (!/^\d{4}-\d{2}-\d{2}T/.test(entry.at)) throw new Error('Audit timestamp must be ISO');
-  }
-  appendAudit(entry: AuditEntry): Promise<void> {
-    return this.exclusive(async () => { await this.assertNewAudit(entry); await this.kv.put(auditKey(entry), entry); });
+  async getRevision(docId: string, revId: string): Promise<Revision | null> {
+    const rev = await this.read<Revision>(revKey({ docId, id: revId }));
+    if (rev) return rev;
+    const legacy = (await this.kv.list(`revisions/${part(docId)}/`)).find(key => key.endsWith(`-${part(revId)}.json`));
+    return legacy ? this.read<Revision>(legacy) : null;
   }
   async queryAudit(q: AuditQuery): Promise<{ items: AuditEntry[]; cursor?: string }> {
     const limit = pageLimit(q.limit);
-    const text = q.text?.toLocaleLowerCase();
-    const rows = (await this.all<AuditEntry>('audit/')).filter(row =>
-      (!q.actorId || row.actorId === q.actorId) && (!q.action || row.action === q.action) &&
-      (!q.collection || row.collection === q.collection) && (!q.docId || row.docId === q.docId) &&
-      (!q.from || row.at >= q.from) && (!q.to || row.at <= q.to) &&
-      (!text || JSON.stringify(row).toLocaleLowerCase().includes(text)))
-      .sort((a, b) => b.at.localeCompare(a.at) || b.id.localeCompare(a.id));
-    const start = q.cursor ? rows.findIndex(row => row.id === q.cursor) + 1 : 0;
-    if (q.cursor && start === 0) throw new Error('Invalid audit cursor');
-    const items = rows.slice(start, start + limit);
-    return { items, ...(start + limit < rows.length ? { cursor: items.at(-1)?.id } : {}) };
+    const text = q.text?.toLowerCase();
+    const keys = await this.kv.list('audit/');
+    const months = [...new Set(keys.map(key => key.split('/')[1]))].sort().reverse();
+    const rows: AuditEntry[] = [];
+    let afterCursor = !q.cursor;
+    for (const month of months) {
+      if ((q.from && month < q.from.slice(0, 7)) || (q.to && month > q.to.slice(0, 7))) continue;
+      const entries = await Promise.all(keys.filter(key => key.startsWith(`audit/${month}/`)).map(key => this.read<AuditEntry>(key)));
+      for (const row of entries.filter((row): row is AuditEntry => row !== null).sort((a, b) => b.at.localeCompare(a.at) || b.id.localeCompare(a.id))) {
+        if (!afterCursor) { if (row.id === q.cursor) afterCursor = true; continue; }
+        if ((!q.actorId || row.actorId === q.actorId) && (!q.action || row.action === q.action) &&
+          (!q.collection || row.collection === q.collection) && (!q.docId || row.docId === q.docId) &&
+          (!q.from || row.at >= q.from) && (!q.to || row.at <= q.to) && (!text || JSON.stringify(row).toLowerCase().includes(text))) rows.push(row);
+        if (rows.length > limit) return { items: rows.slice(0, limit), cursor: rows[limit - 1].id };
+      }
+    }
+    if (!afterCursor) throw new Error('Invalid audit cursor');
+    return { items: rows };
   }
   listUsers() { return this.all<User>('users/'); }
   getUser(id: string) { return this.read<User>(`users/${part(id)}.json`); }
   async getUserByUsername(username: string): Promise<User | null> {
-    const id = await this.read<string>(`users-by-name/${part(username.toLocaleLowerCase())}.json`);
+    const id = await this.read<string>(`users-by-name/${part(username.toLowerCase())}.json`);
     return id ? this.getUser(id) : null;
   }
   putUser(user: User): Promise<void> {
     return this.exclusive(async () => {
-      const nameKey = `users-by-name/${part(user.username.toLocaleLowerCase())}.json`;
+      const nameKey = `users-by-name/${part(user.username.toLowerCase())}.json`;
       const owner = await this.read<string>(nameKey);
       if (owner && owner !== user.id) throw new Error('Username already exists');
       const old = await this.getUser(user.id);
       await this.kv.put(`users/${part(user.id)}.json`, user);
       await this.kv.put(nameKey, user.id);
-      if (old && old.username.toLocaleLowerCase() !== user.username.toLocaleLowerCase()) await this.kv.delete(`users-by-name/${part(old.username.toLocaleLowerCase())}.json`);
+      if (old && old.username.toLowerCase() !== user.username.toLowerCase()) await this.kv.delete(`users-by-name/${part(old.username.toLowerCase())}.json`);
     });
   }
   getSession(hash: string) { return this.read<Session>(`sessions/${part(hash)}.json`); }
-  async putSession(session: Session) { await this.kv.put(`sessions/${part(session.hash)}.json`, session); }
+  async putSession(session: Session) { await this.exclusive(() => this.kv.put(`sessions/${part(session.hash)}.json`, session)); }
   async deleteSession(hash: string) { await this.kv.delete(`sessions/${part(hash)}.json`); }
   async listSessions(userId: string) { return (await this.all<Session>('sessions/')).filter(session => session.userId === userId); }
+  deleteExpiredSessions(now: string): Promise<number> {
+    const cutoff = Date.parse(now);
+    if (!Number.isFinite(cutoff)) return Promise.reject(new Error('Invalid session expiry cutoff'));
+    return this.exclusive(async () => {
+      const expired = (await this.all<Session>('sessions/')).filter(session => Date.parse(session.expiresAt) <= cutoff);
+      for (const session of expired) await this.kv.delete(`sessions/${part(session.hash)}.json`);
+      return expired.length;
+    });
+  }
   rateLimitHit(key: string, windowSec: number): Promise<{ count: number; resetAt: string }> {
     if (!Number.isFinite(windowSec) || windowSec <= 0) return Promise.reject(new Error('Window must be positive'));
     return this.exclusive(async () => {
@@ -179,5 +344,8 @@ export class KvStore implements Store {
   }
   async rateLimitReset(key: string) { await this.exclusive(() => this.kv.delete(`ratelimit/${part(key)}.json`)); }
   async getMeta(key: string) { return this.kv.get(`meta/${part(key)}.json`); }
-  async setMeta(key: string, value: unknown) { await this.kv.put(`meta/${part(key)}.json`, value); }
+  async setMeta(key: string, value: unknown) {
+    if (key === 'pending-mutation' || key === 'pending-publish') throw new Error('Reserved transaction metadata key');
+    await this.kv.put(`meta/${part(key)}.json`, value);
+  }
 }
