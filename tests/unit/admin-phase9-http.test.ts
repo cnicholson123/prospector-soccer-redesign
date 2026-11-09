@@ -1,6 +1,6 @@
 import { afterEach, expect, it } from 'vitest';
 import { rm } from 'node:fs/promises';
-import { adminFixture } from '../helpers/admin.js';
+import { adminFixture, createUserWithPassword } from '../helpers/admin.js';
 import { createRenderHandler } from '../../server/render/handler.js';
 import type { Doc, Revision, AuditEntry } from '../../shared/types.js';
 import type { SiteComparison } from '../../shared/history.js';
@@ -79,7 +79,7 @@ it('previews every overwritten draft, live change, list order, later document an
 it('keeps history readable while enforcing audit and site restore roles', async () => {
   const f = await adminFixture(true); roots.push(f.root); await f.login();
   const password = generatedPassword();
-  await f.req('/users', 'POST', { username: 'Viewer', displayName: 'Viewer', role: 'Viewer', password });
+  await createUserWithPassword(f, { username: 'Viewer', displayName: 'Viewer', role: 'Viewer', password });
   await f.login('Viewer', password);
   expect((await f.req('/revisions?limit=1')).status).toBe(200);
   const actors = await (await f.req('/audit/actors')).json();

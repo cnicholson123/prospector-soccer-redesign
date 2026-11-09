@@ -40,6 +40,7 @@ export function createShopApp(factory: () => Store = createStore, options: { con
     let snapshot = await store.getSnapshot();
     if (preview) {
       const session = await readSession(store, c.req.raw, now(), config.production);
+      if (session?.user.mustChangePassword) return c.json({ error: { code: 'password_change_required', message: 'Change your temporary password before continuing' } }, 403);
       if (!session) return c.json({ error: { code: 'forbidden', message: 'Preview requires authentication.' } }, 403);
       if (snapshot) snapshot = buildSnapshot((await allDocs(store)).filter(d => !d.trashedAt).map(d => ({ ...d, published: d.draft, publishedVersion: d.version })), snapshot);
     }

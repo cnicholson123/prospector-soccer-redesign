@@ -23,7 +23,10 @@ export interface PublishTx {
 }
 export interface AdminCounts { counts: Record<string, number>; pendingCount: number; reviewCount: number; scheduledCount: number }
 export interface SessionContext { session: Session; user: User | null; scheduleVersion: number; nextDueAt: string | null; counts?: AdminCounts }
+export interface MediaCleanup { id: string; at: string; urls: string[]; kind: 'media-finalization' }
 export interface Store {
+  listMediaCleanups(before: string, limit: number): Promise<MediaCleanup[]>;
+  deleteMediaCleanup(id: string): Promise<void>;
   getSessionContext(hash: string, includeCounts?: boolean): Promise<SessionContext | null>;
   listAllDocs(): Promise<Doc[]>;
   adminCounts(): Promise<AdminCounts>;
@@ -62,7 +65,7 @@ export interface Store {
   deleteSession(hash: string): Promise<void>;
   listSessions(userId: string): Promise<Session[]>;
   deleteExpiredSessions(now: string): Promise<number>;
-  rateLimitHit(key: string, windowSec: number): Promise<{ count: number; resetAt: string }>;
+  rateLimitHit(key: string, windowSec: number, amount?: number): Promise<{ count: number; resetAt: string }>;
   rateLimitReset(key: string): Promise<void>;
   setScheduleError(error: { at: string } | null): Promise<void>;
   getMeta(key: string): Promise<unknown>;

@@ -21,6 +21,7 @@ export function createAuthenticate(): MiddlewareHandler<AdminEnv> {
     await stage('ratelimit', async () => work.rateLimit(auth.session.hash, c.get('now').getTime()));
     if (!['GET', 'HEAD', 'OPTIONS'].includes(c.req.method)) checkCsrf(c.req.raw, auth.session.csrfToken, c.get('config'));
     if (auth.refreshed) c.header('Set-Cookie', cookie(auth.token, c.get('config'), Math.floor((Date.parse(auth.session.expiresAt) - c.get('now').getTime()) / 1000)));
+    if (auth.user.mustChangePassword && !c.req.path.startsWith('/api/admin/auth/')) throw new ApiError(403, 'password_change_required', 'Change your temporary password before continuing');
     if (can(auth.user, 'content.publish') && !c.req.path.startsWith('/api/admin/auth/') && !c.req.path.startsWith('/api/admin/schedule/') && !c.req.path.endsWith('/untrash')) {
       const due = await stage('settle', () => work.settle(c.get('store'), c.get('now'), auth));
       if (due) c.set('counts', undefined); // The aggregate captured at authentication predates settlement.

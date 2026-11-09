@@ -9,7 +9,7 @@ export interface Config {
   databaseUrl?: string; blobReadWriteToken?: string; sessionSecret: string;
   adminBootstrapUsers?: BootstrapUser[]; adminBootstrapUser: string; adminBootstrapPassword: string; publicBaseUrl: string;
   cookieSecure: boolean; cacheSmaxage: number; cacheSwr: number; cdnPurge: 'off' | 'tag';
-  cronSecret?: string; tzName: string; maxImageBytes: number; maxFileBytes: number;
+  cronSecret?: string; tzName: string; maxImageBytes: number; maxFileBytes: number; maxUploadBytesPerDay: number;
   production: boolean; adminForcePasswordChange: boolean; shopCheckout: 'disabled' | 'enabled';
 }
 export function loadConfig(env: NodeJS.ProcessEnv = process.env, warn = console.warn): Config {
@@ -52,6 +52,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env, warn = console.
   if (production && !adminBootstrapUsers) fail('ADMIN_BOOTSTRAP_USERS is required in production');
   if (production && (!env.SESSION_SECRET || Buffer.byteLength(env.SESSION_SECRET) < 32)) fail('SESSION_SECRET must contain at least 32 bytes in production');
   if (env.SESSION_SECRET && Buffer.byteLength(env.SESSION_SECRET) < 32) fail('SESSION_SECRET must contain at least 32 bytes');
+  if (production && !env.CRON_SECRET?.trim()) fail('CRON_SECRET is required in production');
   const sessionSecret = env.SESSION_SECRET ?? randomBytes(32).toString('base64url');
   if (!env.SESSION_SECRET) warn('SESSION_SECRET is ephemeral; set a persistent value before enabling signed upload tokens.');
   const publicBaseUrl = env.PUBLIC_BASE_URL ?? 'http://localhost:3000';
@@ -68,5 +69,5 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env, warn = console.
     adminBootstrapUsers, adminBootstrapUser: env.ADMIN_BOOTSTRAP_USERNAME || env.ADMIN_BOOTSTRAP_USER || 'Phil', adminBootstrapPassword: env.ADMIN_BOOTSTRAP_PASSWORD || 'Phil',
     publicBaseUrl: base.origin, cookieSecure, cacheSmaxage: integer('CACHE_SMAXAGE', production ? 15 : 0),
     cacheSwr: integer('CACHE_SWR', production ? 300 : 0), cdnPurge: choice('CDN_PURGE', 'off', ['off', 'tag']),
-    cronSecret: env.CRON_SECRET, tzName, maxImageBytes: integer('MAX_IMAGE_BYTES', 8 * 1024 ** 2, 1), maxFileBytes: integer('MAX_FILE_BYTES', 15 * 1024 ** 2, 1) };
+    cronSecret: env.CRON_SECRET, tzName, maxUploadBytesPerDay: integer('MAX_UPLOAD_BYTES_PER_DAY', 256 * 1024 ** 2, 1), maxImageBytes: integer('MAX_IMAGE_BYTES', 8 * 1024 ** 2, 1), maxFileBytes: integer('MAX_FILE_BYTES', 15 * 1024 ** 2, 1) };
 }

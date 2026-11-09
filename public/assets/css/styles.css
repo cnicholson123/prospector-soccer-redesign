@@ -237,8 +237,12 @@ ul, ol { margin: 0; padding: 0; }
   .primary-nav a::after { left: 9px; right: 9px; }
 }
 @media (max-width: 1200px) {
-  .primary-nav, .site-header__cta { display: none; }
-  .menu-toggle { display: inline-flex; }
+  .js .primary-nav, .js .site-header__cta { display: none; }
+  .js .menu-toggle { display: inline-flex; }
+  html:not(.js) .site-header__inner { flex-wrap: wrap; height: auto; min-height: var(--header-h); padding-block: 12px; }
+  html:not(.js) .site-header__cta { margin-left: auto; }
+  html:not(.js) .primary-nav { order: 3; width: 100%; }
+  html:not(.js) .primary-nav ul { flex-wrap: wrap; justify-content: center; }
 }
 @media (max-width: 420px) {
   .brand__name { font-size: 1.35rem; }

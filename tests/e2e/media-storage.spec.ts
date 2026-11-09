@@ -11,7 +11,10 @@ test('quarantines an upload, verifies it and serves only finalized media',async(
   expect(issued.ok()).toBeTruthy();const grant=await issued.json();expect(grant.local).toBe(true);
   expect((await api.put(grant.uploadUrl,{headers:{...headers,'Content-Type':'image/png'},data:bytes})).ok()).toBeTruthy();
   expect((await api.get('/blobs/'+grant.pathname)).status()).toBe(404);
-  const finalized=await api.post('/api/admin/media',{headers,data:{ticket:grant.ticket,alt:'Uploaded crest',width:99999}});
+  const webBytes=Buffer.from('UklGRiIAAABXRUJQVlA4IBYAAAAwAQCdASoBAAEADsD+JaQAA3AAAAAA','base64');
+  const web=await (await api.post('/api/admin/media/upload-url',{headers,data:{filename:'web.webp',mime:'image/webp',size:webBytes.length}})).json();
+  expect((await api.put(web.uploadUrl,{headers:{...headers,'Content-Type':'image/webp'},data:webBytes})).ok()).toBe(true);
+  const finalized=await api.post('/api/admin/media',{headers,data:{ticket:grant.ticket,webTicket:web.ticket,alt:'Uploaded crest',width:99999}});
   expect(finalized.status()).toBe(201);const doc=(await finalized.json()).doc;
   expect(doc.draft.width).toBe(1);expect(doc.draft.height).toBe(1);
   const file=await api.get(doc.draft.variants.original);expect(file.ok()).toBeTruthy();expect(file.headers()['content-type']).toBe('image/png');

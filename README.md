@@ -71,7 +71,7 @@ ADMIN_BOOTSTRAP_USERS='[{"username":"Phil","displayName":"Phil","role":"Owner","
 ADMIN_FORCE_PASSWORD_CHANGE=false
 ```
 
-Then run `npm run bootstrap` against the same `DATA_DIR` and restart the server to load changed environment values. Bootstrap also runs lazily on admin access. It creates missing accounts and audits each creation. Existing passwords, roles, names and active states are preserved. To reset an existing account, use Users while signed in as an authorized administrator. Password changes are optional. New passwords must meet the server's length, username and common-password rules. Generated create/reset passwords appear once in the admin acknowledgement dialog.
+Then run `npm run bootstrap` against the same `DATA_DIR` and restart the server to load changed environment values. Bootstrap also runs lazily on admin access. It seeds accounts only when the user table is empty and audits each creation. Later environment changes are inert, including after username changes. Add subsequent accounts through Users. To reset an existing account, use Users while signed in as an authorized administrator. Bootstrap account password changes stay optional with `ADMIN_FORCE_PASSWORD_CHANGE=false`. Accounts created or reset through Users receive a generated one-time temporary password and must change it in Profile before opening content, previews or the workspace. New passwords must meet the server's length, username and common-password rules. Generated create/reset passwords appear once in the admin acknowledgement dialog.
 
 ### Choose the right seed command
 
@@ -80,7 +80,7 @@ Then run `npm run bootstrap` against the same `DATA_DIR` and restart the server 
 | `npm run seed` | Initialize a new empty store with all repository content and an initial publication |
 | `npm run seed:store` | Add missing merchandise showcase records to an initialized store |
 | `npm run seed:media` | Register missing shipped static images in an initialized store's media library |
-| `npm run bootstrap` | Add missing configured users, independently of content seeding |
+| `npm run bootstrap` | Seed configured users only into an empty user table |
 
 The general seed can reset repository-owned content. Its edited-version guard is helpful but does not make it an upgrade command. **Do not run general `seed` or `seed -- --force` as a deployment step against an edited/live store.** The additive commands preserve existing content, drafts, trash, users, sessions and history, publish only their own new records, accept no force option, and can be rerun after interruption. Static media registration does not upload files. Details and expected counts are in the deployment runbook.
 
@@ -193,10 +193,19 @@ Indexing is fail-closed. `seo.indexable` defaults to `false` in the schema and s
 
 In **Site settings → Utility bar**, replace the **Pill text** containing `Redesign concept` and edit **Message** / **Message long** as needed, then publish. Keeping the utility bar enabled retains its Admin entry link. This changes content through the CMS. The checkout boundary is a separate environment control.
 
-## Known issues and maintenance notes
+## Known issues and limitations
+
+- Full bounded server-side image decoding is deferred (A3). The server verifies headers, dimensions, MIME and size, and requires a client-produced WebP variant of at most 2000px. It does not decode complete pixel payloads or bound animation frame counts and aggregate decoded memory.
+- Strict zero-write cold or aged reads are deferred (A2). Warm GET/HEAD performance budgets remain enforced. Sliding sessions can refresh once per 15 minutes, revision maintenance can claim work once per 10 minutes, and due schedules or expired health caches can write.
+- Draft-media lookup can scan media records (F11). This is a performance limitation.
+- Published media sends `public, max-age=0, s-maxage=86400`, requiring browser revalidation. CDN copies can remain for up to 24 hours after removal. Previously cached year-long responses keep their earlier freshness lifetime, and downloaded files cannot be recalled. Historical binaries remain retained.
+- Each user has a configurable `MAX_UPLOAD_BYTES_PER_DAY` quota, default 256 MiB per rolling 24-hour window. Issuing each original or web-variant ticket reserves its declared bytes, including abandoned, rejected or failed uploads. The quota persists across app instances. Uploads also retain their existing hourly ticket and per-file limits.
+- The command palette defaults to Dashboard navigation. **Publish all** opens the populated **Review & publish** tray and requires confirmation there.
 
 - Very fast repeated `[` / `]` presses before the next editor renders can be ignored. The shortcuts save before changing documents and leave text input alone.
 - Editing presence is per warm server instance. Visible editors send a heartbeat at most every 30 seconds, and entries expire after 75 seconds. Other instances have separate presence maps, restarts clear them, and closed editors can linger until expiry. Version checks enforce write concurrency.
 - Constrained Markdown, explicit reload-and-compare conflicts and administrator-performed password resets are the current supported workflows. Email resets, full FS-history import, verified-binary garbage collection and automatic backup scheduling need separate implementation. Media validation checks signatures/dimensions, with retained originals and still-image WebP previews for animated inputs.
 
 The implementation plan, decisions and phase verification history live in [plans/admin-plan.md](plans/admin-plan.md) and [plans/admin-progress.md](plans/admin-progress.md).
+
+Finalization records a cleanup intent before copying. Failed deletions and process interruptions retain that intent. Cron retries at most 100 intents older than 24 hours per run, recovers pending metadata first, and preserves draft, scheduled and published-history references. This cleanup is limited to finalization attempts.

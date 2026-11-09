@@ -125,7 +125,7 @@ export function cronRoutes(app: Hono<AdminEnv>) {
     const secret = c.get('config').cronSecret, authorization = c.req.header('authorization') ?? '';
     const expected = `Bearer ${secret}`;
     if (!secret || !safeEqual(authorization, expected)) throw new ApiError(401, 'unauthenticated', 'Invalid cron credential');
-    await collectIncoming(c.get('blobs'), c.get('now'));
+    await collectIncoming(c.get('blobs'), c.get('now'), c.get('store'));
     await c.get('store').deleteExpiredSessions(c.get('now').toISOString());
     return c.json(await settleSchedules(c.get('store'), c.get('now')));
   });

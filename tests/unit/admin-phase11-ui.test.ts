@@ -46,7 +46,7 @@ it('hides out-of-ceiling account actions, protects the last Owner and discards t
   render(); hooks.effects[0](); await vi.waitFor(() => expect(hooks.values[1]).toBe(true));
   let tree = render();
   const ownerRow = nodes(tree).find(n => n.type === 'li' && words(n).includes('Phil'))!;
-  expect(nodes(ownerRow).find(n => words(n.props.children as ComponentChildren) === 'Deactivate')?.props.disabled).toBe(true);
+  expect(nodes(ownerRow).some(n => n.type === 'button' && n.props.children === 'Deactivate')).toBe(false);
   session.value!.user = admin;
   tree = render();
   expect(words(nodes(tree).find(n => n.type === 'li' && words(n).includes('Phil')))).toContain('Only an Owner');
@@ -71,7 +71,7 @@ it('palette uses an ARIA combobox/listbox, keyboard selection, and ignores stale
   let tree = render(); const input = () => nodes(tree).find(n => n.props.role === 'combobox')!;
   expect(input().props).toMatchObject({ 'aria-controls': 'command-results', 'aria-expanded': 'true', 'aria-autocomplete': 'list' });
   (input().props.onKeyDown as Function)({ key: 'Enter', preventDefault() {} }); await Promise.resolve();
-  expect(execute).toHaveBeenCalledWith(expect.objectContaining({ title: 'Publish all' }));
+  expect(execute).toHaveBeenCalledWith(expect.objectContaining({ title: 'Dashboard', href: '/admin' }));
   (input().props.onInput as Function)({ currentTarget: { value: 'Old result' } }); tree = render();
   const cleanup = hooks.effects[1](); await vi.advanceTimersByTimeAsync(200);
   (input().props.onInput as Function)({ currentTarget: { value: 'New result' } }); if (cleanup) cleanup(); tree = render(); hooks.effects[1](); await vi.advanceTimersByTimeAsync(200);

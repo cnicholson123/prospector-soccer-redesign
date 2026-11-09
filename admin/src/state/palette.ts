@@ -18,7 +18,7 @@ export function commands(): Command[] {
   if (inEditor) screens.push({ id: 'preview-ipad', title: 'Open preview as iPad', detail: 'Current document · 820px', action: 'preview-ipad' });
   if (allowed('users.manage')) screens.push({ id: 'users', title: 'Users', detail: 'Navigate', href: '/admin/users' });
   if (allowed('audit.read')) screens.push({ id: 'audit', title: 'Audit log', detail: 'Navigate', href: '/admin/audit' });
-  if (allowed('content.publish')) screens.unshift({ id: 'publish', title: 'Publish all', detail: 'Publish all saved pending changes', action: 'publish' });
+  if (allowed('content.publish')) screens.push({ id: 'publish', title: 'Publish all', detail: 'Review all saved pending changes', action: 'publish' });
   for (const definition of Object.values(collections)) {
     screens.push({ id: definition.name, title: definition.labelPlural, detail: 'Navigate', href: definition.kind === 'singleton' ? editorPath(definition.name) : `/admin/${definition.name}` });
     if (definition.kind === 'collection' && !definition.systemManaged && allowed('content.create')) screens.push({ id: 'new-' + definition.name, title: `New ${definition.label.toLowerCase()}`, detail: 'Create item', href: `/admin/${definition.name}/new` });

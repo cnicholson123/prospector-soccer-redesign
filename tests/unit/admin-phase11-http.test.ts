@@ -1,6 +1,6 @@
 import { afterEach, expect, it } from 'vitest';
 import { rm } from 'node:fs/promises';
-import { adminFixture } from '../helpers/admin.js';
+import { adminFixture, createUserWithPassword } from '../helpers/admin.js';
 import { createAdminApp } from '../../server/http/hono-app.js';
 import { createRenderHandler } from '../../server/render/handler.js';
 import { newSession, DAY } from '../../server/auth/session.js';
@@ -13,7 +13,7 @@ it('one-time account credentials, ceilings, active state and revocation remain a
   expect(created.status).toBe(201);
   const { user, temporaryPassword } = await created.json();
   expect(temporaryPassword.length).toBeGreaterThanOrEqual(18); expect(user).not.toHaveProperty('passwordHash');
-  const writer = await f.login('Writer', temporaryPassword); expect(writer.response.status).toBe(200); expect(writer.data.user.mustChangePassword).not.toBe(true);
+  const writer = await f.login('Writer', temporaryPassword); expect(writer.response.status).toBe(200); expect(writer.data.user.mustChangePassword).toBe(true);
   expect((await f.req('/publish', 'POST', {})).status).toBe(403);
   expect((await f.req('/users')).status).toBe(403);
   await f.login();
@@ -31,8 +31,12 @@ it('one-time account credentials, ceilings, active state and revocation remain a
   await f.login();
   expect((await f.req(`/users/${user.id}/revoke-sessions`, 'POST')).status).toBe(200);
   const users = await (await f.req('/users')).json(); expect(JSON.stringify(users)).not.toMatch(/passwordHash|temporaryPassword|scrypt\$/);
+  f.clock('2030-01-01T12:16:00Z');
   const admin = await (await f.req('/users', 'POST', { username: 'AdminUser', role: 'Admin' })).json();
   await f.login('AdminUser', admin.temporaryPassword);
+  const rotated = await f.req('/auth/password', 'POST', { current: admin.temporaryPassword, next: 'Rotated administrator passphrase' });
+  expect(rotated.status).toBe(200);
+  await f.login('AdminUser', 'Rotated administrator passphrase');
   expect((await f.req('/users', 'POST', { username: 'ForbiddenOwner', role: 'Owner' })).status).toBe(403);
   const owner = users.users.find((u: { role: string }) => u.role === 'Owner');
   expect((await f.req(`/users/${owner.id}/reset-password`, 'POST')).status).toBe(403);
@@ -43,8 +47,8 @@ it('one-time account credentials, ceilings, active state and revocation remain a
 });
 it('Contributor requests, Editor returns with required note and approves a fresh version to the public page', async () => {
   const f = await fixture(true);
-  const writer = await (await f.req('/users', 'POST', { username: 'ReviewerWriter', role: 'Contributor' })).json();
-  await f.login('ReviewerWriter', writer.temporaryPassword);
+  const writer = await (await createUserWithPassword(f, { username: 'ReviewerWriter', password: 'Rotated testing passphrase', role: 'Contributor' })).json();
+  await f.login('ReviewerWriter', 'Rotated testing passphrase');
   const { doc } = await (await f.req('/docs/events', 'POST', { draft: { title: 'Phase eleven community event', date: '2030-06-01', showOnHome: true } })).json();
   const request = await (await f.req(`/docs/events/${doc.id}/review`, 'POST', { baseVersion: doc.version, note: 'Please check' })).json();
   expect((await f.req(`/docs/events/${doc.id}/review`, 'DELETE', { baseVersion: request.doc.version, note: 'Cannot self-return' })).status).toBe(403);
@@ -54,7 +58,7 @@ it('Contributor requests, Editor returns with required note and approves a fresh
   expect((await f.req(`/docs/events/${doc.id}/review`, 'DELETE', { baseVersion: request.doc.version, note: '  ' })).status).toBe(422);
   const returned = await (await f.req(`/docs/events/${doc.id}/review`, 'DELETE', { baseVersion: request.doc.version, note: 'Please confirm the location.' })).json();
   expect(returned.doc.reviewRequestedBy).toBeUndefined();
-  await f.login('ReviewerWriter', writer.temporaryPassword);
+  await f.login('ReviewerWriter', 'Rotated testing passphrase');
   expect((await (await f.req(`/docs/events/${doc.id}`)).json()).doc.reviewNote).toBe('Please confirm the location.');
   const edited = await (await f.req(`/docs/events/${doc.id}`, 'PUT', { baseVersion: returned.doc.version, draft: { ...doc.draft, location: 'Club fields' } })).json();
   const resubmitted = await (await f.req(`/docs/events/${doc.id}/review`, 'POST', { baseVersion: edited.doc.version })).json();
@@ -89,10 +93,10 @@ it('lists only active, same-generation own sessions; password rotation and curre
 it('heartbeat is isolated, bounded to its document, expires, and uses no persistence; rebuild is Admin+', async () => {
   const f = await fixture();
   const { doc } = await (await f.req('/docs/events', 'POST', { draft: { title: 'Presence event', date: '2030-06-01' } })).json();
-  const writer = await (await f.req('/users', 'POST', { username: 'PresenceWriter', role: 'Contributor' })).json();
+  const writer = await (await createUserWithPassword(f, { username: 'PresenceWriter', password: 'Rotated testing passphrase', role: 'Contributor' })).json();
   const before = (await f.store.queryAudit({ limit: 100 })).items.length;
   const first = await f.req(`/docs/events/${doc.id}/presence`, 'POST'); expect((await first.json()).others).toEqual([]);
-  await f.login('PresenceWriter', writer.temporaryPassword);
+  await f.login('PresenceWriter', 'Rotated testing passphrase');
   const presence = await (await f.req(`/docs/events/${doc.id}/presence`, 'POST')).json();
   expect(presence.others).toEqual([{ id: (await f.store.getUserByUsername('Phil'))!.id, name: 'Phil' }]);
   expect(JSON.stringify(presence)).not.toMatch(/hash|csrf|session/);
@@ -102,18 +106,18 @@ it('heartbeat is isolated, bounded to its document, expires, and uses no persist
   expect((await isolated.json()).others).toEqual([]);
   f.clock('2030-01-01T12:01:16Z'); expect((await (await f.req(`/docs/events/${doc.id}/presence`, 'POST')).json()).others).toEqual([]);
   await f.login();
-  const editor = await (await f.req('/users', 'POST', { username: 'Rebuilder', role: 'Editor' })).json();
-  await f.login('Rebuilder', editor.temporaryPassword); expect((await f.req('/rebuild', 'POST')).status).toBe(403);
+  const editor = await (await createUserWithPassword(f, { username: 'Rebuilder', password: 'Rotated testing passphrase', role: 'Editor' })).json();
+  await f.login('Rebuilder', 'Rotated testing passphrase'); expect((await f.req('/rebuild', 'POST')).status).toBe(403);
   await f.login(); expect((await f.req('/rebuild', 'POST')).status).toBe(200);
   expect((await f.store.listPublishes(1))[0].kind).toBe('rebuild');
   expect((await f.store.queryAudit({ limit: 100 })).items.some(a => a.action === 'content.rebuild')).toBe(true);
 });
 
-it('legacy must-change flags never force changes or block authenticated previews', async () => {
+it('must-change flags restrict content and previews while auth routes remain usable', async () => {
   const f = await fixture(true), owner = (await f.store.listUsers())[0];
   await f.store.putUser({ ...owner, mustChangePassword: true });
-  expect((await f.req('/docs/home/home')).status).toBe(200);
+  expect((await f.req('/docs/home/home')).status).toBe(403);
   expect((await f.req('/auth/sessions')).status).toBe(200);
   const render = createRenderHandler(f.store, f.config, () => new Date('2030-01-01T12:00:00Z'));
-  expect((await render(new Request('http://localhost:3000/?preview=1', { headers: { Cookie: f.getCookie() } }))).status).toBe(200);
+  expect((await render(new Request('http://localhost:3000/?preview=1', { headers: { Cookie: f.getCookie() } }))).status).toBe(403);
 });

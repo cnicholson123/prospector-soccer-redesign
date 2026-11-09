@@ -24,8 +24,8 @@ describe('Section 19 hashed bootstrap', () => {
     expect(await bootstrap(f.store, { ...f.config, adminBootstrapUsers: [replacement, users[1]] })).toBe(false);
     expect(await f.store.getUserByUsername('Phil')).toEqual(phil);
     const extra = { ...users[1], username: 'AnotherOwner' };
-    expect(await bootstrap(f.store, { ...f.config, adminBootstrapUsers: [...users, extra] })).toBe(true);
-    expect((await f.store.queryAudit({ action: 'system.bootstrap', limit: 100 })).items).toHaveLength(3);
+    expect(await bootstrap(f.store, { ...f.config, adminBootstrapUsers: [...users, extra] })).toBe(false);
+    expect((await f.store.queryAudit({ action: 'system.bootstrap', limit: 100 })).items).toHaveLength(2);
     const audit = JSON.stringify(await f.store.queryAudit({ limit: 100 }));
     for (const secret of [...passwords, ...users.map(u => u.passwordHash)]) expect(audit).not.toContain(secret);
     const login = await f.login('Chris', passwords[1]);
@@ -33,7 +33,7 @@ describe('Section 19 hashed bootstrap', () => {
   });
   it('validates secret configuration without including its contents in errors', async () => {
     const { users } = await setupUsers();
-    const env = { NODE_ENV: 'production', STORE_DRIVER: 'fs', SESSION_SECRET: randomBytes(32).toString('hex'), PUBLIC_BASE_URL: 'https://example.test' };
+    const env = { NODE_ENV: 'production', STORE_DRIVER: 'fs', SESSION_SECRET: randomBytes(32).toString('hex'), PUBLIC_BASE_URL: 'https://example.test', CRON_SECRET: 'local-test-cron' };
     const config = loadConfig({ ...env, ADMIN_BOOTSTRAP_USERS: JSON.stringify(users) });
     expect(config.adminBootstrapUsers).toEqual(users); expect(config.adminForcePasswordChange).toBe(false);
     const secret = generatedPassword();

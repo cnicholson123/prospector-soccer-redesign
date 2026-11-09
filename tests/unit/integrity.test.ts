@@ -1,6 +1,6 @@
 import { afterEach, expect, it, vi } from 'vitest';
 import { rm } from 'node:fs/promises';
-import { adminFixture } from '../helpers/admin.js';
+import { adminFixture, createUserWithPassword } from '../helpers/admin.js';
 import { KvStore } from '../../server/store/kv-store.js';
 import { FsPrimitives } from '../../server/store/primitives/fs.js';
 import { audit } from '../../server/audit.js';
@@ -15,7 +15,7 @@ it('all unauthenticated routes reject, and low roles cannot mutate through alter
   for (const [path, method] of [
     ['/docs/events', 'GET'], ['/docs/events', 'POST'], ['/docs/site/site', 'PUT'], ['/publish', 'POST'], ['/schedule', 'POST'], ['/audit/export', 'GET'], ['/users', 'GET'], ['/publishes', 'GET'], ['/dashboard', 'GET'], ['/search?q=a', 'GET'], ['/export/content', 'GET'], ['/health/links', 'POST'],
   ]) expect((await f.req(path, method, undefined, { Cookie: '' })).status, `${method} ${path}`).toBe(401);
-  await f.req('/users', 'POST', { username: 'contributor', role: 'Contributor', password: 'Fieldside secure phrase' });
+  await createUserWithPassword(f, { username: 'contributor', role: 'Contributor', password: 'Fieldside secure phrase' });
   await f.login('contributor', 'Fieldside secure phrase');
   for (const [path, method] of [['/unpublish', 'POST'], ['/schedule', 'POST'], ['/rebuild', 'POST'], ['/health/links', 'POST'], ['/publishes/1/restore', 'POST'], ['/docs/events/evt_1/trash', 'POST'], ['/export/content', 'GET']]) expect((await f.req(path, method, method === 'GET' ? undefined : {})).status, path).toBe(403);
   const siteRev = (await f.store.listRevisions('site', 'site', 1))[0];
@@ -64,10 +64,10 @@ it('runs login session GC at most hourly and never refreshes a session twice wit
 });
 it('serializes last-Owner protections and rejects stale user updates', async () => {
   const f = await fixture(), owner = (await f.store.listUsers())[0];
-  const second = await (await f.req('/users', 'POST', { username: 'second', role: 'Owner', password: 'Fieldside secure phrase' })).json();
+  const second = await (await createUserWithPassword(f, { username: 'second', role: 'Owner', password: 'Fieldside secure phrase' })).json();
   const other = (await f.store.getUser(second.user.id))!;
   await f.store.changeUser({ ...other, active: false }, owner.id, audit({ id: owner.id, displayName: owner.displayName }, 'users.deactivate'), other);
-  await expect(f.store.changeUser({ ...owner, active: false }, owner.id, audit({ id: owner.id, displayName: owner.displayName }, 'users.deactivate'), owner)).rejects.toMatchObject({ code: 'last_owner' });
+  await expect(f.store.changeUser({ ...owner, active: false }, owner.id, audit({ id: owner.id, displayName: owner.displayName }, 'users.deactivate'), owner)).rejects.toMatchObject({ code: 'forbidden' });
   await expect(f.store.changeUser({ ...other, role: 'Editor' }, owner.id, audit({ id: owner.id, displayName: owner.displayName }, 'users.update'), other)).rejects.toMatchObject({ code: 'conflict' });
 });
 it('publishing after soft trash removes the document while untrash keeps its draft', async () => {

@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { rm } from 'node:fs/promises';
 import { createServer } from 'node:http';
-import { adminFixture } from '../helpers/admin.js';
+import { adminFixture, createUserWithPassword } from '../helpers/admin.js';
 import { createRenderHandler, renderPage } from '../../server/render/handler.js';
 import { diff } from '../../server/content/diff.js';
 import { health } from '../../server/content/health.js';
@@ -47,7 +47,7 @@ describe('Phase 5 HTTP content lifecycle', () => {
     const f = await fixture();
     let doc = (await (await f.req('/docs/events', 'POST', { draft: event('Original') })).json()).doc;
     const ownerRevision = (await f.store.listRevisions('events', doc.id, 20))[0];
-    await f.req('/users', 'POST', { username: 'writer', role: 'Contributor', password: 'Fieldside secure phrase' });
+    await createUserWithPassword(f, { username: 'writer', role: 'Contributor', password: 'Fieldside secure phrase' });
     await f.login('writer', 'Fieldside secure phrase');
     doc = (await (await f.req(`/docs/events/${doc.id}`, 'PUT', { baseVersion: doc.version, draft: event('Other writer') })).json()).doc;
     expect((await f.store.getRevision(doc.id, ownerRevision.id))?.sealedAt).toBeTruthy();

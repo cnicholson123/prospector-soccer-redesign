@@ -32,3 +32,19 @@ export async function adminFixture(seed = false, overrides: Partial<Config> = {}
   }
   return { root, config, store, app, req, login, clock: (value: string) => { time = new Date(value); }, getCookie: () => cookie };
 }
+
+/** Provision role fixtures through the real one-time password and rotation flow. */
+export async function createUserWithPassword(f: Awaited<ReturnType<typeof adminFixture>>, input: { username: string; password: string; role: string; displayName?: string }) {
+  const { password, ...fields } = input;
+  const response = await f.req('/users', 'POST', fields);
+  if (response.status !== 201) return response;
+  const created = await response.json();
+  const login = await f.req('/auth/login', 'POST', { username: input.username, password: created.temporaryPassword }, { 'X-Forwarded-For': '192.0.2.90' });
+  if (login.status !== 200) throw new Error('Fixture temporary login failed');
+  const auth = await login.json();
+  const changed = await f.app.request('/api/admin/auth/password', { method: 'POST', headers: {
+    Cookie: login.headers.get('set-cookie')!.split(';')[0], 'X-CSRF-Token': auth.csrfToken, Origin: f.config.publicBaseUrl, 'Content-Type': 'application/json',
+  }, body: JSON.stringify({ current: created.temporaryPassword, next: password }) });
+  if (changed.status !== 200) throw new Error('Fixture password rotation failed');
+  return new Response(JSON.stringify({ ...created, user: (await changed.json()).user }), { status: 201 });
+}

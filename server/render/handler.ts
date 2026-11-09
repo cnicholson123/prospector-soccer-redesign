@@ -66,6 +66,7 @@ export function createRenderHandler(store: Store, config: Config, now: () => Dat
     const preview = url.searchParams.has('preview') || url.searchParams.has('edit');
     const auth = preview ? await readSession(store, request, now(), config.production) : null;
     if (preview && !auth) return new Response('Preview requires authentication', { status: 401, headers: { ...headers, 'Cache-Control': 'no-store' } });
+    if (preview && auth?.user.mustChangePassword) return new Response('Change your temporary password before continuing', { status: 403, headers: { ...headers, 'Cache-Control': 'no-store' } });
     const redirect = /^\/(index|home|recreational|competitive|referees|sponsors|board|resources|about)\.html$/.exec(url.pathname);
     if (redirect) {
       const target = ['index', 'home'].includes(redirect[1]) ? '/' : `/${redirect[1]}`;

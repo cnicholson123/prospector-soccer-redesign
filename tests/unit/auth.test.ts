@@ -9,7 +9,7 @@ import { bootstrap } from '../../server/auth/bootstrap.js';
 import { can } from '../../server/permissions.js';
 import { roles, permissionTable, type Permission } from '../../shared/permissions-table.js';
 import type { User } from '../../shared/types.js';
-import { adminFixture } from '../helpers/admin.js';
+import { adminFixture, createUserWithPassword } from '../helpers/admin.js';
 const roots: string[] = [];
 afterEach(async () => { await Promise.all(roots.splice(0).map(root => rm(root, { recursive: true, force: true }))); });
 const fixture = async () => { const f = await adminFixture(); roots.push(f.root); return f; };
@@ -93,13 +93,13 @@ describe('auth HTTP and user administration', () => {
   it('enforces route permissions, user ceilings, last Owner, and password/session rotation', async () => {
     const f = await fixture(); const owner = await f.login();
     const ownerId = owner.data.user.id;
-    expect((await f.req('/users/' + ownerId, 'DELETE')).status).toBe(409);
+    expect((await f.req('/users/' + ownerId, 'DELETE')).status).toBe(403);
     expect((await f.req('/users/' + ownerId, 'PATCH', { role: 'Admin' })).status).toBe(403);
     for (const role of ['Admin', 'Viewer', 'Contributor']) {
-      expect((await f.req('/users', 'POST', { username: role, role, password: 'Fieldside secure phrase' })).status).toBe(201);
+      expect((await createUserWithPassword(f, { username: role, role, password: 'Fieldside secure phrase' })).status).toBe(201);
     }
     await f.login('Admin', 'Fieldside secure phrase');
-    expect((await f.req('/users', 'POST', { username: 'badowner', role: 'Owner', password: 'Fieldside secure phrase' })).status).toBe(403);
+    expect((await createUserWithPassword(f, { username: 'badowner', role: 'Owner', password: 'Fieldside secure phrase' })).status).toBe(403);
     expect((await f.req('/users/' + ownerId, 'POST')).status).toBe(404);
     expect((await f.req('/users/' + ownerId + '/reset-password', 'POST')).status).toBe(403);
     await f.login('Viewer', 'Fieldside secure phrase');
@@ -121,7 +121,7 @@ describe('auth HTTP and user administration', () => {
   });
   it('invalidates sessions after role changes and rejects stale credential updates', async () => {
     const f = await fixture(); await f.login();
-    const created = await (await f.req('/users', 'POST', { username: 'editor', role: 'Editor', password: 'Fieldside secure phrase' })).json();
+    const created = await (await createUserWithPassword(f, { username: 'editor', role: 'Editor', password: 'Fieldside secure phrase' })).json();
     const { token } = await newSession(f.store, await f.store.getUser(created.user.id) as User, {}, new Date('2030-01-01T12:00:00Z'));
     await f.req('/users/' + created.user.id, 'PATCH', { role: 'Viewer' });
     expect((await f.req('/auth/me', 'GET', undefined, { Cookie: 'psc_session=' + token })).status).toBe(401);

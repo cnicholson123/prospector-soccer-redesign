@@ -22,10 +22,7 @@ import { Media } from './routes/Media.js';
 import { Users } from './routes/Users.js';
 import { CommandPalette, ShortcutHelp } from './components/CommandPalette.js';
 import { typingTarget, type Command } from './state/palette.js';
-import { api, allowed } from './api.js';
-import { editorFlush } from './state/autosave.js';
-import { changed, type ContentDoc } from './state/content.js';
-import { notify } from './state/toasts.js';
+import { allowed } from './api.js';
 import { Profile } from './routes/Profile.js';
 function Workspace() {
   const { path, route } = useLocation();
@@ -44,10 +41,11 @@ function Workspace() {
   useEffect(() => {
     if (loading) return;
     if (!session.value && path !== '/admin/login') route('/admin/login', true);
-    if (session.value && path === '/admin/login') route('/admin', true);
+    if (session.value?.user.mustChangePassword && path !== '/admin/profile') route('/admin/profile#password', true);
+    else if (session.value && path === '/admin/login') route('/admin', true);
     const section = path.split('/')[2] as CollectionName;
     document.title = `${collections[section]?.labelPlural || (String(section) === 'pages' ? 'Pages' : String(section) === 'settings' ? 'Site settings' : String(section) === 'users' ? 'Users' : String(section) === 'profile' ? 'Profile' : String(section) === 'history' ? 'History' : String(section) === 'audit' ? 'Audit log' : 'Dashboard')} · Prospector Admin`;
-  }, [loading, !!session.value, path]);
+  }, [loading, !!session.value, session.value?.user.mustChangePassword, path]);
   useEffect(() => {
     const click = (event: MouseEvent) => {
       if (event.defaultPrevented || event.button || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
@@ -60,7 +58,7 @@ function Workspace() {
       void navigationGuard.value().then(ok => { if (ok) navigate(destination); else setLeave(destination); });
     };
     const key = (event: KeyboardEvent) => {
-      if (!session.value) return;
+      if (!session.value || session.value.user.mustChangePassword) return;
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') { event.preventDefault(); if (!document.querySelector('dialog[open]')) setPalette(true); return; }
       if (document.querySelector('dialog[open]')) return;
       if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key.toLowerCase() === 'p') { event.preventDefault(); openPublish(); }
@@ -85,15 +83,12 @@ function Workspace() {
     if (command.action === 'preview-ipad') window.dispatchEvent(new Event('psc:preview-ipad'));
     if (command.action === 'publish') {
       if (!allowed('content.publish')) throw new Error('Your role cannot publish.');
-      if (editorFlush.value && !await editorFlush.value()) throw new Error('Resolve your unsaved changes before publishing.');
-      const { docs } = await api<{ docs: ContentDoc[] }>('/pending');
-      if (!docs.length) { notify('All saved changes are already published'); return; }
-      const result = await api<{ siteVersion: number; purged: boolean }>('/publish', 'POST', { all: true, items: docs.map(d => ({ collection: d.collection, id: d.id, expectedVersion: d.version })) });
-      changed(); notify(result.purged ? 'Live now' : 'Published · Live within about 5 minutes', `/?v=${result.siteVersion}`);
+      openPublish();
     }
   }
   if (loading) return <main class="initial-loading" role="status">Opening the clubhouse…</main>;
   if (!session.value) return <Login />;
+  if (session.value.user.mustChangePassword) return <Shell restricted publish={() => {}} refresh={0}><Profile /></Shell>;
   const revision = refresh + contentChanged.value;
   return <><Shell publish={() => openPublish()} palette={() => setPalette(true)} help={() => setHelp(true)} refresh={revision}><Router>
     <Route component={Dashboard} path="/admin" publish={() => openPublish()} refresh={revision} />

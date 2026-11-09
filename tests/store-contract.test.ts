@@ -45,6 +45,20 @@ export function storeContract(name: string, setup: () => Promise<{ store: Store;
       expect((await store.listUsers()).every(u => u.role === 'Owner')).toBe(true);
       expect((await store.queryAudit({ action: 'system.bootstrap', limit: 10 })).items).toHaveLength(2);
     });
+    it('preserves renamed bootstrap identities and rejects adding environment accounts later', async () => {
+      const original = user('usr_boot', 'Initial');
+      await store.bootstrapUsers([{ user: original, audit: audit() }]);
+      await store.changeUser({ ...original, username: 'Renamed' }, original.id, audit(), original);
+      expect(await reopen().bootstrapUsers([{ user: user('usr_new', 'Initial'), audit: audit() }])).toBe(0);
+      expect((await store.listUsers()).map(u => u.username)).toEqual(['Renamed']);
+    });
+    it('atomically accumulates weighted byte reservations across instances and expires the window', async () => {
+      const results = await Promise.all([store.rateLimitHit('bytes-user', 86400, 60), reopen().rateLimitHit('bytes-user', 86400, 60)]);
+      expect(results.map(r => r.count).sort((a, b) => a - b)).toEqual([60, 120]);
+      expect((await store.rateLimitHit('bytes-other', 86400, 25)).count).toBe(25);
+      advance(86400001);
+      expect((await store.rateLimitHit('bytes-user', 86400, 10)).count).toBe(10);
+    });
     it('creates with history and audit, orders, trashes and persists documents', async () => {
       const first = creation(doc('evt_b', 2));
       await store.createDoc(first); await store.createDoc(creation(doc('evt_a', 1)));
@@ -185,7 +199,7 @@ export function storeContract(name: string, setup: () => Promise<{ store: Store;
       expect(refreshes.filter(s=>s?.refreshed)).toHaveLength(1);
       const failures=await Promise.all(Array.from({length:5},()=>reopen().loginFailure('username',at)));
       expect(failures.some(f=>f.locks===1&&f.until==='2026-11-09T18:15:00.000Z')).toBe(true);
-      await expect(store.changeUser({...changed!,active:false},owner.id,audit(),changed!)).rejects.toThrow('last active Owner');
+      await expect(store.changeUser({...changed!,active:false},owner.id,audit(),changed!)).rejects.toThrow('deactivate your own account');
     });
     it('reorders siblings atomically and seals working revisions without changing their data', async () => {
       const first=creation(doc('evt_a',0)),second=creation(doc('evt_b',1));await store.createDoc(first);await store.createDoc(second);
@@ -289,6 +303,19 @@ describe('KV failure recovery, compatibility and bounded reads', () => {
     await fs.put('snapshot/published.json', legacy);
     expect((await store.getSnapshot())?.schemaVersion).toBe(schemaVersion);
     expect((await store.getSnapshot())?.docs).toEqual(tx.snapshot.docs);
+  });
+  it('replays all bootstrap accounts after a partial FS multi-user write', async () => {
+    const original = fs.put.bind(fs);
+    let fail = true;
+    vi.spyOn(fs, 'put').mockImplementation(async (key, value) => {
+      await original(key, value);
+      if (fail && key.startsWith('users/')) { fail = false; throw new Error('Interrupted bootstrap'); }
+    });
+    const entries = ['Phil', 'Chris'].map((name, index) => ({ user: user(`usr_boot_${index}`, name), audit: audit() }));
+    await expect(store.bootstrapUsers(entries)).rejects.toThrow('Interrupted bootstrap');
+    expect(await store.bootstrapUsers(entries)).toBe(0);
+    expect((await store.listUsers()).map(u => u.username).sort()).toEqual(['Chris', 'Phil']);
+    expect((await store.queryAudit({ limit: 10 })).items).toHaveLength(2);
   });
   it('recovers legacy manifest order only when its matching snapshot still exists', async () => {
     const tx = publishTx(doc('evt_a', 7));

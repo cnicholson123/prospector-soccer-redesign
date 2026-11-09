@@ -1,19 +1,14 @@
 import { randomBytes } from 'node:crypto';
 import type { Hono } from 'hono';
 import type { User, Role } from '../../../shared/types.js';
-import { validateFields } from '../../content/validate.js';
 import { roles } from '../../../shared/permissions-table.js';
+import { profileEmail as email, userChanges } from '../../auth/profile.js';
 import { audit, publicUser } from '../../audit.js';
-import { hashPassword, checkPassword } from '../../auth/password.js';
+import { hashPassword } from '../../auth/password.js';
 import { username } from '../../store/identifiers.js';
 import { requirePermission } from '../middleware/permission.js';
 import { actor, type AdminEnv } from '../middleware/auth.js';
 import { ApiError, object, string } from '../middleware/errors.js';
-function email(value: unknown): string | undefined {
-  if (value === undefined || value === '') return undefined;
-  if (!validateFields({ email: { type: 'email' } }, { email: value }).valid) throw new ApiError(422, 'validation', 'Invalid email');
-  return value as string;
-}
 function role(value: unknown): Role {
   if (!roles.includes(value as Role)) throw new ApiError(422, 'validation', 'Invalid role');
   return value as Role;
@@ -23,9 +18,9 @@ export function userRoutes(app: Hono<AdminEnv>) {
   app.get('/api/admin/users', async c => c.json({ users: (await c.get('store').listUsers()).map(publicUser) }));
   app.post('/api/admin/users', async c => {
     const input = object(await c.req.json());
-    const name = username(input.username), password = input.password === undefined ? randomBytes(18).toString('base64url') : string(input.password, 'password', 1024);
-    checkPassword(password, name);
-    const user: User = { id: `usr_${randomBytes(12).toString('base64url')}`, username: name, displayName: string(input.displayName ?? name, 'displayName', 100), email: email(input.email), role: role(input.role), passwordHash: await hashPassword(password), active: true, passwordWeak: false, createdAt: c.get('now').toISOString(), createdBy: c.get('user').id };
+    if ('password' in input) throw new ApiError(422, 'validation', 'Passwords are generated automatically');
+    const name = username(input.username), password = randomBytes(18).toString('base64url');
+    const user: User = { id: `usr_${randomBytes(12).toString('base64url')}`, username: name, displayName: string(input.displayName ?? name, 'displayName', 100), email: email(input.email), role: role(input.role), passwordHash: await hashPassword(password), active: true, passwordWeak: false, mustChangePassword: true, createdAt: c.get('now').toISOString(), createdBy: c.get('user').id };
     await c.get('store').changeUser(user, c.get('user').id, audit(actor(c), 'users.create', { meta: { userId: user.id, role: user.role } }, c.get('now')), null);
     return c.json({ user: publicUser(user), temporaryPassword: password }, 201);
   });
@@ -38,14 +33,14 @@ export function userRoutes(app: Hono<AdminEnv>) {
     if (next.username !== user.username) next.passwordWeak = true;
     const revoke = next.role !== user.role || next.active !== user.active;
     if (revoke) next.authVersion = (user.authVersion ?? 0) + 1;
-    await c.get('store').changeUser(next, c.get('user').id, audit(actor(c), 'users.update', { meta: { userId: user.id, role: next.role, previousRole: user.role, active: next.active, previousActive: user.active } }, c.get('now')), user);
+    await c.get('store').changeUser(next, c.get('user').id, audit(actor(c), 'users.update', { meta: { userId: user.id, changes: userChanges(user, next) } }, c.get('now')), user);
     return c.json({ user: publicUser(next) });
   });
   app.post('/api/admin/users/:id/reset-password', async c => {
     const user = await c.get('store').getUser(c.req.param('id'));
     if (!user) throw new ApiError(404, 'not_found', 'User not found');
     const password = randomBytes(18).toString('base64url');
-    const next = { ...user, passwordHash: await hashPassword(password), passwordChangedAt: c.get('now').toISOString(), passwordWeak: false, mustChangePassword: false, authVersion: (user.authVersion ?? 0) + 1 };
+    const next = { ...user, passwordHash: await hashPassword(password), passwordChangedAt: c.get('now').toISOString(), passwordWeak: false, mustChangePassword: true, authVersion: (user.authVersion ?? 0) + 1 };
     await c.get('store').changeUser(next, c.get('user').id, audit(actor(c), 'users.reset_password', { meta: { userId: user.id } }, c.get('now')), user);
     return c.json({ temporaryPassword: password });
   });

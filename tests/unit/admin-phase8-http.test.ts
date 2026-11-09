@@ -1,6 +1,6 @@
 import { afterEach, expect, it } from 'vitest';
 import { rm } from 'node:fs/promises';
-import { adminFixture } from '../helpers/admin.js';
+import { adminFixture, createUserWithPassword } from '../helpers/admin.js';
 import { generatedPassword } from '../helpers/password.js';
 import { createRenderHandler } from '../../server/render/handler.js';
 import { pageNames } from '../../shared/schema.js';
@@ -70,7 +70,7 @@ it('resolves all real-page annotations and gives Contributors private previews a
     const liveBody = await live.text(); expect(liveBody).not.toContain('admin-inline'); expect(liveBody).not.toContain('data-edit=');
   }
   const password = generatedPassword();
-  const created = await f.req('/users', 'POST', { username: 'Contributor', displayName: 'Contributor', role: 'Contributor', password });
+  const created = await createUserWithPassword(f, { username: 'Contributor', displayName: 'Contributor', role: 'Contributor', password });
   expect(created.status).toBe(201);
   await f.login('Contributor', password);
   expect((await render(new Request('http://localhost:3000/?preview=1', { headers: { Cookie: f.getCookie() } }))).status).toBe(200);

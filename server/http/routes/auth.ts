@@ -1,4 +1,5 @@
 import type { Hono } from 'hono';
+import { profileEmail, userChanges } from '../../auth/profile.js';
 import { audit, publicUser } from '../../audit.js';
 import { checkOrigin } from '../../auth/csrf.js';
 import { verifyPassword, passwordWeak, checkPassword, hashPassword } from '../../auth/password.js';
@@ -62,6 +63,14 @@ export function authRoutes(app: Hono<AdminEnv>) {
   app.post('/api/admin/auth/logout', async c => {
     await c.get('store').revokeSessions(c.get('user').id, audit(actor(c), 'auth.logout', {}, c.get('now')), { hash: c.get('session').hash, seal: true });
     c.header('Set-Cookie', cookie('', c.get('config'), 0)); return c.json({ ok: true });
+  });
+  app.patch('/api/admin/auth/profile', async c => {
+    const input = object(await c.req.json()), user = c.get('user');
+    if (Object.keys(input).some(key => !['displayName', 'email'].includes(key))) throw new ApiError(422, 'validation', 'Only display name and email can be edited');
+    const next = { ...user, ...(input.displayName === undefined ? {} : { displayName: string(input.displayName, 'displayName', 100) }),
+      ...(input.email === undefined ? {} : { email: profileEmail(input.email) }) };
+    await c.get('store').changeUser(next, user.id, audit(actor(c), 'users.update', { meta: { userId: user.id, changes: userChanges(user, next) } }, c.get('now')), user);
+    return c.json({ user: publicUser(next) });
   });
   app.post('/api/admin/auth/password', async c => {
     const input = object(await c.req.json()), user = c.get('user'), store = c.get('store');

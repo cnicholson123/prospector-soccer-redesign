@@ -1,3 +1,4 @@
+import { authorizeUserChange } from './user-changes.js';
 import { completeCounts } from './counts.js';
 import { measureQuery } from './metrics.js';
 import { keyPart, documentId, username } from './identifiers.js';
@@ -5,13 +6,12 @@ import { loginGenerationKey, usernameRateKey } from '../auth/ratelimit.js';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { Pool, type PoolClient } from '@neondatabase/serverless';
 import { ApiError } from '../http/middleware/errors.js';
-import { can } from '../permissions.js';
 import { isDeepStrictEqual } from 'node:util';
 import { type CollectionName } from '../../shared/schema.js';
 import { validate, ValidationError } from '../content/validate.js';
 import { buildSnapshot } from '../content/snapshot.js';
 import { referenceUsage } from '../content/references.js';
-import type { AuditEntry, AuditQuery, CreateDoc, Doc, DocMutation, PublishRecord, PublishTx, RevisionQuery, Revision, Session, Snapshot, Store, User, AdminCounts, SessionContext } from './types.js';
+import type { AuditEntry, AuditQuery, CreateDoc, Doc, DocMutation, PublishRecord, PublishTx, RevisionQuery, Revision, Session, Snapshot, Store, User, AdminCounts, SessionContext, MediaCleanup } from './types.js';
 
 type CountRow = { collection: string; total: number; pending: number; review: number; scheduled: number };
 const countSql = `SELECT collection,
@@ -378,7 +378,8 @@ export class PostgresStore implements Store {
   }
   bootstrapUsers(entries: { user: User; audit: AuditEntry }[]): Promise<number> {
     return this.exclusive(async () => {
-      if (!(await this.listUsers()).some(u => u.active && u.role === 'Owner') && !entries.some(e => e.user.active && e.user.role === 'Owner')) throw new Error('Bootstrap requires an active Owner');
+      if ((await this.listUsers()).length) return 0;
+      if (!entries.some(e => e.user.active && e.user.role === 'Owner')) throw new Error('Bootstrap requires an active Owner');
       let created = 0;
       for (const { user, audit: entry } of entries) {
         if (await this.getUserByUsername(user.username)) continue;
@@ -405,8 +406,7 @@ export class PostgresStore implements Store {
       const actor = await this.getUser(actorId);
       const old = await this.getUser(user.id);
       if (!equal(old, expected)) throw new ApiError(409, 'conflict', 'User changed. Reload and compare');
-      if (!actor || !can(actor, 'users.manage', { role: user.role }) || (old && !can(actor, 'users.manage', { role: old.role }))) throw new ApiError(403, 'forbidden', 'Role exceeds your permission');
-      if (old && old.id === actorId && old.role !== user.role) throw new ApiError(403, 'forbidden', 'You cannot change your own role');
+      authorizeUserChange(actor, old, user);
       if (old?.active && old.role === 'Owner' && (!user.active || user.role !== 'Owner') && (await this.listUsers()).filter(u => u.active && u.role === 'Owner').length === 1) throw new ApiError(409, 'last_owner', 'The last active Owner cannot be removed');
       await this.checkAudit(entry);
       // Check name collision before any audit or user writes.
@@ -469,12 +469,13 @@ export class PostgresStore implements Store {
     if (rows.length) this.options.afterWrite?.('sessions');
     return rows.length;
   }
-  async rateLimitHit(key: string, windowSec: number): Promise<{ count: number; resetAt: string }> {
+  async rateLimitHit(key: string, windowSec: number, amount = 1): Promise<{ count: number; resetAt: string }> {
     keyPart(key);
+    if (!Number.isSafeInteger(amount) || amount < 1) throw new Error('Amount must be a positive integer');
     if (!Number.isFinite(windowSec) || windowSec <= 0) throw new Error('Window must be positive');
     const now = this.now(), reset = new Date(now.getTime()+windowSec*1000).toISOString();
-    const rows = await this.rows<{ body: { count: number; resetAt: string } }>(`INSERT INTO rate_limits(id,body) VALUES($1,jsonb_build_object('count',1,'resetAt',$3::text))
-      ON CONFLICT(id) DO UPDATE SET body=CASE WHEN rate_limits.body->>'resetAt'>$2 THEN jsonb_set(rate_limits.body,'{count}',to_jsonb((rate_limits.body->>'count')::int+1)) ELSE excluded.body END RETURNING body`, [key, now.toISOString(), reset]);
+    const rows = await this.rows<{ body: { count: number; resetAt: string } }>(`INSERT INTO rate_limits(id,body) VALUES($1,jsonb_build_object('count',$4::bigint,'resetAt',$3::text))
+      ON CONFLICT(id) DO UPDATE SET body=CASE WHEN rate_limits.body->>'resetAt'>$2 THEN jsonb_set(rate_limits.body,'{count}',to_jsonb((rate_limits.body->>'count')::bigint+$4::bigint)) ELSE excluded.body END RETURNING body`, [key, now.toISOString(), reset, amount]);
     this.options.afterWrite?.('rate_limits'); return rows[0].body;
   }
   async rateLimitReset(key: string) { keyPart(key); await this.remove('rate_limits', key); }
@@ -484,6 +485,10 @@ export class PostgresStore implements Store {
       : await this.rows("UPDATE meta SET body='null'::jsonb WHERE id='schedule-error' AND body IS DISTINCT FROM 'null'::jsonb RETURNING id");
     if (rows.length) this.options.afterWrite?.('meta');
   }
+  async listMediaCleanups(before: string, limit: number): Promise<MediaCleanup[]> {
+    return this.all<MediaCleanup>('meta', "WHERE id LIKE 'media-cleanup-%' AND body->>'at'<$1 ORDER BY body->>'at' LIMIT $2", [before, pageLimit(limit)]);
+  }
+  async deleteMediaCleanup(id: string): Promise<void> { await this.remove('meta', 'media-cleanup-' + keyPart(id)); }
   async getMeta(key: string) { return this.read('meta', key); }
   async setMeta(key: string, value: unknown) {
     if (key === 'pending-mutation' || key === 'pending-publish') throw new Error('Reserved transaction metadata key');

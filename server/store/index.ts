@@ -20,5 +20,5 @@ export function createMediaBlobs(config: Config = loadConfig(), store: Store = c
     return new VercelBlobs(config.blobReadWriteToken, store);
   }
   const primitives = new FsPrimitives(config.dataDir);
-  return new FsBlobs(config.dataDir, new KvStore(primitives, { exclusive: primitives.exclusive }), primitives.exclusive);
+  return new FsBlobs(config.dataDir, store, primitives.exclusive);
 }

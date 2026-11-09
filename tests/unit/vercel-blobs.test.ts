@@ -3,7 +3,7 @@ const sdk=vi.hoisted(()=>({put:vi.fn(),get:vi.fn(),del:vi.fn(),list:vi.fn(),hand
 vi.mock('@vercel/blob',()=>sdk);vi.mock('@vercel/blob/client',()=>sdk);
 import { VercelBlobs } from '../../server/store/blobs/vercel.js';
 import type { Store } from '../../server/store/types.js';
-const store={listPublishes:async()=>[]} as unknown as Store;
+const store={listPublishes:async()=>[], listAllDocs:async()=>[], getSnapshot:async()=>null} as unknown as Store;
 afterEach(()=>vi.resetAllMocks());
 describe('Vercel private binary adapter',()=>{
   it('uses private, immutable uploads and returns an application delivery URL',async()=>{
@@ -14,13 +14,13 @@ describe('Vercel private binary adapter',()=>{
     await expect(blobs.put('../escape',new Uint8Array(),{contentType:'image/png'})).rejects.toThrow();
     await expect(blobs.put('media/2030/media_a/original.png',new Uint8Array(),{contentType:'image/svg+xml'})).rejects.toThrow();
   });
-  it('fetches private bytes from the canonical path and deletes only incoming files',async()=>{
+  it('fetches private bytes and permits cleanup of unreferenced finalized objects',async()=>{
     const blobs=new VercelBlobs('server-token',store);
     sdk.get.mockResolvedValue({statusCode:200,stream:new ReadableStream(),blob:{size:5,contentType:'image/png'}});
     expect((await blobs.read('media/incoming/abc/original.png'))?.size).toBe(5);
     expect(sdk.get).toHaveBeenCalledWith('media/incoming/abc/original.png',{access:'private',token:'server-token',useCache:false});
     await blobs.delete('/media/media/incoming/abc/original.png');expect(sdk.del).toHaveBeenCalledWith('media/incoming/abc/original.png',{token:'server-token'});
-    await expect(blobs.delete('/media/media/2030/media_a/original.png')).rejects.toThrow('cannot be deleted');
+    await blobs.delete('/media/media/2030/media_a/original.png'); expect(sdk.del).toHaveBeenCalledWith('media/2030/media_a/original.png', { token: 'server-token' });
     await expect(blobs.delete('https://evil.example/object')).rejects.toThrow();
   });
   it('restricts client tokens to the ticket path, MIME, expiry and size, and delegates signed callbacks',async()=>{

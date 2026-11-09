@@ -1,24 +1,13 @@
 import { readFile, readdir, stat, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { atomicWrite, safePath } from '../primitives/fs.js';
-import { mediaPath } from './common.js';
+import { mediaPath, retained } from './common.js';
 import type { MediaStorage, RunExclusive, Store } from '../types.js';
 export class FsBlobs implements MediaStorage {
   private root: string;
   constructor(dataDir: string, private store: Store, private exclusive: RunExclusive) { this.root = join(dataDir, 'blobs'); }
   private async retained(url: string): Promise<boolean> {
-    let before: number | undefined;
-    do {
-      const records = await this.store.listPublishes(1000, before);
-      for (const record of records) for (const entry of record.manifest.filter(entry => entry.collection === 'media')) {
-        const revision = await this.store.getRevision(entry.id, entry.revId);
-        const data = revision?.data as { variants?: Record<string, string> } | undefined;
-        if (Object.values(data?.variants ?? {}).includes(url)) return true;
-      }
-      if (records.length < 1000) return false;
-      before = records.at(-1)!.siteVersion;
-    } while (before !== undefined);
-    return false;
+    return retained(this.store, url);
   }
   async put(path: string, body: Uint8Array | ReadableStream<Uint8Array>, opts: { contentType: string }): Promise<{ url: string }> {
     if (!opts.contentType || /[\r\n]/.test(opts.contentType)) throw new Error('Invalid content type');

@@ -6,11 +6,23 @@ import { localDateTime } from '../../admin/src/components/Form/index.js';
 import { publishConflictMessage } from '../../admin/src/components/PublishTray.js';
 
 const marker = (prefix: string) => `${prefix} ${randomBytes(5).toString('hex')}`;
-async function login(page: Page, username = 'Phil', password = adminPassword) {
+async function login(page: Page, username = 'Phil', password = adminPassword, temporary = false) {
   await page.goto('/admin');
-  await page.getByLabel('Username', { exact: true }).fill(username);
-  await page.getByLabel('Password', { exact: true }).fill(password);
+  await page.getByRole('textbox', { name: 'Username', exact: true }).fill(username);
+  await page.getByRole('textbox', { name: 'Password', exact: true }).fill(password);
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+  if (temporary) {
+    await expect(page).toHaveURL(/\/admin\/profile/);
+    await page.getByRole('textbox', { name: 'Current password', exact: true }).fill(password);
+    const next = randomBytes(24).toString('base64url');
+    await page.getByRole('textbox', { name: 'New password', exact: true }).fill(next);
+    await page.getByRole('textbox', { name: 'Confirm new password', exact: true }).fill(next);
+    const changed = page.waitForResponse(r => r.url().endsWith('/api/admin/auth/password') && r.request().method() === 'POST');
+    await page.getByRole('button', { name: 'Update password', exact: true }).click();
+    expect((await changed).status()).toBe(200);
+    await expect(page.getByRole('region', { name: 'Password change required' })).toHaveCount(0);
+    await page.goto('/admin');
+  }
   await expect(page.getByRole('heading', { name: /Good (morning|afternoon|evening),/ })).toBeVisible();
 }
 async function writeLead(context: BrowserContext, lead: string) {
@@ -197,11 +209,13 @@ test('Contributor can preview and request review; Viewer sees a read-only tray',
   expect(finalized.status()).toBe(201);
   const mediaId = (await finalized.json()).doc.id;
   for (const role of ['Contributor', 'Viewer']) {
-    const username = `${role}${randomBytes(3).toString('hex')}`, password = randomBytes(24).toString('base64url');
-    expect((await context.request.post('/api/admin/users', { headers: { 'X-CSRF-Token': csrfToken, Origin: 'http://localhost:3000' }, data: { username, displayName: role, role, password } })).status()).toBe(201);
+    const username = `${role}${randomBytes(3).toString('hex')}`;
+    const created = await context.request.post('/api/admin/users', { headers: { 'X-CSRF-Token': csrfToken, Origin: 'http://localhost:3000' }, data: { username, displayName: role, role } });
+    expect(created.status()).toBe(201);
+    const password = (await created.json()).temporaryPassword;
     const other = await browser.newContext({ baseURL: 'http://localhost:3000' });
     try {
-      const otherPage = await other.newPage(); await login(otherPage, username, password);
+      const otherPage = await other.newPage(); await login(otherPage, username, password, true);
       await otherPage.goto('/admin/pages/home');
       await otherPage.getByRole('button', { name: 'Preview', exact: true }).click();
       await expect(otherPage.frameLocator('iframe[title="Draft content preview"]').locator('.hero__lead')).toBeVisible();

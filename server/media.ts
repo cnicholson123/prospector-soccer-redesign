@@ -1,12 +1,13 @@
 import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import type { Config } from './config.js';
-import type { MediaStorage, Store, Doc } from './store/types.js';
+import type { MediaStorage, Store, Doc, MediaCleanup } from './store/types.js';
 import { ApiError } from './http/middleware/errors.js';
 import { revision } from './content/revisions.js';
 import { audit, type Actor } from './audit.js';
 import { validate, ValidationError } from './content/validate.js';
 import { readSession } from './auth/session.js';
 import { can } from './permissions.js';
+import { effectiveSnapshot } from './content/scheduled-view.js';
 import { retained } from './store/blobs/common.js';
 
 const extensions: Record<string, string> = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/gif': 'gif', 'application/pdf': 'pdf' };
@@ -74,73 +75,103 @@ export function verifyMedia(bytes: Buffer, declared: string): { width: number; h
   if (mime!=='application/pdf' && (!width || !height || width>30000 || height>30000 || width*height>100_000_000)) invalid('Invalid or excessive image dimensions');
   return { width, height };
 }
-/** Verify every variant independently before creating any trusted metadata. */
-export async function prepareMedia(blobs: MediaStorage, grant: Grant, webGrant?: Grant) {
-  async function verify(grant: Grant) {
-    const incoming = await blobs.read(grant.path);
+/** Verify and validate the complete metadata before copying any binary. */
+export async function prepareMedia(store: Store, blobs: MediaStorage, grant: Grant, webGrant?: Grant, metadata: Record<string, unknown> = {}) {
+  if (grant.mime !== 'application/pdf' && !webGrant) invalid('Images require a WebP web variant no larger than 2000 pixels');
+  async function verify(item: Grant) {
+    const incoming = await blobs.read(item.path);
     if (!incoming) return invalid('Upload is missing');
-    const bytes = await readBounded(incoming.stream, grant.size);
-    if (bytes.length !== grant.size || incoming.size !== grant.size || incoming.contentType !== grant.mime) invalid('Uploaded size or MIME type differs from the ticket');
-    return { grant, bytes, dimensions: verifyMedia(bytes, grant.mime) };
+    const bytes = await readBounded(incoming.stream, item.size);
+    if (bytes.length !== item.size || incoming.size !== item.size || incoming.contentType !== item.mime) invalid('Uploaded size or MIME type differs from the ticket');
+    return { grant: item, bytes, dimensions: verifyMedia(bytes, item.mime) };
   }
   const original = await verify(grant);
   const web = webGrant ? await verify(webGrant) : undefined;
   if (web && (grant.mime === 'application/pdf' || web.grant.mime !== 'image/webp' || web.grant.owner !== grant.owner || web.dimensions.width > 2000 || web.dimensions.height > 2000)) invalid('Web variant must be a WebP image no larger than 2000 pixels');
-  async function copy(item: Awaited<ReturnType<typeof verify>>, name: string) {
-    const path = `media/${grant.year}/${grant.id}/${name}.${extensions[item.grant.mime]}`;
-    const copied = await blobs.read(path);
-    if (copied) {
-      const old = await readBounded(copied.stream, item.bytes.length);
-      if (!old.equals(item.bytes)) invalid('Conflicting finalized binary');
-      return blobs.url(path);
-    }
-    return (await blobs.put(path, item.bytes, { contentType: item.grant.mime })).url;
-  }
-  const originalUrl = await copy(original, 'original');
-  const webUrl = web ? await copy(web, 'web') : originalUrl;
-  return { data: { filename: grant.filename, mime: grant.mime, size: original.bytes.length,
+  // Each attempt owns its copies, so a losing finalization cannot remove the winner's binaries.
+  const binaryId = 'media_' + randomBytes(16).toString('hex');
+  const originalPath = `media/${grant.year}/${binaryId}/original.${extensions[grant.mime]}`;
+  const webPath = web ? `media/${grant.year}/${binaryId}/web.webp` : originalPath;
+  const urls = [...new Set([originalPath, webPath])].map(path => blobs.url(path));
+  const data = { ...metadata, filename: grant.filename, mime: grant.mime, size: original.bytes.length,
     ...(grant.mime === 'application/pdf' ? {} : (web ?? original).dimensions),
-    variants: { original: originalUrl, web: webUrl }, source: 'upload', uploadedBy: grant.owner },
+    variants: { original: blobs.url(originalPath), web: blobs.url(webPath) }, source: 'upload', uploadedBy: metadata.uploadedBy ?? grant.owner };
+  const checked = validate('media', data); if (!checked.valid) throw new ValidationError(checked.errors);
+  const intent: MediaCleanup = { kind: 'media-finalization', id: binaryId, at: new Date(grant.expires - 900000).toISOString(), urls };
+  await store.setMeta('media-cleanup-' + binaryId, intent);
+  try {
+    await blobs.put(originalPath, original.bytes, { contentType: grant.mime });
+    if (web) await blobs.put(webPath, web.bytes, { contentType: web.grant.mime });
+  } catch (error) { await cleanMediaAttempt(store, blobs, intent); throw error; }
+  return { data, intent,
     cleanup: async () => { await blobs.delete(blobs.url(grant.path)); if (webGrant) await blobs.delete(blobs.url(webGrant.path)); } };
+}
+/** Recover an interrupted FS commit before deciding which attempt's copies are unreferenced. */
+export async function commitMedia(store: Store, blobs: MediaStorage, prepared: Awaited<ReturnType<typeof prepareMedia>>, commit: () => Promise<Doc>): Promise<Doc> {
+  try {
+    const doc = await commit();
+    await cleanMediaAttempt(store, blobs, prepared.intent);
+    await prepared.cleanup();
+    return doc;
+  } catch (error) {
+    await store.recoverPublish();
+    await cleanMediaAttempt(store, blobs, prepared.intent);
+    throw error;
+  }
 }
 export async function finalizeMedia(store: Store, blobs: MediaStorage, grant: Grant, input: Record<string, unknown>, actor: Actor, now: Date, webGrant?: Grant): Promise<Doc> {
   const existing = await store.getDoc('media', grant.id);
   if (existing) return existing;
-  const prepared = await prepareMedia(blobs, grant, webGrant);
-  const draft = { ...prepared.data, alt: typeof input.alt === 'string' ? input.alt : '', caption: typeof input.caption === 'string' ? input.caption : '',
-    focal: { x: 0.5, y: 0.5 }, uploadedAt: now.toISOString() };
-  const checked = validate('media', draft); if (!checked.valid) throw new ValidationError(checked.errors);
-  const doc: Doc = { id: grant.id, collection: 'media', draft, version: 1, status: 'draft', createdAt: now.toISOString(), updatedAt: now.toISOString(), createdBy: actor.id, updatedBy: actor.id };
-  try { await store.createDoc({ doc, revision: revision(doc, actor, 'created', now), audit: audit(actor, 'media.upload', { collection: 'media', docId: doc.id }, now) }); }
-  catch (error) { const winner = await store.getDoc('media', doc.id); if (!winner) throw error; return winner; }
-  await prepared.cleanup();
-  return doc;
+  const prepared = await prepareMedia(store, blobs, grant, webGrant, { alt: input.alt ?? '', caption: input.caption ?? '', focal: { x: 0.5, y: 0.5 }, uploadedAt: now.toISOString() });
+  const doc: Doc = { id: grant.id, collection: 'media', draft: prepared.data, version: 1, status: 'draft', createdAt: now.toISOString(), updatedAt: now.toISOString(), createdBy: actor.id, updatedBy: actor.id };
+  return commitMedia(store, blobs, prepared, async () => {
+    try { return await store.createDoc({ doc, revision: revision(doc, actor, 'created', now), audit: audit(actor, 'media.upload', { collection: 'media', docId: doc.id }, now) }); }
+    catch (error) {
+      await store.recoverPublish();
+      const winner = await store.getDoc('media', doc.id);
+      if (!winner) throw error;
+      return winner;
+    }
+  });
 }
-export async function collectIncoming(blobs: MediaStorage, now: Date): Promise<number> {
+async function cleanMediaAttempt(store: Store, blobs: MediaStorage, intent: MediaCleanup) {
+  for (const url of intent.urls) if (!await retained(store, url)) await blobs.delete(url);
+  await store.deleteMediaCleanup(intent.id);
+}
+export async function collectIncoming(blobs: MediaStorage, now: Date, store?: Store): Promise<number> {
   let count=0;
+  if (store) {
+    await store.recoverPublish();
+    const pending = await store.listMediaCleanups(new Date(now.getTime() - 86400000).toISOString(), 100);
+    for (const intent of pending) await cleanMediaAttempt(store, blobs, intent);
+  }
   for (const blob of await blobs.incoming()) if (Date.parse(blob.uploadedAt) < now.getTime()-86400000) { await blobs.delete(blobs.url(blob.path)); count++; }
   return count;
 }
 /** Only verified, published files are public. Drafts require a content-reading session. */
-export async function serveMedia(request: Request, store: Store, blobs: MediaStorage): Promise<Response> {
+export async function serveMedia(request: Request, store: Store, blobs: MediaStorage, now = new Date()): Promise<Response> {
   if (!['GET', 'HEAD'].includes(request.method)) return new Response('Method not allowed', { status: 405, headers: { Allow: 'GET, HEAD' } });
   const path = new URL(request.url).pathname.slice(7);
   if (!/^media\/\d{4}\/media_[a-f0-9]{32}\/(?:original\.(?:jpg|png|webp|gif|pdf)|web\.webp)$/.test(path)) return new Response('Not found', { status: 404 });
   const url = blobs.url(path), id = path.split('/')[2];
-  const snapshot = await store.getSnapshot();
-  const published = Object.values(snapshot?.media ?? {}).some(media => media.url===url) || (snapshot?.docs.media ?? []).some(doc => Object.values((doc.data as { variants?: Record<string,string> }).variants ?? {}).includes(url));
+  const stored = await store.getSnapshot();
+  const snapshot = stored ? effectiveSnapshot(stored, now) : null;
+  const published = Object.entries(snapshot?.media ?? {}).some(([mediaId, media]) => !snapshot?.docs.media?.some(doc => doc.id === mediaId) && media.url === url) || (snapshot?.docs.media ?? []).some(doc => Object.values((doc.data as { variants?: Record<string,string> }).variants ?? {}).includes(url));
   if (!published) {
-    const session = await readSession(store, request);
-    if (!session || !can(session.user,'content.read')) return new Response('Not found', { status: 404, headers: { 'Cache-Control':'no-store' } });
+    const session = await readSession(store, request, now);
+    if (!session || session.user.mustChangePassword || !can(session.user,'content.read')) return new Response('Not found', { status: 404, headers: { 'Cache-Control':'no-store' } });
   }
-  const doc = await store.getDoc('media', id);
+  let doc = await store.getDoc('media', id);
   const data = doc?.draft as { variants?: Record<string,string>; mime?: string } | undefined;
   if (!published && !Object.values(data?.variants ?? {}).includes(url)) {
     const docs = await store.listDocs('media');
-    const current = docs.some(item => Object.values((item.draft as { variants?: Record<string,string> }).variants ?? {}).includes(url));
-    if (!current && !await retained(store, url)) return new Response('Not found', { status: 404 });
+    doc = docs.find(item => Object.values((item.draft as { variants?: Record<string,string> }).variants ?? {}).includes(url)) ?? doc;
+    if (!doc && !await retained(store, url)) return new Response('Not found', { status: 404 });
   }
   const blob = await blobs.read(path);
   if (!blob || !extensions[blob.contentType]) return new Response('Not found', { status: 404 });
-  return new Response(request.method==='HEAD' ? null : blob.stream, { headers: { 'Content-Type':blob.contentType, 'Content-Length':String(blob.size), 'Content-Disposition':'inline', 'X-Content-Type-Options':'nosniff', 'Content-Security-Policy':"sandbox; default-src 'none'", 'Cache-Control':published?'public, max-age=31536000, immutable':'private, no-store' } });
+  const publicData = snapshot?.docs.media?.find(item => Object.values((item.data as { variants?: Record<string, string> }).variants ?? {}).includes(url))?.data as { filename?: string } | undefined;
+  const filename = (published ? publicData?.filename : (doc?.draft as { filename?: string } | undefined)?.filename) ?? path.split('/').at(-1)!;
+  const safeFilename = filename.replace(/[^a-zA-Z0-9._ -]/g, '_').replace(/^\.+/, '').trim() || 'download.pdf';
+  return new Response(request.method==='HEAD' ? null : blob.stream, { headers: { 'Content-Type':blob.contentType, 'Content-Length':String(blob.size), 'Content-Disposition':blob.contentType === 'application/pdf' ? `inline; filename="${safeFilename}"` : 'inline', 'X-Content-Type-Options':'nosniff', 'Content-Security-Policy':"sandbox; default-src 'none'", 'Cache-Control':published?'public, max-age=0, s-maxage=86400':'private, no-store' } });
 }

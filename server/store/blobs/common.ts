@@ -4,6 +4,9 @@ export function mediaPath(path: string): string {
   return path;
 }
 export async function retained(store: Store, url: string): Promise<boolean> {
+  const [docs, snapshot] = await Promise.all([store.listAllDocs(), store.getSnapshot()]);
+  const hasUrl = (data: unknown) => Object.values((data as { variants?: Record<string, string> } | undefined)?.variants ?? {}).includes(url);
+  if (docs.some(doc => doc.collection === 'media' && (hasUrl(doc.draft) || hasUrl(doc.published))) || snapshot?.scheduled.some(item => item.collection === 'media' && hasUrl(item.data))) return true;
   let before: number | undefined;
   do {
     const records = await store.listPublishes(1000, before);

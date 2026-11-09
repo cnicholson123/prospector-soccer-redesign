@@ -2,7 +2,7 @@ import type { Hono } from 'hono';
 import { actor, type AdminEnv } from '../middleware/auth.js';
 import { requirePermission } from '../middleware/permission.js';
 import { ApiError, object, string, version } from '../middleware/errors.js';
-import { finalizeMedia, prepareMedia, readBounded, readGrant, uploadGrant } from '../../media.js';
+import { commitMedia, finalizeMedia, prepareMedia, readBounded, readGrant, uploadGrant } from '../../media.js';
 import { rateLimit } from '../../auth/ratelimit.js';
 import { validate, ValidationError } from '../../content/validate.js';
 import { revision } from '../../content/revisions.js';
@@ -27,6 +27,8 @@ export function mediaRoutes(app: Hono<AdminEnv>) {
     }
     await rateLimit(c.get('store'), 'uploads-' + c.get('user').id, 60, 3600, now);
     const { ticket, grant } = uploadGrant(body, c.get('user').id, config, now);
+    const quota = await c.get('store').rateLimitHit('upload-bytes-' + c.get('user').id, 86400, grant.size);
+    if (quota.count > config.maxUploadBytesPerDay) throw new ApiError(429, 'rate_limited', 'Daily upload byte limit reached', undefined, Math.max(1, Math.ceil((Date.parse(quota.resetAt) - now.getTime()) / 1000)));
     const endpoint = '/api/admin/media/upload-url?ticket=' + encodeURIComponent(ticket);
     return c.json({ ticket, pathname: grant.path, access: 'private',
       handleUploadUrl: endpoint, uploadUrl: '/api/admin/media/local-upload?ticket=' + encodeURIComponent(ticket),
@@ -60,15 +62,16 @@ export function mediaRoutes(app: Hono<AdminEnv>) {
     const grant = readGrant(string(input.ticket, 'ticket', 4096), c.get('user').id, c.get('config'), c.get('now'));
     if (String(current.mime).startsWith('image/') !== grant.mime.startsWith('image/')) throw new ApiError(422, 'validation', 'Replace with the same kind of media');
     const web = input.webTicket ? readGrant(string(input.webTicket, 'webTicket', 4096), c.get('user').id, c.get('config'), c.get('now')) : undefined;
-    const prepared = await prepareMedia(c.get('blobs'), grant, web);
+    const prepared = await prepareMedia(store, c.get('blobs'), grant, web, { ...current, uploadedAt: c.get('now').toISOString() });
     const draft = { ...current, ...prepared.data, uploadedBy: current.uploadedBy, uploadedAt: c.get('now').toISOString() };
-    const checked = validate('media', draft); if (!checked.valid) throw new ValidationError(checked.errors);
     const next = { ...doc, draft, version: doc.version + 1 };
-    const updated = await store.mutateDoc({ collection: 'media', id: doc.id, expectedVersion: expected,
-      patch: { draft, status: doc.published ? 'changed' : 'draft', updatedBy: c.get('user').id, updatedAt: c.get('now').toISOString() },
-      revision: { append: revision(next, actor(c), 'edited', c.get('now')) }, audit: audit(actor(c), 'media.replace', { collection: 'media', docId: doc.id }, c.get('now')) });
-    if (updated === 'conflict') throw new ApiError(409, 'conflict', 'Someone else saved this. Reload and compare', { current: await store.getDoc('media', doc.id) });
-    await prepared.cleanup();
+    const updated = await commitMedia(store, c.get('blobs'), prepared, async () => {
+      const updated = await store.mutateDoc({ collection: 'media', id: doc.id, expectedVersion: expected,
+        patch: { draft, status: doc.published ? 'changed' : 'draft', updatedBy: c.get('user').id, updatedAt: c.get('now').toISOString() },
+        revision: { append: revision(next, actor(c), 'edited', c.get('now')) }, audit: audit(actor(c), 'media.replace', { collection: 'media', docId: doc.id }, c.get('now')) });
+      if (updated === 'conflict') throw new ApiError(409, 'conflict', 'Someone else saved this. Reload and compare', { current: await store.getDoc('media', doc.id) });
+      return updated;
+    });
     return c.json({ doc: updated });
   });
   app.get('/api/admin/media', requirePermission('content.read'), async c => {

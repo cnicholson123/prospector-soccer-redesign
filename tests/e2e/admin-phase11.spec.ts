@@ -2,11 +2,27 @@ import { randomBytes } from 'node:crypto';
 import type { Page, Locator } from '@playwright/test';
 import { test, expect, restoreSeed } from './fixtures.js';
 import { adminPassword } from './credentials.js';
-async function signIn(page: Page, username: string, password: string) {
+async function signIn(page: Page, username: string, password: string, temporary = false) {
   await page.goto('/admin');
   await page.getByRole('textbox', { name: 'Username', exact: true }).fill(username);
-  await page.getByLabel('Password', { exact: true }).fill(password);
+  await page.getByRole('textbox', { name: 'Password', exact: true }).fill(password);
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+  if (temporary) {
+    await expect(page).toHaveURL(/\/admin\/profile/);
+    await expect(page.getByRole('region', { name: 'Password change required' })).toBeVisible();
+    expect((await page.request.get('/api/admin/docs/events')).status()).toBe(403);
+    await page.goto('/admin/events');
+    await expect(page).toHaveURL(/\/admin\/profile/);
+    const next = randomBytes(24).toString('base64url');
+    await page.getByRole('textbox', { name: 'Current password', exact: true }).fill(password);
+    await page.getByRole('textbox', { name: 'New password', exact: true }).fill(next);
+    await page.getByRole('textbox', { name: 'Confirm new password', exact: true }).fill(next);
+    const changed = page.waitForResponse(r => r.url().endsWith('/api/admin/auth/password') && r.request().method() === 'POST');
+    await page.getByRole('button', { name: 'Update password', exact: true }).click();
+    expect((await changed).status()).toBe(200);
+    await expect(page.getByRole('region', { name: 'Password change required' })).toHaveCount(0);
+    await page.goto('/admin');
+  }
   await expect(page.getByRole('heading', { name: /Good (morning|afternoon|evening)/ })).toBeVisible();
 }
 async function requestReview(page: Page, title: string) {
@@ -38,7 +54,7 @@ for (const width of [390, 1280]) test(`users and contributor review lifecycle ${
   const contributorContext = await browser.newContext({ viewport: { width, height: 900 }, baseURL: 'http://localhost:3000' });
   try {
     const contributor = await contributorContext.newPage();
-    await signIn(contributor, username, password);
+    await signIn(contributor, username, password, true);
     await contributor.goto('/admin/events/new');
     const title = `Review event ${randomBytes(5).toString('hex')}`;
     await contributor.getByRole('textbox', { name: 'Title', exact: true }).fill(title);
@@ -84,8 +100,12 @@ test('Admin role ceiling and audited account controls', async ({ page, context, 
   const child = await (await context.request.post('/api/admin/users', { headers, data: { username: `child_${suffix}`, displayName: `Child ${suffix}`, role: 'Contributor' } })).json();
   const ctx = await browser.newContext({ baseURL: 'http://localhost:3000' });
   try {
-    const adminPage = await ctx.newPage(); await signIn(adminPage, admin.user.username, admin.temporaryPassword);
-    await adminPage.goto('/admin/users'); await adminPage.getByRole('button', { name: 'Add user', exact: true }).click();
+    const adminPage = await ctx.newPage(); await signIn(adminPage, admin.user.username, admin.temporaryPassword, true);
+    await adminPage.goto('/admin/users');
+    const self = adminPage.locator('li.account-row').filter({ hasText: `@${admin.user.username}` });
+    await expect(self.getByRole('button', { name: 'Edit user', exact: true })).toBeVisible();
+    await expect(self.getByRole('button', { name: 'Deactivate', exact: true })).toHaveCount(0);
+    await adminPage.getByRole('button', { name: 'Add user', exact: true }).click();
     const dialog = adminPage.getByRole('dialog');
     await expect(dialog.getByRole('option', { name: 'Owner', exact: true })).toHaveCount(0);
     await expect(dialog.getByRole('option', { name: 'Admin', exact: true })).toHaveCount(0);
@@ -110,7 +130,7 @@ test('Admin role ceiling and audited account controls', async ({ page, context, 
   } finally { await ctx.close(); }
 });
 
-test('command palette publishes all and exposes keyboard navigation', async ({ page, context }) => {
+test('command palette defaults to navigation and requires reviewed publication', async ({ page, context }) => {
   await signIn(page, 'Phil', adminPassword);
   const title = `Palette event ${randomBytes(4).toString('hex')}`;
   await page.goto('/admin/events/new');
@@ -118,15 +138,28 @@ test('command palette publishes all and exposes keyboard navigation', async ({ p
   await page.getByRole('textbox', { name: 'Date', exact: true }).fill('2099-07-01');
   await page.getByRole('button', { name: 'Create event', exact: true }).first().click();
   await expect(page).toHaveURL(/\/events\/evt_/);
+  const editorUrl = page.url();
+  await page.keyboard.press('Meta+k');
+  await expect(page.getByRole('option', { name: /Dashboard/ })).toHaveAttribute('aria-selected', 'true');
+  await page.keyboard.press('Enter');
+  await expect(page).toHaveURL(/\/admin$/);
+  expect(await (await context.request.get('/')).text()).not.toContain(title);
+  await page.goto(editorUrl);
   await page.getByRole('textbox', { name: 'Location', exact: true }).fill('Palette club fields');
   await page.keyboard.press('Meta+k');
   let palette = page.getByRole('dialog', { name: 'Command palette', exact: true });
   const combo = palette.getByRole('combobox', { name: 'Search commands and documents' });
   await expect(combo).toBeFocused(); await combo.fill('Publish all');
   await expect(palette.getByRole('option', { name: /Publish all/ })).toHaveAttribute('aria-selected', 'true');
-  const published = page.waitForResponse(r => r.url().endsWith('/api/admin/publish') && r.request().method() === 'POST');
-  await page.keyboard.press('Enter'); expect((await published).status()).toBe(200);
+  await page.keyboard.press('Enter');
   await expect(palette).toHaveCount(0);
+  const tray = page.getByRole('dialog', { name: 'Review & publish', exact: true });
+  await expect(tray.getByRole('checkbox', { name: new RegExp(title) })).toBeChecked();
+  expect(await (await context.request.get('/')).text()).not.toContain(title);
+  const published = page.waitForResponse(r => r.url().endsWith('/api/admin/publish') && r.request().method() === 'POST');
+  await tray.getByRole('button', { name: /Publish \d+ changes/ }).click();
+  expect((await published).status()).toBe(200);
+  await expect(tray).toHaveCount(0);
   expect(await (await context.request.get('/')).text()).toContain(title);
   await page.keyboard.press('Control+k');
   palette = page.getByRole('dialog', { name: 'Command palette', exact: true });
@@ -146,7 +179,7 @@ test('Users add form is usable entirely by keyboard at 390px', async ({ page }) 
   await page.setViewportSize({ width: 390, height: 900 });
   await page.goto('/admin');
   for (const [name, value] of [['Username', 'Phil'], ['Password', adminPassword]]) {
-    const field = page.getByLabel(name, { exact: true }); await focusWithTab(page, field); await page.keyboard.type(value);
+    const field = page.getByRole('textbox', { name, exact: true }); await focusWithTab(page, field); await page.keyboard.type(value);
   }
   await focusWithTab(page, page.getByRole('button', { name: 'Sign in', exact: true })); await page.keyboard.press('Enter');
   await expect(page.getByRole('heading', { name: /Good (morning|afternoon|evening)/ })).toBeVisible();
@@ -183,7 +216,7 @@ test('presence, adjacent-item shortcuts, health fix links and snapshot rebuild',
   await expect(page.getByText('No other editors seen on this server.', { exact: true })).toBeVisible();
   const ctx = await browser.newContext({ baseURL: 'http://localhost:3000' });
   try {
-    const otherPage = await ctx.newPage(); await signIn(otherPage, other.user.username, other.temporaryPassword);
+    const otherPage = await ctx.newPage(); await signIn(otherPage, other.user.username, other.temporaryPassword, true);
     await otherPage.goto(`/admin/events/${docs[0].id}`);
     await expect(otherPage.getByText('Also editing: Phil', { exact: true })).toBeVisible();
     // Brackets do not intercept typing, then navigate after the field is saved.

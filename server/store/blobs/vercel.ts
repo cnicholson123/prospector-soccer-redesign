@@ -24,8 +24,7 @@ export class VercelBlobs implements MediaStorage {
     const path = mediaPath(url.slice('/media/'.length));
     if (!path.startsWith('media/incoming/')) {
       if (await retained(this.store, url)) throw new Error('Media is retained by publish history');
-      // Verified objects are immutable; only quarantine is garbage collected.
-      throw new Error('Verified media binaries cannot be deleted');
+      // Only unreferenced finalization attempts can be removed.
     }
     await del(path, { token: this.token });
   }

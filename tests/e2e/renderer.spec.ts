@@ -75,3 +75,16 @@ test('content is visible with JavaScript disabled', async ({ browser }) => {
   await expect(page.locator('.price-card')).toHaveCount(2);
   await context.close();
 });
+
+for (const width of [1141, 1170, 1200]) test(`header navigation works without JavaScript at ${width}px`, async ({ browser }) => {
+  const context = await browser.newContext({ baseURL: 'http://localhost:3000', javaScriptEnabled: false, viewport: { width, height: 900 } });
+  try {
+    const page = await context.newPage(); await page.goto('/');
+    const nav = page.getByRole('navigation', { name: 'Main' });
+    await expect(nav).toBeVisible();
+    await expect(page.getByRole('button', { name: /Menu/ })).toBeHidden();
+    await nav.getByRole('link', { name: 'Recreational', exact: true }).click();
+    await expect(page).toHaveURL(/\/recreational$/);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  } finally { await context.close(); }
+});

@@ -660,3 +660,49 @@ Deviations and open acceptance gates
 - Playwright execution, browser visual/accessibility checks and Lighthouse — **not run (sandbox)**. Claude must run the installed Chrome suite after this cleanup to close browser acceptance. No browser pass is claimed from discovery or the HTTP smoke.
 - Real Neon/Postgres, private Blob and database backup/restore execution — **not run (no env)**. Docker PostgreSQL commands are documented but were not executed in this phase. Every executed application test used the filesystem driver. Hosted public parity, admin login, purge and cron delivery remain deployment acceptance gates.
 - No commit, push, deployment, hosting credential acquisition, GitHub Pages setting change, global configuration edit or file edit outside this repository was performed.
+
+## CHANGELOG — Phase 10 pre-deployment remediation — 2026-11-09
+
+Shipped against the media findings in `plans/reviews/2026-11-09-predeploy-remediation.md`, including the Phase 6 storage foundation.
+
+- **A1** Media authorization uses the renderer's time-effective snapshot. Frozen scheduled replacements serve at the exact deadline without settlement. Older URLs lose anonymous access at that boundary. Snapshot fallback media follows the renderer's document-first resolution.
+- **A4** Complete metadata validation precedes copying. Every attempt has fresh binary paths and a durable cleanup intent. Failed copies, failed commits and competing finalizations clean unreferenced copies after recovery. Cron retries at most 100 abandoned intents older than 24 hours, preserving draft, scheduled and publication-history references. FS media retention now uses the supplied Store, including when metadata is in Postgres. Added configurable per-user `MAX_UPLOAD_BYTES_PER_DAY`, default 256 MiB, using atomic weighted reservations in both adapters. Both original and web tickets count, including abandoned uploads.
+- **F7** Image creation and replacement require a separately verified WebP web ticket, limited to 2000 pixels per edge. PDFs retain their single-ticket flow. Existing image metadata remains readable.
+- **F5 / F10** Public media sends `public, max-age=0, s-maxage=86400`. PDFs include a sanitized original filename in inline Content-Disposition. Private drafts remain no-store.
+- Added FS/Postgres HTTP regressions for schedule boundaries and old URLs, metadata validation before writes, missing variants, partial copies, failed commits, replacement conflicts, competing finalization, abandoned-intent recovery, retention, PDF filenames and concurrent byte reservations. Updated prior upload fixtures and the storage browser spec for web tickets.
+
+## CHANGELOG — Phase 11 pre-deployment remediation — 2026-11-09
+
+Shipped against the account and command findings, including the Phase 4 auth/Store foundation.
+
+- **F1 / F8** Admin creation always generates temporary credentials and rejects caller-supplied passwords. Creation/reset set `mustChangePassword=true`. Default authentication returns 403 `password_change_required` for non-auth admin requests until rotation. Auth/profile/session/logout routes remain available. Public and shop draft previews, and private media delivery, honor the same restriction. Hashed bootstrap accounts retain optional changes and `ADMIN_FORCE_PASSWORD_CHANGE` semantics remain intact.
+- The SPA renders a restricted Profile workspace for temporary credentials, redirects direct content links, hides publication/navigation controls and explains the required change. Password rotation restores ordinary navigation. Updated creation/reset copy and 390px/1280px browser flows. Required fields in changed flows use role/name locators.
+- **F2 / F6** Current-manager self identity edits bypass role ceilings while self-role changes and self-deactivation remain forbidden inside both transactional Store implementations. The self Deactivate control is absent. Non-managers can edit only display name/email through authenticated `PATCH /auth/profile`, with matching Profile controls.
+- **A7 / F9** Account-update audits record changed username, display name, email, role and active values before/after, excluding credential material.
+- **A5** The default palette command is Dashboard navigation. Publish all opens the populated Review & publish tray. Existing editor flushing, fresh pending versions and explicit human confirmation apply there. Added component and browser regressions for default navigation and review-before-publication.
+- **F4** Hashed bootstrap seeds only an empty user table. Renames and later environment additions do not recreate accounts. FS writes the complete initial account set through one replay journal, and Postgres uses its transaction. Added rename, concurrency and interrupted-bootstrap coverage. Subsequent accounts use Users.
+
+## CHANGELOG — Phase 12 pre-deployment remediation — 2026-11-09
+
+- **F3** Production configuration rejects missing/blank `CRON_SECRET`. Deployment documentation marks it required, and production fixtures explicitly supply it.
+- **A6** Collapsed navigation is scoped to `.js`. Without JavaScript, the existing desktop links wrap in a content-sized header, including 1141–1200px. Added static CSS coverage and browser cases at 1141, 1170 and 1200px. Public HTML, seed data, design tokens and all golden fixtures are unchanged. The no-JavaScript CSS fallback is the intentional public-design change required by this review.
+- Updated README, README-deploy and the example environment for first-login changes, fresh-install-only bootstrap, the required cron secret, upload quotas/cleanup and media caching. Documented the explicitly deferred **A3** full bounded server-side image decoding, **A2** strict zero-write cold/aged reads, and **F11** draft-media scan. Recorded residual old browser-cache lifetimes, downloaded copies and the 24-hour CDN cache choice.
+- No dependencies, hosting configuration, schema migration, commit, push, deployment or file outside this repository was changed. The supplied checkout is `main`, with no local `admin-cms` branch and read-only `.git`; branch placement remains an external step.
+
+### Pre-deployment verification
+
+- Node 22.12.0 `npm run build` — PASS, including Vite and both TypeScript projects.
+- Node 22.12.0 `npm test` with filesystem storage — PASS, 774 tests and 40 explicit no-env skips. Includes all three plain-Node function packages in `check:runtime`, all eight public goldens and FS performance budgets.
+- `npm run check-facts` — PASS, 122 facts. `npm run test:e2e -- --list` — PASS, 53 tests in 13 files. Browser execution, visual/focus checks and Lighthouse — **not run (sandbox)**. Claude must run installed Chrome afterwards.
+- Regression sensitivity against an isolated pre-fix HEAD copy — all 13 new focused cases fail on FS. All nine new server/config cases also fail with local Postgres. The fixed-code runs exercise these same cases.
+- Local PostgreSQL 17.11 verification and final diff checks are recorded in the completion note below. Real Neon cloud, private Blob and hosted deployment verification — **not run (no env)**.
+
+### Pre-deployment completion results
+
+- Final Node 22.12.0 `npm run build && npm test` — PASS. Filesystem run reports **774 passed, 40 explicit no-env skips**. All three unbundled function packages pass `check:runtime`; all eight goldens and FS performance budgets pass.
+- Docker **PostgreSQL 17.11**, through the existing Neon WebSocket test transport, `DATABASE_URL=<local> POSTGRES_TEST_WS_PROXY=<local> npm test -- --maxWorkers=1` — PASS, **832 passed, one private-Blob no-env skip**. Includes shared contracts, SQL rollback/immutability, local Neon HTTP serialization and Postgres performance budgets.
+- `POSTGRES_HTTP_TESTS=1 npx vitest run tests/unit/predeploy-remediation.test.ts tests/unit/auth.test.ts tests/unit/bootstrap-users.test.ts tests/unit/media.test.ts tests/unit/media-phase10.test.ts tests/unit/admin-phase11-http.test.ts --maxWorkers=1`, using that same local database — PASS, **136 tests**. All new storage-related remediations exercise Postgres metadata and FS media. Containers were stopped after verification.
+- An initial exploratory full-suite run with `POSTGRES_HTTP_TESTS=1` reached the existing filesystem-only reorder journal fault injection, which cannot inject faults into a Postgres transaction. That run was stopped. The documented full-suite configuration and the explicit Postgres HTTP selection above both passed. No production behavior or assertion was weakened to accommodate it.
+- Final `npm run check-facts` — PASS, **122 facts**. `npm run test:e2e -- --list` — PASS, **53 tests in 13 files**. `git diff --check` — PASS. Public HTML golden fixtures were not regenerated. The sole public CSS change is the required no-JavaScript header fallback.
+- Deferred as specified by the review and documented in both READMEs: full bounded server-side image decoding (A3), strict zero-write cold/aged reads (A2), and draft-media lookup optimization (F11). Browser/Chrome/Lighthouse execution remains **not run (sandbox)**. Real Neon cloud, private Blob and deployment remain **not run (no env)**.
+- Branch placement remains the supplied `main` checkout because `admin-cms` is absent and `.git` is read-only. Work is uncommitted. No push, deployment, hosting credentials, dependency change or global configuration edit was made.

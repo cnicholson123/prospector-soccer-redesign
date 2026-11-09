@@ -1,7 +1,7 @@
 import { bootstrapEnvironment } from '../helpers/password.js';
 import { afterEach, expect, it, vi } from 'vitest';
 import { rm } from 'node:fs/promises';
-import { adminFixture } from '../helpers/admin.js';
+import { adminFixture, createUserWithPassword } from '../helpers/admin.js';
 import { commitSnapshot, publishDocuments } from '../../server/content/publish.js';
 import { scheduleDocuments } from '../../server/content/schedule.js';
 import { saveDraft, revision } from '../../server/content/revisions.js';
@@ -80,7 +80,7 @@ it('A6: generic restore denies media even for another uploader’s Contributor',
   const f = await fixture(), data = { filename: 'other.png', uploadedBy: 'someone-else' };
   const doc: Doc = { id: 'med_other', collection: 'media', draft: data, version: 1, status: 'draft', createdAt: now.toISOString(), updatedAt: now.toISOString(), createdBy: actor.id, updatedBy: actor.id };
   const rev = revision(doc, actor, 'created', now); await f.store.createDoc({ doc, revision: rev, audit: audit(actor, 'media.upload', {}, now) });
-  await f.req('/users', 'POST', { username: 'writer', role: 'Contributor', password: 'Strong testing phrase' }); await f.login('writer', 'Strong testing phrase');
+  await createUserWithPassword(f, { username: 'writer', role: 'Contributor', password: 'Strong testing phrase' }); await f.login('writer', 'Strong testing phrase');
   expect((await f.req(`/revisions/${rev.id}/restore?docId=${doc.id}`, 'POST', { baseVersion: 1 })).status).toBe(403);
   expect((await f.store.getDoc('media', doc.id))?.version).toBe(1);
 });
@@ -149,7 +149,7 @@ it('F-M1: future routes require authentication by default', async () => {
 it('F-M2: Viewer and Editor cannot see another Owner’s weak-password health finding', async () => {
   const f = await fixture();
   for (const role of ['Viewer','Editor','Admin']) {
-    await f.login(); await f.req('/users', 'POST', { username: role, role, password: 'Strong testing phrase' }); await f.login(role, 'Strong testing phrase');
+    await f.login(); await createUserWithPassword(f, { username: role, role, password: 'Strong testing phrase' }); await f.login(role, 'Strong testing phrase');
     const data = await (await f.req('/dashboard')).json();
     expect(data.health.some((i: {code:string}) => i.code === 'weak_owner_password')).toBe(role === 'Admin');
   }
@@ -160,10 +160,11 @@ it('F-M3: overlong keys, invalid doc IDs and invalid login usernames return 4xx 
   for (const username of ['a'.repeat(101), 'a/b', '..']) expect((await f.req('/auth/login', 'POST', { username, password: 'bad' })).status).toBe(422);
   recover.mockClear(); expect((await f.req('/auth/me')).status).toBe(200); expect(recover).not.toHaveBeenCalled();
 });
-it('section 19 keeps password changes optional even for legacy forced accounts', async () => {
+it('explicit must-change flags restrict content until password rotation', async () => {
   const f = await fixture(false, { adminForcePasswordChange: true });
   expect((await f.req('/auth/me')).status).toBe(200);
-  for (const path of ['/dashboard','/auth/sessions']) expect((await f.req(path)).status).toBe(200);
+  expect((await f.req('/dashboard')).status).toBe(403);
+  expect((await f.req('/auth/sessions')).status).toBe(200);
   const changed = await f.req('/auth/password', 'POST', { current: 'Phil', next: 'Strong replacement phrase' }); expect(changed.status).toBe(200);
   expect((await f.login('Phil', 'Strong replacement phrase')).response.status).toBe(200); expect((await f.req('/dashboard')).status).toBe(200);
   expect(f.config.adminForcePasswordChange).toBe(true);

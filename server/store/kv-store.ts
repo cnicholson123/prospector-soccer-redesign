@@ -1,14 +1,14 @@
+import { authorizeUserChange } from './user-changes.js';
 import { keyPart, documentId, username } from './identifiers.js';
 import { loginGenerationKey, usernameRateKey } from '../auth/ratelimit.js';
 import { countsFromDocs } from './counts.js';
 import { ApiError } from '../http/middleware/errors.js';
-import { can } from '../permissions.js';
 import { isDeepStrictEqual } from 'node:util';
 import { collectionNames, type CollectionName } from '../../shared/schema.js';
 import { validate, ValidationError } from '../content/validate.js';
 import { buildSnapshot } from '../content/snapshot.js';
 import { referenceUsage } from '../content/references.js';
-import type { AuditEntry, AuditQuery, CreateDoc, Doc, DocMutation, KvPrimitives, PublishRecord, PublishTx, RevisionQuery, Revision, RunExclusive, Session, Snapshot, Store, User } from './types.js';
+import type { AuditEntry, AuditQuery, CreateDoc, Doc, DocMutation, KvPrimitives, PublishRecord, PublishTx, RevisionQuery, Revision, RunExclusive, Session, Snapshot, Store, User, MediaCleanup } from './types.js';
 
 const part = (value: string): string => {
   keyPart(value);
@@ -430,15 +430,22 @@ export class KvStore implements Store {
   }
   bootstrapUsers(entries: { user: User; audit: AuditEntry }[]): Promise<number> {
     return this.exclusive(async () => {
-      if (!(await this.listUsers()).some(u => u.active && u.role === 'Owner') && !entries.some(e => e.user.active && e.user.role === 'Owner')) throw new Error('Bootstrap requires an active Owner');
-      let created = 0;
+      if ((await this.listUsers()).length) return 0;
+      if (!entries.some(e => e.user.active && e.user.role === 'Owner')) throw new Error('Bootstrap requires an active Owner');
+      await this.readyToMutate();
+      const writes: MutationJournal['writes'] = [];
+      const names = new Set<string>();
       for (const { user, audit: entry } of entries) {
-        if (await this.getUserByUsername(user.username)) continue;
+        username(user.username);
+        if (names.has(user.username.toLowerCase())) throw new Error('Duplicate bootstrap username');
+        names.add(user.username.toLowerCase());
         await this.checkAudit(entry);
-        await this.saveUser(user, entry);
-        created++;
+        writes.push({ key: auditKey(entry), value: entry }, { key: `users/${part(user.id)}.json`, value: user },
+          { key: `users-by-name/${part(user.username.toLowerCase())}.json`, value: user.id });
       }
-      return created;
+      await this.kv.put(mutationKey, { writes } satisfies MutationJournal);
+      await this.resumeMutation();
+      return entries.length;
     });
   }
   bootstrapOwner(user: User, entry: AuditEntry): Promise<boolean> {
@@ -455,8 +462,7 @@ export class KvStore implements Store {
       const actor = await this.getUser(actorId);
       const old = await this.getUser(user.id);
       if (!equal(old, expected)) throw new ApiError(409, 'conflict', 'User changed. Reload and compare');
-      if (!actor || !can(actor, 'users.manage', { role: user.role }) || (old && !can(actor, 'users.manage', { role: old.role }))) throw new ApiError(403, 'forbidden', 'Role exceeds your permission');
-      if (old && old.id === actorId && old.role !== user.role) throw new ApiError(403, 'forbidden', 'You cannot change your own role');
+      authorizeUserChange(actor, old, user);
       if (old?.active && old.role === 'Owner' && (!user.active || user.role !== 'Owner') && (await this.listUsers()).filter(u => u.active && u.role === 'Owner').length === 1) throw new ApiError(409, 'last_owner', 'The last active Owner cannot be removed');
       await this.checkAudit(entry);
       // Check name collision before any audit or user writes.
@@ -532,13 +538,14 @@ export class KvStore implements Store {
       return expired.length;
     });
   }
-  rateLimitHit(key: string, windowSec: number): Promise<{ count: number; resetAt: string }> {
+  rateLimitHit(key: string, windowSec: number, amount = 1): Promise<{ count: number; resetAt: string }> {
+    if (!Number.isSafeInteger(amount) || amount < 1) throw new Error('Amount must be a positive integer');
     if (!Number.isFinite(windowSec) || windowSec <= 0) return Promise.reject(new Error('Window must be positive'));
     return this.exclusive(async () => {
       const storageKey = `ratelimit/${part(key)}.json`;
       const current = await this.read<{ count: number; resetAt: string }>(storageKey);
       const now = this.now().getTime();
-      const next = current && Date.parse(current.resetAt) > now ? { ...current, count: current.count + 1 } : { count: 1, resetAt: new Date(now + windowSec * 1000).toISOString() };
+      const next = current && Date.parse(current.resetAt) > now ? { ...current, count: current.count + amount } : { count: amount, resetAt: new Date(now + windowSec * 1000).toISOString() };
       await this.kv.put(storageKey, next); return next;
     });
   }
@@ -548,6 +555,12 @@ export class KvStore implements Store {
       if (!!await this.getMeta('schedule-error') !== !!error) await this.setMeta('schedule-error', error);
     });
   }
+  async listMediaCleanups(before: string, limit: number): Promise<MediaCleanup[]> {
+    const keys = (await this.kv.list('meta/')).filter(key => key.startsWith('meta/media-cleanup-'));
+    const pending = (await Promise.all(keys.map(key => this.read<MediaCleanup>(key)))).filter((entry): entry is MediaCleanup => !!entry && entry.at < before);
+    return pending.sort((a, b) => a.at.localeCompare(b.at)).slice(0, pageLimit(limit));
+  }
+  async deleteMediaCleanup(id: string): Promise<void> { await this.exclusive(() => this.kv.delete(`meta/${part('media-cleanup-' + id)}.json`)); }
   async getMeta(key: string) { return this.kv.get(`meta/${part(key)}.json`); }
   async setMeta(key: string, value: unknown) {
     if (key === 'pending-mutation' || key === 'pending-publish') throw new Error('Reserved transaction metadata key');

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { rm, readFile } from 'node:fs/promises';
-import { adminFixture } from '../helpers/admin.js';
+import { adminFixture, createUserWithPassword } from '../helpers/admin.js';
 import { createMediaBlobs } from '../../server/store/index.js';
 import { serveMedia } from '../../server/media.js';
 import { renderPage } from '../../server/render/handler.js';
@@ -63,11 +63,11 @@ describe('Phase 10 verified media workflows', () => {
     expect(denied.status).toBe(409); expect((await denied.json()).error.details.usage).toContainEqual(expect.objectContaining({ id: sponsor.id, path: 'logo' }));
     const usage = await (await f.req(`/media/${doc.id}/usage`)).json(); expect(usage.usage).toContainEqual(expect.objectContaining({ id: sponsor.id }));
     const publicFile = await serveMedia(new Request('http://localhost:3000' + doc.draft.variants.web), f.store, createMediaBlobs(f.config, f.store));
-    expect(publicFile.status).toBe(200); expect(publicFile.headers.get('cache-control')).toContain('immutable');
+    expect(publicFile.status).toBe(200); expect(publicFile.headers.get('cache-control')).toBe('public, max-age=0, s-maxage=86400');
   });
   it('keeps media review writes forbidden while a Contributor can review ordinary pending content', async () => {
     const f = await fixture(true), { doc: media } = await image(f);
-    await f.req('/users', 'POST', { username: 'reviewer', password: 'Strong reviewer phrase 123', role: 'Contributor' });
+    await createUserWithPassword(f, { username: 'reviewer', password: 'Strong reviewer phrase 123', role: 'Contributor' });
     expect((await f.login('reviewer', 'Strong reviewer phrase 123')).response.status).toBe(200);
     const home = (await f.store.getDoc('home', 'home'))!;
     const draft = home.draft as { hero: Record<string, unknown> };
@@ -123,7 +123,7 @@ describe('Phase 10 verified media workflows', () => {
   });
   it('enforces contributor ownership for edits, replacement and deletion', async () => {
     const f = await fixture(), { doc } = await image(f);
-    await f.req('/users', 'POST', { username: 'contributor', password: 'Strong contributor phrase 123', role: 'Contributor' });
+    await createUserWithPassword(f, { username: 'contributor', password: 'Strong contributor phrase 123', role: 'Contributor' });
     await f.login('contributor', 'Strong contributor phrase 123');
     expect((await f.req(`/media/${doc.id}`, 'PATCH', { baseVersion: 1, alt: 'No' })).status).toBe(403);
     expect((await f.req(`/media/${doc.id}/replace`, 'POST', {})).status).toBe(403);
