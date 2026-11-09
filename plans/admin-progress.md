@@ -49,3 +49,4 @@ Deviations / open issues:
 - Icon names are reserved in the shared schema; extracting their actual SVG renderers remains Phase 2 work. Optional defaults are schema metadata, not mutations performed by validation.
 - FS lock recovery after an ungraceful process death is manual: with all dev servers stopped, remove `DATA_DIR/.store-lock`. The lock times out rather than stealing an active writer's lock. This is a local-development limitation; production transactions remain Phase 6 work.
 - No content migration, production service tests, sign-in, publishing engine, or admin editor is claimed in these two phases.
+- Playwright uses the installed Google Chrome (channel 'chrome'); the Codex sandbox cannot launch browsers, so Claude runs e2e outside it.
