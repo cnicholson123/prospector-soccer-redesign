@@ -30,10 +30,24 @@ const signedIn = await admin.fetch(new Request('http://localhost:3000/api/admin/
   body: JSON.stringify({ username: process.env.ADMIN_BOOTSTRAP_USERNAME, password: process.env.ADMIN_BOOTSTRAP_PASSWORD }),
 }));
 assert.equal(signedIn.status, 200);
-// Published store stays disabled. Authenticated preview is the supported way to test it before launch.
+// Private preview remains available alongside the published concept catalog.
 const quote = await shop.fetch(new Request('http://localhost:3000/api/shop/quote?preview=1', {
   method: 'POST', headers: { 'Content-Type': 'application/json', Origin: 'http://localhost:3000', Cookie: signedIn.headers.get('set-cookie')!.split(';')[0] },
   body: JSON.stringify({ lines: [] }),
 }));
 assert.equal(quote.status, 200); assert.equal((await quote.json()).totals.totalCents, 0);
 console.log('Plain Node ESM PASS — shop empty-cart quote 200 (authenticated preview)');
+
+const publicQuote = await shop.fetch(new Request('http://localhost:3000/api/shop/quote', {
+  method: 'POST', headers: { 'Content-Type': 'application/json', Origin: 'http://localhost:3000' }, body: '{"lines":[]}',
+}));
+assert.equal(publicQuote.status, 200);
+for (const path of ['checkout', 'orders', 'orders/lookup', 'payments/status', 'webhooks/stripe']) {
+  const blocked = await shop.fetch(new Request('http://localhost:3000/api/shop/' + path, { method: 'POST', body: 'invalid-json' }));
+  assert.equal(blocked.status, 403); assert.deepEqual(await blocked.json(), { error: 'checkout_disabled' });
+}
+const disabled = await render.fetch(new Request('http://localhost:3000/shop/checkout'));
+assert.equal(disabled.status, 200);
+const disabledHtml = await disabled.text();
+assert.match(disabledHtml, /Checkout is disabled/); assert.doesNotMatch(disabledHtml, /data-checkout/);
+console.log('Plain Node ESM PASS — public quote 200, operational routes 403, checkout disabled');

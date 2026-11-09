@@ -146,3 +146,14 @@ The API trusts the first `X-Forwarded-For` value **only behind Vercel's trusted 
 Every changed document envelope now advances its version, including publish/unpublish/schedule/cancel/settlement. Clients must reload document versions after those operations. A trash operation preserves existing live membership until that document is selected for removal; rebuilding or publishing unrelated content does not release the deletion. Frozen scheduled references participate in atomic trash checks. A failed lazy settlement appears as `schedule_failed` in dashboard health without blocking authentication, logout or repair requests.
 
 Restore with `publish:true` returns the committed `doc`. On success it also returns `published:true` and publication details; if publication fails it returns HTTP 200 with `published:false` and `publishError:{code,message,details?}`. Clients must show the saved draft and the separate publication failure, and must not display a success toast for that publication. This explicit partial-success contract avoids implying that a failed publish rolled back the restored draft. Generic revision restore of media is denied; approved metadata fields use the media editing endpoint.
+
+
+## Merch showcase (proof of concept)
+
+The seed publishes ten concept products, three bundles and five categories, with `storeSettings.enabled=true`. The navigation reads **Merch (concept)**. Store pages label prices as illustrative and state that no orders are accepted.
+
+`SHOP_CHECKOUT=disabled` is the default in **every** environment, including when unset. Keep it disabled for deployment. Checkout, order, payment and webhook routes return HTTP 403 `{ "error": "checkout_disabled" }` before request processing; the checkout page has no form. Store settings cannot override this deployment control. No payment credentials are required or used by this phase.
+
+`SHOP_CHECKOUT=enabled` is accepted only with `NODE_ENV=development` or `test`; configuration loading refuses it in production or any other environment. It exposes the existing development form for future work; order/payment implementation remains deferred.
+
+For local review use the filesystem driver (`STORE_DRIVER=fs`), `npm run seed`, and `npm run start`. Seed changes do not automatically update an already initialized store. The seed command refuses to overwrite edited content; use a fresh local `DATA_DIR` to inspect this showcase without replacing edits.

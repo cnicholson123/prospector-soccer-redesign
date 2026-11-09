@@ -3,7 +3,7 @@ import type { DocumentView, SnapshotView } from '../snapshot-view.js';
 import { availability, type Availability } from '../../shop/availability.js';
 import { money, toCents } from '../../shop/pricing.js';
 import { productReady, type Product, type Stock, type Settings, type Bundle } from '../../shop/types.js';
-export interface ShopContext { view: SnapshotView; stock: Stock }
+export interface ShopContext { view: SnapshotView; stock: Stock; checkoutEnabled?: boolean }
 export const settings = (ctx: ShopContext) => ctx.view.doc('storeSettings', 'storeSettings');
 export function productState(ctx: ShopContext, doc: DocumentView): Availability {
   const p = doc.value('') as Product;
@@ -20,7 +20,7 @@ export function shopImage(ctx: ShopContext, doc: DocumentView, path: string, pri
 export function displayPrice(doc: DocumentView): string { return doc.value('price') ? doc.money('price') : 'Price pending'; }
 export function productCard(ctx: ShopContext, product: DocumentView) {
   const state = productState(ctx, product), first = product.list('images')[0];
-  return html`<article class="product-card card"><a href="/shop/p/${product.text('slug')}">${first ? shopImage(ctx, first, 'image') : html``}<div class="product-card__body"><p class="eyebrow">${product.text('tagline')}</p><h3>${product.text('name')}</h3><p class="product-card__price">${displayPrice(product)}${product.value('youthPrice') ? html` <span>· youth ${money(toCents(product.value('youthPrice') as { amount: number }))}</span>` : html``}</p><span class="pill pill--soft-gold">${state.label}</span></div></a></article>`;
+  return html`<article class="product-card card"><a href="/shop/p/${product.text('slug')}">${first ? shopImage(ctx, first, 'image') : html``}<div class="product-card__body"><p class="eyebrow">${product.text('tagline')}</p><h3>${product.text('name')}</h3><p class="product-card__price">${displayPrice(product)}${product.value('youthPrice') ? html` <span>· youth ${money(toCents(product.value('youthPrice') as { amount: number }))}</span>` : html``}</p>${pocNote()}<span class="pill pill--soft-gold">${state.label}</span></div></a></article>`;
 }
 export function savings(ctx: ShopContext, bundle: DocumentView): number {
   const b = bundle.value('') as Bundle;
@@ -56,5 +56,10 @@ export function variantPicker(ctx: ShopContext, product: DocumentView, name = 'v
   })}</div></fieldset>`)}`;
 }
 export const quantity = (cap = 10) => html`<div class="product-quantity"><label for="product-quantity">Quantity</label><div class="cart-stepper"><button type="button" data-step="-1" aria-label="Decrease quantity">−</button><input id="product-quantity" name="quantity" type="number" inputmode="numeric" min="1" max="${Math.max(1, cap)}" value="1" required><button type="button" data-step="1" aria-label="Increase quantity">+</button></div></div>`;
-export const noScript = (ctx: ShopContext) => html`<noscript><p class="note">Adding to the cart needs JavaScript. <a href="${settings(ctx).email('contactEmail')}">Email the club to order.</a></p></noscript>`;
-export const drawer = () => html`<dialog class="cart-drawer" id="cart-drawer" aria-labelledby="cart-drawer-title"><div class="cart-drawer__head"><h2 id="cart-drawer-title">Your club gear</h2><button type="button" class="btn btn--ghost" data-cart-close aria-label="Close cart">Close</button></div><div data-cart-problems role="alert" hidden></div><div data-cart-lines></div><div class="cart-summary"><p>Subtotal <strong data-cart-subtotal>$0</strong></p><a class="btn btn--gold" href="/shop/checkout">Checkout</a><a class="btn btn--ghost" href="/shop/cart">View cart</a></div></dialog><p class="sr-only" data-cart-live aria-live="polite" role="status"></p>`;
+export const pocNote = () => html`<p class="shop-poc-note">Proof of concept only — no orders are accepted. Prices are illustrative.</p>`;
+export const pocBanner = () => html`<aside class="shop-poc-banner" aria-label="Proof of concept only"><div class="container"><strong>Proof of concept only</strong><span>No orders are accepted. Prices are illustrative.</span></div></aside>`;
+export const checkoutAction = (enabled = false) => enabled
+  ? html`<a class="btn btn--gold" href="/shop/checkout">Continue to checkout</a>`
+  : html`<button type="button" class="btn btn--gold shop-checkout-disabled" disabled>Checkout disabled — proof of concept</button>${pocNote()}`;
+export const noScript = (ctx: ShopContext) => html`<noscript><p class="note">Adding to the cart needs JavaScript. <a href="${settings(ctx).email('contactEmail')}">Contact the club about this concept.</a></p></noscript>`;
+export const drawer = (checkoutEnabled = false) => html`<dialog class="cart-drawer" id="cart-drawer" aria-labelledby="cart-drawer-title"><div class="cart-drawer__head"><h2 id="cart-drawer-title">Your club gear</h2><button type="button" class="btn btn--ghost" data-cart-close aria-label="Close cart">Close</button></div><div data-cart-problems role="alert" hidden></div><div data-cart-lines></div><div class="cart-summary"><p>Subtotal <strong data-cart-subtotal>$0</strong></p>${checkoutAction(checkoutEnabled)}<a class="btn btn--ghost" href="/shop/cart">View cart</a></div></dialog><p class="sr-only" data-cart-live aria-live="polite" role="status"></p>`;

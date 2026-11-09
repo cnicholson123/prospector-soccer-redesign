@@ -110,7 +110,7 @@ describe('filesystem seed and HTTP entry point', () => {
     const snapshot = await store.getSnapshot();
     expect(snapshot?.siteVersion).toBe(1);
     const publish = await store.getPublish(1);
-    expect(publish?.manifest).toHaveLength(123);
+    expect(publish?.manifest).toHaveLength(145);
     for (const entry of publish!.manifest) {
       const doc = await store.getDoc(entry.collection, entry.id);
       expect(doc?.published).toEqual(doc?.draft);
@@ -138,7 +138,7 @@ describe('filesystem seed and HTTP entry point', () => {
     for (const page of pageNames.filter(p => p !== 'shop')) {
       const path = page === 'home' ? '' : page;
       const response = await handler(new Request('http://localhost/' + path));
-      expect(normalizeHtml(await response.text())).toBe(normalizeHtml(await readFile(`tests/golden/${page === 'home' ? 'index' : page}.html`, 'utf8')));
+      expect(normalizeHtml((await response.text()).replaceAll('<li><a href="/shop">Merch (concept)</a></li>', ''))).toBe(normalizeHtml(await readFile(`tests/golden/${page === 'home' ? 'index' : page}.html`, 'utf8')));
       const redirect = await handler(new Request(`http://localhost/${page === 'home' ? 'index' : page}.html?v=1`));
       expect(redirect.status).toBe(308); expect(redirect.headers.get('Location')).toBe('/' + path + '?v=1');
     }
@@ -190,7 +190,7 @@ describe('filesystem seed and HTTP entry point', () => {
       const robots = await (await handler(new Request('http://localhost/robots.txt'))).text();
       expect(robots).toContain('Disallow: /admin');
       const sitemap = await (await handler(new Request('http://localhost/sitemap.xml'))).text();
-      expect(sitemap.match(/<url>/g)).toHaveLength(8);
+      expect(sitemap.match(/<url>/g)).toHaveLength(27);
       expect(sitemap).toContain('http://localhost:3000/recreational');
       expect(await (await handler(new Request('http://localhost/?page=about'))).text()).toContain('About Prospector');
     } finally { read.mockRestore(); }

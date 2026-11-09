@@ -1,3 +1,4 @@
+import { checkoutGuard } from './checkout-guard.js';
 import { Hono } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
 import { createHmac } from 'node:crypto';
@@ -31,6 +32,7 @@ export function createShopApp(factory: () => Store = createStore, options: { con
   const app = new Hono<Env>();
   let config = options.config, store: Store | undefined;
   const now = () => options.now?.() ?? new Date(), stocks = options.shopStore ?? temporaryShopStore;
+  app.use('/api/shop/*', checkoutGuard(() => config ??= loadConfig()));
   app.use('/api/shop/*', async (c, next) => {
     c.header('Cache-Control', 'no-store'); c.header('X-Content-Type-Options', 'nosniff');
     config ??= loadConfig(); store ??= factory();

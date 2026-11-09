@@ -2,16 +2,16 @@
   {
     "id": "storeSettings",
     "data": {
-      "enabled": false,
+      "enabled": true,
       "comingSoon": {
         "enabled": false,
         "title": "The club shop is coming soon",
         "text": "Club gear for players, families and fans. Check back for our first pre-order window."
       },
-      "announcement": "Concept collection. Products, prices and pickup details are subject to confirmation.",
+      "announcement": "",
       "contactEmail": "communicationsdirector@prospector.org",
       "nav": {
-        "label": "Shop",
+        "label": "Merch (concept)",
         "showInHeader": true
       },
       "offline": {
@@ -27,9 +27,9 @@
         "options": [
           {
             "_key": "00000001",
-            "label": "Saturday practices — Cameron Park",
-            "details": "Placeholder — pickup dates and location to be confirmed.",
-            "active": false
+            "label": "Illustrative pickup — no orders accepted",
+            "details": "Proof of concept only. No pickup is scheduled.",
+            "active": true
           }
         ]
       },

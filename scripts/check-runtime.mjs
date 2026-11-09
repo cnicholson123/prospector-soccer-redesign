@@ -10,7 +10,7 @@ const temporary = await mkdtemp(join(root, '.cache/runtime-'));
 const compiled = join(temporary, 'compiled');
 const env = {
   ...process.env,
-  NODE_ENV: 'test', NODE_OPTIONS: '', STORE_DRIVER: 'fs',
+  NODE_ENV: 'test', SHOP_CHECKOUT: 'disabled', NODE_OPTIONS: '', STORE_DRIVER: 'fs',
   DATA_DIR: join(temporary, 'data'), SESSION_SECRET: randomBytes(32).toString('hex'),
   ADMIN_BOOTSTRAP_USERNAME: 'RuntimeCheck', ADMIN_BOOTSTRAP_PASSWORD: randomBytes(32).toString('hex'),
   ADMIN_FORCE_PASSWORD_CHANGE: 'false', PUBLIC_BASE_URL: 'http://localhost:3000',

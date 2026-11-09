@@ -10,7 +10,7 @@ import { previewPath, editorPath } from '../../admin/src/state/content.js';
 let f: Awaited<ReturnType<typeof catalogFixture>>;
 beforeEach(async()=>{ f=await catalogFixture(); });
 function check(collection:'products'|'bundles'|'categories'|'storeSettings', value:unknown, id='new') { return validate(collection,value,{mode:'publish',id,documents:f.docs,resolve:(c,id)=>f.docs.find(d=>d.collection===c&&d.id===id)??null}); }
-it('seeds concepts as drafts, singletons published and schema 2',async()=>{ const docs=await loadSeed(); expect(docs.filter(d=>['products','bundles','categories'].includes(d.collection)).every(d=>d.published===undefined&&d.status==='draft')).toBe(true); expect(docs.filter(d=>d.collection==='products')).toHaveLength(10); expect(docs.filter(d=>d.collection==='bundles')).toHaveLength(3); expect(docs.find(d=>d.id==='storeSettings')?.published).toMatchObject({enabled:false}); });
+it('seeds the visible concept catalog as published',async()=>{ const docs=await loadSeed(); expect(docs.filter(d=>['products','bundles','categories'].includes(d.collection)).every(d=>d.published!==undefined&&d.status==='published')).toBe(true); expect(docs.filter(d=>d.collection==='products')).toHaveLength(10); expect(docs.filter(d=>d.collection==='bundles')).toHaveLength(3); expect(docs.find(d=>d.id==='storeSettings')?.published).toMatchObject({enabled:true,nav:{label:'Merch (concept)'}}); });
 it.each([0,.29,19.99,100])('accepts exact %s',amount=>expect(validateFields({price:{type:'money',exact:true}},{price:{amount}}).valid).toBe(true));
 it.each([{amount:-1},{amount:1.001},{amount:1,max:1},{amount:Infinity},{amount:1,currency:'usd'}])('rejects invalid exact money %j',price=>expect(validateFields({price:{type:'money',exact:true}},{price}).valid).toBe(false));
 it.each(['CAPS','a--b','a b','-start','end-','x'.repeat(61)])('rejects invalid slug %s',slug=>expect(validateFields({slug:{type:'text',pattern:'slug'}},{slug}).valid).toBe(false));
@@ -27,7 +27,7 @@ it('rejects unpublished components and missing fixed variants with paths',()=>{
  expect(check('bundles',f.bundle,'bundle_coach-kit').errors.map(e=>e.path)).toContain('components[0].fixedVariantKey');
 });
 it('requires contact, payment and active fulfillment before enabling',()=>{
- const s=f.docs.find(d=>d.id==='storeSettings')!.draft as Record<string,unknown>; s.enabled=true;s.contactEmail='';s.offline={enabled:false};
+ const s=f.docs.find(d=>d.id==='storeSettings')!.draft as Record<string,unknown>; s.enabled=true;s.contactEmail='';s.offline={enabled:false};s.pickup={enabled:true,options:[]};
  expect(check('storeSettings',s).errors.map(e=>e.path)).toEqual(expect.arrayContaining(['contactEmail','offline.enabled','pickup.options']));
 });
 it.each(roles)('gates order actions and settings for %s',role=>{

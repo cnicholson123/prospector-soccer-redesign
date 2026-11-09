@@ -7,7 +7,7 @@
         "description": "Club gear for players, families, coaches and fans."
       },
       "hero": {
-        "eyebrow": "Club shop · 2026–27",
+        "eyebrow": "Proof of concept",
         "title": "Wear the *gold*.",
         "lead": "For our players. For our families. For the sidelines that feel like home.",
         "image": {
@@ -19,7 +19,7 @@
           "href": "#collection"
         },
         "secondaryCta": {
-          "label": "How pre-orders work",
+          "label": "Explore the concept",
           "href": "#how"
         }
       },
@@ -40,22 +40,22 @@
       },
       "how": {
         "eyebrow": "Made for our club",
-        "title": "How pre-orders work",
+        "title": "Imagine your club gear",
         "steps": [
           {
             "_key": "00000001",
             "title": "Choose your gear",
-            "text": "Pick your favorites and sizes during the order window."
+            "text": "Explore the concept collection and try different sizes."
           },
           {
             "_key": "00000002",
-            "title": "We order together",
-            "text": "One club order goes into production after the window closes."
+            "title": "Try the cart",
+            "text": "Add favorites, adjust quantities and compare illustrative prices."
           },
           {
             "_key": "00000003",
-            "title": "Meet us for pickup",
-            "text": "We will share pickup details when your gear is ready."
+            "title": "Share your ideas",
+            "text": "This is a showcase only. Orders, payments and pickup are not available."
           }
         ]
       },
@@ -66,7 +66,7 @@
       "cta": {
         "eyebrow": "Here to help",
         "title": "Questions about your gear?",
-        "text": "Get in touch with the club before you order.",
+        "text": "Share your thoughts on this concept collection with the club.",
         "buttons": [
           {
             "_key": "00000001",

@@ -15,11 +15,14 @@ test('renderer serves the home page, cache headers, assets and health', async ({
   expect(await css.body()).toEqual(await readFile('public/assets/css/styles.css'));
   expect(await (await request.get('/api/admin/healthz')).json()).toEqual({ ok: true });
 });
-test('all migrated pages match the goldens through HTTP', async ({ request }) => {
+test('all migrated pages match the goldens through HTTP except concept navigation', async ({ request }) => {
   for (const name of pages) {
     const response = await request.get('/' + name);
     expect(response.status()).toBe(200);
-    expect(normalizeHtml(await response.text())).toBe(normalizeHtml(await readFile(`tests/golden/${name}.html`, 'utf8')));
+    const rendered = await response.text();
+    const conceptLink = '<li><a href="/shop">Merch (concept)</a></li>';
+    expect(rendered.split(conceptLink)).toHaveLength(3);
+    expect(normalizeHtml(rendered.replaceAll(conceptLink, ''))).toBe(normalizeHtml(await readFile(`tests/golden/${name}.html`, 'utf8')));
     const legacy = await request.get(`/${name}.html?keep=1`, { maxRedirects: 0 });
     expect(legacy.status()).toBe(308);
     expect(legacy.headers().location).toBe(`/${name}?keep=1`);

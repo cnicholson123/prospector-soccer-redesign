@@ -10,5 +10,5 @@ export default defineConfig({
   // All specs share one server + DATA_DIR; parallel workers interfere through publish-all, so run serially.
   workers: 1,
   testDir: './tests/e2e', use: { baseURL: 'http://localhost:3000', browserName: 'chromium', channel: process.env.PW_CHANNEL ?? 'chrome' },
-  webServer: { command: 'npm run start', url: 'http://localhost:3000/api/admin/healthz', reuseExistingServer: false, env: { DATA_DIR: dataDir, STORE_DRIVER: 'fs', CACHE_SMAXAGE: '0', CACHE_SWR: '0', ADMIN_BOOTSTRAP_USERS: bootstrapUsers, ADMIN_FORCE_PASSWORD_CHANGE: 'false' } },
+  webServer: { command: 'npm run start', url: 'http://localhost:3000/api/admin/healthz', reuseExistingServer: false, env: { SHOP_CHECKOUT: 'disabled', DATA_DIR: dataDir, STORE_DRIVER: 'fs', CACHE_SMAXAGE: '0', CACHE_SWR: '0', ADMIN_BOOTSTRAP_USERS: bootstrapUsers, ADMIN_FORCE_PASSWORD_CHANGE: 'false' } },
 });

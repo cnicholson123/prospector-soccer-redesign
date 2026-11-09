@@ -46,3 +46,41 @@ Integration notes and remaining gates
 - Updated pre-store test assumptions for schema version, page count and draft-aware seed/manifest counts. Limited Vitest to four workers to prevent excessive concurrent filesystem fixture writes; retained all assertions and provided 15-second allowances for three larger existing FS workflows.
 - Both requested phases are implemented in this run, per the explicit request. Fable/Claude design review, actual browser accessibility and responsive checks remain open acceptance gates, not inferred passes.
 - Store is still disabled in the seed. Launch decisions and credentials from the plan's Build defaults remain unconfigured. Inventory is the Phase 2 read stub; publishing/restoring content never mutates operational stock.
+
+## CHANGELOG — Phase 1 scope revision: Published concept showcase — 2026-11-09
+
+Shipped
+
+- Supersedes the earlier disabled-store/draft-seed defaults above. Store settings are now published with `enabled: true` and `Merch (concept)` navigation. All ten products, three bundles, five categories and four shop FAQs are published, so a freshly seeded filesystem store has a populated showcase without an admin publication step. All 145 seed documents are now published.
+- Shop hero eyebrow is `Proof of concept`. Landing, FAQ and pickup placeholder copy make the demonstration status explicit. The active pickup option is labeled illustrative with no scheduled pickup; its active flag preserves the existing publication validation and does not enable ordering.
+- Seed tests assert published products/bundles/categories and enabled settings. HTTP tests verify the seeded landing/product/bundle/category pages work before any admin write, while retaining explicit disabled-store and unpublished-component coverage.
+
+Verification / limits
+
+- The final `npm test` run includes isolated filesystem seeding, complete published-seed validation and the HTTP showcase checks: **PASS**. No existing user content store was reseeded or overwritten.
+- Real Neon/Postgres and Blob: **not run (no env)**. Existing initialized stores need an intentional content/seed update; changing repository seed files alone does not publish over existing edited content.
+
+## CHANGELOG — Phase 2 scope revision: Live-but-unusable proof of concept — 2026-11-09
+
+Shipped against the scope revision
+
+- Added a persistent gold/navy banner immediately after the sticky site header on every shop route, including category, lookup, coming-soon and missing/status URLs. Added the exact inline note `Proof of concept only — no orders are accepted. Prices are illustrative.` near product and bundle prices/actions, collection cards and cart totals/actions. The cart page and drawer have a disabled `Checkout disabled — proof of concept` button. Size selection, add/remove and quantity changes remain available.
+- Added `SHOP_CHECKOUT=disabled|enabled`; unset means disabled in every environment. Only explicit `NODE_ENV=development` or `test` permits `enabled`; production (and other environments) refuses it at config load. Disabled checkout renders an explanation without a form or token. Disabled order lookup also avoids collecting personal details.
+- Added shared middleware as the first handler in both shop and admin applications. Public/admin checkout, order, payment and webhook route families return exactly HTTP 403 `{ "error": "checkout_disabled" }`, before storage construction, authentication, body parsing or provider work. The families include future routes so deferred handlers cannot bypass the deployment boundary. Tests exercise unset/disabled configurations, all methods, malformed/oversized bodies, encoded paths and an injected downstream handler that must never run.
+- Added the permission-protected read-only deployment-status endpoint and a Store settings status panel: `Checkout: disabled by deployment (proof of concept)`. It is separate from editable content and has no toggle. Retained a client-side 403 fallback that preserves the cart and leaves any stale checkout submit button disabled.
+- Ordinary public pages change only by the requested `Merch (concept)` desktop/mobile links. Cart chrome and store scripts remain on shop pages, overriding Phase 2's earlier global cart enhancement to meet this run's stricter public-page constraint. The eight golden files and original public stylesheet remain unchanged. The golden harness now requires exactly the two new link strings and removes only those strings before its full comparison; no other markup is ignored for this change. The rationale is also recorded in the plan's Scope revision section.
+- Updated `shop-slice.spec.ts` for all three widths: browse → product → choose sizes → add to drawer → cart, persistence, quantity/removal, disabled checkout and explanation, persistent banners across shop pages, no checkout requests from the UI, direct endpoint refusal and no checkout form. Retained keyboard navigation and catalog generation coverage; added the read-only admin status assertion. Browser configuration pins checkout disabled. Orders/payments/providers/fulfillment (phases 3–9) remain deferred.
+- Updated deployment/env documentation and the unbundled Node runtime smoke to verify public quotes, operational 403s and the disabled checkout page in every packaged function.
+
+Final verification
+
+- `npm run build` — **PASS**, Vite and both TypeScript configurations.
+- `npm test` — **PASS: 679 passed, 17 skipped**, 29 test files passed / 2 hosted-service files skipped. Includes all eight unchanged public golden files and `npm run check:runtime`.
+- `check:runtime` — **PASS** on Node v25.9.0: explicit `.js` imports, isolated FS seed, all three function packages, public and private-preview empty-cart quotes, disabled operational routes and checkout SSR.
+- `npm run test:e2e -- --list` — **PASS: 32 tests in 9 files**. Playwright execution, responsive visual review, screenshots and Lighthouse — **not run (sandbox)**; Claude must run installed Chrome afterwards.
+- `npm run check-facts` — **PASS: 122 facts**. `node --check public/assets/js/shop.js` — **PASS**. `git diff --check` — **PASS**.
+- Real Neon/Postgres and Blob — **not run (no env)**. No payment credentials or hosted services were used. No dependencies, golden fixtures or base public CSS changed. No commit, merge, push, deployment, global configuration change or persistent edit outside this repository was performed.
+
+Open acceptance gates
+
+- Browser execution/design/accessibility remain unverified in this sandbox. No implementation requirement is deferred; visual/browser acceptance is not claimed from SSR or unit tests.

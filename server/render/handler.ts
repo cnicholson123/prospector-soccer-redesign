@@ -89,7 +89,7 @@ export function createRenderHandler(store: Store, config: Config, now: () => Dat
     const shopPath = requested === 'shop' ? url.searchParams.get('path') ?? '' : requested.startsWith('shop/') ? requested.slice(5) : null;
     if (shopPath !== null) {
       const ids = view.collection('products').flatMap(p => p.list('variants').map(v => `${p.id}.${v.text('_key')}`));
-      const result = renderShop({ view, stock: await temporaryShopStore.getStock(ids) }, shopPath.replace(/^\/+|\/+$/g, ''), { preview, secret: config.sessionSecret, error: url.searchParams.has('error') });
+      const result = renderShop({ view, checkoutEnabled: config.shopCheckout === 'enabled', stock: await temporaryShopStore.getStock(ids) }, shopPath.replace(/^\/+|\/+$/g, ''), { preview, secret: config.sessionSecret, error: url.searchParams.has('error') });
       if (!preview && !result.private) { tagContent(); tagShop(); }
       const until = Math.min(...selected.scheduled.map(s => (Date.parse(s.at) - view.now.getTime()) / 1000).filter(n => n > 0));
       return new Response(request.method === 'HEAD' ? null : result.body, { status: result.status, headers: { ...headers, 'Content-Type': 'text/html; charset=utf-8', 'Referrer-Policy': result.private ? 'no-referrer' : headers['Referrer-Policy'], 'Cache-Control': preview || result.private ? 'no-store' : `public, max-age=0, s-maxage=${Math.min(15, Math.max(0, Math.floor(until)))}, stale-while-revalidate=${until <= 75 ? 0 : 60}` } });

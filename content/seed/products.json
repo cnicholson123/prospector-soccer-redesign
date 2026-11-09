@@ -1,7 +1,6 @@
 [
   {
     "id": "prod_hoodie",
-    "status": "draft",
     "data": {
       "name": "Crest Hoodie",
       "slug": "crest-hoodie",
@@ -144,7 +143,6 @@
   },
   {
     "id": "prod_fan-tee",
-    "status": "draft",
     "data": {
       "name": "Gold Country Fan Tee",
       "slug": "gold-country-fan-tee",
@@ -306,7 +304,6 @@
   },
   {
     "id": "prod_scarf",
-    "status": "draft",
     "data": {
       "name": "Supporter Scarf",
       "slug": "supporter-scarf",
@@ -376,7 +373,6 @@
   },
   {
     "id": "prod_cap",
-    "status": "draft",
     "data": {
       "name": "Crest Trucker Cap",
       "slug": "crest-trucker-cap",
@@ -453,7 +449,6 @@
   },
   {
     "id": "prod_beanie",
-    "status": "draft",
     "data": {
       "name": "Pom Beanie",
       "slug": "pom-beanie",
@@ -530,7 +525,6 @@
   },
   {
     "id": "prod_bottle",
-    "status": "draft",
     "data": {
       "name": "Engraved Insulated Bottle",
       "slug": "engraved-insulated-bottle",
@@ -613,7 +607,6 @@
   },
   {
     "id": "prod_pins",
-    "status": "draft",
     "data": {
       "name": "Enamel Pin Set",
       "slug": "enamel-pin-set",
@@ -683,7 +676,6 @@
   },
   {
     "id": "prod_blanket",
-    "status": "draft",
     "data": {
       "name": "Sherpa Sideline Blanket",
       "slug": "sherpa-sideline-blanket",
@@ -753,7 +745,6 @@
   },
   {
     "id": "prod_backpack",
-    "status": "draft",
     "data": {
       "name": "Cleat Backpack",
       "slug": "cleat-backpack",
@@ -830,7 +821,6 @@
   },
   {
     "id": "prod_decal",
-    "status": "draft",
     "data": {
       "name": "Car Decal + PSC Magnet",
       "slug": "car-decal-psc-magnet",

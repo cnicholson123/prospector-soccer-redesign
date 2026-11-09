@@ -16,7 +16,7 @@ it.each(['','p/crest-hoodie','b/coach-kit','c/apparel','cart','checkout','orders
  const result=render(path);expect(result.status).toBe(200);expect(result.body).toContain('shop.css');expect(result.body).toContain('shop.js');expect(result.body).not.toContain('Planning estimate only');expect(result.body).not.toContain('estimatedCost');expect(result.body).not.toContain('Supplier');
 });
 it('renders the landing content, responsive image variants, categories and bundle savings',()=>{
- const {body}=render('');for(const text of ['Wear the','Ten pieces','How pre-orders work','Apparel','New Family Pack','Saves $9','Saves $8','Saves $10','srcset=','480w'])expect(body).toContain(text);
+ const {body}=render('');for(const text of ['Wear the','Ten pieces','Imagine your club gear','Apparel','New Family Pack','Saves $9','Saves $8','Saves $10','srcset=','480w'])expect(body).toContain(text);
 });
 it('renders grouped radios, stable variant IDs, quantities, size guide and bundle links',()=>{
  const {body}=render('p/crest-hoodie');for(const text of ['Youth sizes','Adult sizes','type="radio"','prod_hoodie.00000001','inputmode="numeric"','aria-describedby=','Size guide','Part of the Coach Kit','JavaScript','rel="preload"'])expect(body).toContain(text);
@@ -40,7 +40,7 @@ it('hides disabled store, supports coming soon and preserves preview navigation'
  expect(preview.body).toContain('href="/shop/p/crest-hoodie?preview=1"');expect(preview.body).toContain('name="robots" content="noindex"');
 });
 it('adds navigation conditionally and keeps shop styles opt-in on ordinary pages',()=>{
- expect(renderPage(f.snapshot,'home')).toContain('href="/shop"');expect(renderPage(f.snapshot,'home')).toContain('data-cart-open');expect(renderPage(f.snapshot,'home')).not.toContain('shop.css');
+ expect(renderPage(f.snapshot,'home')).toContain('href="/shop"');expect(renderPage(f.snapshot,'home')).not.toContain('data-cart-open');expect(renderPage(f.snapshot,'home')).not.toContain('shop.css');
  f.settings.enabled=false;expect(renderPage(f.snapshot,'home')).not.toContain('data-cart-open');
  const v=new SnapshotView(f.snapshot);expect(layout(v,'home',html`<p>Content</p>`).toString()).not.toContain('shop.css');expect(layout(v,'home',html``,undefined,{styles:['/extra.css'],scripts:['/extra.js']}).toString()).toContain('/extra.css');
 });
@@ -57,4 +57,42 @@ it('previews partially saved drafts without crashing or offering them for purcha
  f.snapshot.docs.products!.push({id:'prod_partial',collection:'products',version:1,order:100,data:{name:'Partial',slug:'partial',featured:true}});
  f.snapshot.docs.bundles!.push({id:'bundle_partial',collection:'bundles',version:1,order:100,data:{name:'Partial bundle',slug:'partial-bundle'}});
  expect(render('').status).toBe(200);expect(render('p/partial').body).toContain('Price pending');expect(render('p/partial').body).toContain('disabled');expect(render('b/partial-bundle').status).toBe(200);
+});
+
+it.each(['','p/crest-hoodie','b/coach-kit','c/apparel','cart','checkout','orders','order/PSC-1001','p/missing'])('labels every shop route %s and exposes no checkout form by default',path=>{
+ const {body}=render(path);
+ expect(body).toContain('aria-label="Proof of concept only"');
+ expect(body).toContain('No orders are accepted. Prices are illustrative.');
+ expect(body.indexOf('shop-poc-banner')).toBeGreaterThan(body.indexOf('</header>'));
+ expect(body).not.toContain('data-checkout');expect(body).not.toContain('action="/api/shop/checkout"');expect(body).not.toContain('name="token"');
+ expect(body).toContain('Proof of concept only — no orders are accepted. Prices are illustrative.');
+});
+it('keeps ordinary public pages unchanged except the concept navigation',()=>{
+ const body=renderPage(f.snapshot,'home');
+ expect(body).toContain('Merch (concept)');
+ expect(body).not.toContain('data-cart-open');expect(body).not.toContain('cart-drawer');expect(body).not.toContain('shop.js');
+ expect(body).not.toContain('shop.css');expect(body).not.toContain('shop-poc-banner');
+});
+it.each(['disabled',undefined])('renders HTTP checkout without a form for SHOP_CHECKOUT=%s',async SHOP_CHECKOUT=>{
+ const config=loadConfig({SHOP_CHECKOUT,SESSION_SECRET:'x'.repeat(32)},()=>{});
+ const store={getSnapshot:async()=>f.snapshot} as unknown as Store;
+ const response=await createRenderHandler(store,config)(new Request('http://localhost:3000/shop/checkout'));
+ const body=await response.text();expect(response.status).toBe(200);expect(body).toContain('Checkout is disabled');expect(body).not.toContain('<form');
+});
+it('allows the future checkout form only with explicit development opt-in',async()=>{
+ const config=loadConfig({SHOP_CHECKOUT:'enabled',NODE_ENV:'development',SESSION_SECRET:'x'.repeat(32)},()=>{});
+ const store={getSnapshot:async()=>f.snapshot} as unknown as Store;
+ const body=await(await createRenderHandler(store,config)(new Request('http://localhost:3000/shop/checkout'))).text();
+ expect(body).toContain('data-checkout');expect(body).toContain('Proof of concept only');
+});
+
+it.each(['disabled',undefined])('labels every HTTP shop page when checkout is %s',async SHOP_CHECKOUT=>{
+ const config=loadConfig({SHOP_CHECKOUT,SESSION_SECRET:'x'.repeat(32)},()=>{});
+ const handler=createRenderHandler({getSnapshot:async()=>f.snapshot} as unknown as Store,config);
+ for(const path of ['','/p/crest-hoodie','/b/coach-kit','/c/apparel','/cart','/checkout','/orders','/order/PSC-1001']) {
+  const response=await handler(new Request('http://localhost:3000/shop'+path));const body=await response.text();
+  expect(body).toContain('aria-label="Proof of concept only"');
+  expect(body).toContain('Proof of concept only — no orders are accepted. Prices are illustrative.');
+  expect(body).not.toContain('data-checkout');expect(body).not.toContain('action="/api/shop/checkout"');
+ }
 });

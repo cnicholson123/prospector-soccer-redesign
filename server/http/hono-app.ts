@@ -1,3 +1,4 @@
+import { checkoutGuard } from '../shop/http/checkout-guard.js';
 import { mediaCallbacks, mediaRoutes } from './routes/media.js';
 import { Hono } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
@@ -12,6 +13,7 @@ import { userRoutes } from './routes/users.js';
 import { auditRoutes } from './routes/audit.js';
 import { docRoutes } from './routes/docs.js';
 import { contentRoutes, cronRoutes } from './routes/content.js';
+import { requirePermission } from './middleware/permission.js';
 import { audit } from '../audit.js';
 
 export function createAdminApp(storeFactory: () => Store = createStore, options: { config?: Config; now?: () => Date; media?: MediaStorage } = {}) {
@@ -19,6 +21,7 @@ export function createAdminApp(storeFactory: () => Store = createStore, options:
   let needsRecovery = true, store: Store | undefined, config = options.config;
   let blobs = options.media;
   let initializing: Promise<unknown> | undefined;
+  app.use('/api/admin/*', checkoutGuard(() => config ??= loadConfig()));
   app.use('/api/admin/*', async (c, next) => {
     c.header('Cache-Control', 'no-store'); c.header('X-Content-Type-Options', 'nosniff');
     if (c.req.raw.body && c.req.raw.headers.has('content-length')) {
@@ -65,6 +68,7 @@ export function createAdminApp(storeFactory: () => Store = createStore, options:
     if (!['GET','HEAD'].includes(c.req.method)) throw new ApiError(403,'forbidden','Use the media routes');
     await next();
   });
+  app.get('/api/admin/shop/status', requirePermission('content.read'), c => c.json({ checkout: c.get('config').shopCheckout }));
   mediaRoutes(app); userRoutes(app); auditRoutes(app); docRoutes(app); contentRoutes(app);
   app.onError((error, c) => {
     if (error instanceof ApiError) {

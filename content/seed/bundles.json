@@ -1,7 +1,6 @@
 [
   {
     "id": "bundle_new-family-pack",
-    "status": "draft",
     "data": {
       "name": "New Family Pack",
       "slug": "new-family-pack",
@@ -39,7 +38,6 @@
   },
   {
     "id": "bundle_sideline-pack",
-    "status": "draft",
     "data": {
       "name": "Sideline Pack",
       "slug": "sideline-pack",
@@ -77,7 +75,6 @@
   },
   {
     "id": "bundle_coach-kit",
-    "status": "draft",
     "data": {
       "name": "Coach Kit",
       "slug": "coach-kit",

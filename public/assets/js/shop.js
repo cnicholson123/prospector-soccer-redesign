@@ -100,6 +100,7 @@
     if (cart.length >= 20) { announce('Your cart holds up to 20 selections. Review it before adding more.'); openCart(form.querySelector('button[type=submit]')); return; }
     cart.push(line); persist(); await refresh(); openCart(form.querySelector('button[type=submit]') || form.querySelector('button')); announce(quote?.problems.length ? quote.problems.map(p => p.message).join(' ') : 'Added ' + form.dataset.title + (line.variantKey ? ', ' + form.querySelector('input:checked')?.dataset.label : '') + '.');
   }));
+  let checkoutBlocked = false;
   const checkout = document.querySelector('[data-checkout]');
   function checkoutError(message) { const errors = checkout.querySelector('[data-checkout-errors]'); errors.hidden = false; errors.textContent = message; errors.focus(); }
   checkout?.addEventListener('submit', async event => {
@@ -117,12 +118,13 @@
       const response = await fetch(api('checkout'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token: quote.token, lines: cart.map(identity), customer, fulfillment: delivery, payment: { provider: data.get('payment') }, customerNote: data.get('customerNote') || '', website: data.get('website') || '' }) });
       const result = await response.json();
       if (response.status === 409) { const updated = result.quote || result.error?.details?.quote; if (updated) { quote = { ...updated, token: updated.token || quote.token }; quote.lines = updated.lines.filter(line => line.quantity > 0); cart = quote.lines.map(identity); tokenAt = Date.now(); persist(); render(); } else await refresh(); throw new Error('Your cart changed: ' + (updated?.problems?.map(p => p.message).join(' ') || 'Please review your quantities and total before placing your order again.')); }
+      if (response.status === 403 && result.error === 'checkout_disabled') { checkoutBlocked = true; button.textContent = 'Checkout disabled — proof of concept'; throw new Error('Proof of concept only — no orders are accepted. Prices are illustrative.'); }
       if (response.status !== 201) throw new Error(response.status === 404 ? 'Ordering is not open yet. Your cart is saved for later.' : result.error?.message || 'We could not place your order. Please try again.');
       if (!result.next?.url) throw new Error('We could not confirm your order. Please contact the club.');
       const next = new URL(result.next.url, location.origin);
       if (next.origin !== location.origin && next.origin !== 'https://checkout.stripe.com') throw new Error('The payment address could not be verified.');
       cart = []; persist(); location.assign(next.href);
-    } catch (error) { checkoutError(error.message); } finally { button.disabled = false; }
+    } catch (error) { checkoutError(error.message); } finally { button.disabled = checkoutBlocked; }
   });
   window.addEventListener('storage', event => { if (event.key === key) { try { cart = storedCart(JSON.parse(event.newValue || '[]'));  void refresh(); } catch { /* Ignore corrupt cross-tab values. */ } } });
   async function refreshAvailability() {

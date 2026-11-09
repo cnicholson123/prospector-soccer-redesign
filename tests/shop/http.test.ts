@@ -10,6 +10,11 @@ import type { User } from '../../shared/types.js';
 let f: Awaited<ReturnType<typeof adminFixture>>;
 beforeAll(async()=>{ f=await adminFixture(true); f.app.get('/api/admin/shop/permission-test',requirePermission('orders.view'),c=>c.json({ok:true})); await f.login(); },15000);
 afterAll(async()=>{ await rm(f.root,{recursive:true,force:true}); });
+it('serves the published showcase immediately from the seed',async()=>{
+ const render=createRenderHandler(f.store,f.config);
+ for(const path of ['/shop','/shop/p/crest-hoodie','/shop/b/coach-kit','/shop/c/apparel']) { const r=await render(new Request('http://localhost:3000'+path));expect(r.status).toBe(200);expect(await r.text()).toContain('Proof of concept only'); }
+ expect((await f.store.getSnapshot())?.docs.products).toHaveLength(10);
+});
 it('creates, edits, previews, validates and publishes product and bundle through the admin API',async()=>{
  const source=(await f.store.getDoc('products','prod_hoodie'))!;
  let response=await f.req('/docs/products','POST',{draft:{...source.draft as object,name:'Practice hoodie',slug:'practice-hoodie'}});expect(response.status).toBe(201);
@@ -26,6 +31,9 @@ it('creates, edits, previews, validates and publishes product and bundle through
  expect((await f.store.getSnapshot())?.docs.bundles?.some(d=>d.id===bd.id)).toBe(true);
 },15000);
 it('keeps disabled store private, enables with a publish, and guards APIs',async()=>{
+ const initial=(await f.store.getDoc('storeSettings','storeSettings'))!;
+ const hidden=(await (await f.req('/docs/storeSettings/storeSettings','PUT',{baseVersion:initial.version,draft:{...initial.draft as object,enabled:false}})).json()).doc;
+ expect((await f.req('/publish','POST',{items:[{collection:'storeSettings',id:'storeSettings',expectedVersion:hidden.version}]})).status).toBe(200);
  const render=createRenderHandler(f.store,f.config), app=createShopApp(()=>f.store,{config:f.config});
  expect((await render(new Request('http://localhost:3000/shop'))).status).toBe(404);
  expect((await render(new Request('http://localhost:3000/shop?preview=1'))).status).toBe(401);
@@ -57,4 +65,10 @@ it('signs checkout tokens, rejects tampering and accepts only 3 seconds through 
  const date=new Date('2030-01-01T00:00:00Z'),secret='x'.repeat(32),token=mintCheckoutToken(secret,date);
  for(const [ms,expected] of [[-1,false],[0,false],[2999,false],[3000,true],[7200000,true],[7200001,false]] as const)expect(verifyCheckoutToken(token,secret,new Date(+date+ms))).toBe(expected);
  expect(verifyCheckoutToken(token+'x',secret,new Date(+date+4000))).toBe(false);expect(verifyCheckoutToken(token,'y'.repeat(32),new Date(+date+4000))).toBe(false);
+});
+
+it('reports checkout as deployment-controlled after settings are published',async()=>{
+ expect((await (await f.req('/shop/status')).json()).checkout).toBe('disabled');
+ const response=await f.req('/shop/orders','POST',{});
+ expect(response.status).toBe(403);expect(await response.json()).toEqual({error:'checkout_disabled'});
 });

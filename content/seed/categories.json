@@ -1,7 +1,6 @@
 [
   {
     "id": "cat_apparel",
-    "status": "draft",
     "data": {
       "name": "Apparel",
       "slug": "apparel",
@@ -10,7 +9,6 @@
   },
   {
     "id": "cat_headwear",
-    "status": "draft",
     "data": {
       "name": "Headwear",
       "slug": "headwear",
@@ -19,7 +17,6 @@
   },
   {
     "id": "cat_accessories",
-    "status": "draft",
     "data": {
       "name": "Accessories",
       "slug": "accessories",
@@ -28,7 +25,6 @@
   },
   {
     "id": "cat_gear",
-    "status": "draft",
     "data": {
       "name": "Gear",
       "slug": "gear",
@@ -37,7 +33,6 @@
   },
   {
     "id": "cat_collectibles",
-    "status": "draft",
     "data": {
       "name": "Collectibles",
       "slug": "collectibles",

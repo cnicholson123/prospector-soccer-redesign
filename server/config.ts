@@ -10,7 +10,7 @@ export interface Config {
   adminBootstrapUsers?: BootstrapUser[]; adminBootstrapUser: string; adminBootstrapPassword: string; publicBaseUrl: string;
   cookieSecure: boolean; cacheSmaxage: number; cacheSwr: number; cdnPurge: 'off' | 'tag';
   cronSecret?: string; tzName: string; maxImageBytes: number; maxFileBytes: number;
-  production: boolean; adminForcePasswordChange: boolean;
+  production: boolean; adminForcePasswordChange: boolean; shopCheckout: 'disabled' | 'enabled';
 }
 export function loadConfig(env: NodeJS.ProcessEnv = process.env, warn = console.warn): Config {
   const production = env.NODE_ENV === 'production';
@@ -27,6 +27,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env, warn = console.
     const value = env[key];
     return value === undefined ? fallback : value === 'true' ? true : value === 'false' ? false : fail(`${key} must be true or false`);
   };
+  const shopCheckout = choice('SHOP_CHECKOUT', 'disabled', ['disabled', 'enabled']);
+  if (shopCheckout === 'enabled' && !['development', 'test'].includes(env.NODE_ENV ?? '')) fail('SHOP_CHECKOUT=enabled is allowed only with NODE_ENV=development or test; production checkout is forbidden');
   const storeDriver = choice('STORE_DRIVER', production ? 'postgres' : 'fs', ['fs', 'postgres']);
   if (storeDriver === 'postgres' && !env.DATABASE_URL) fail('DATABASE_URL is required for STORE_DRIVER=postgres');
   let adminBootstrapUsers: BootstrapUser[] | undefined;
@@ -61,7 +63,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env, warn = console.
   if (production && !cookieSecure) fail('COOKIE_SECURE must be true in production');
   const tzName = env.TZ_NAME ?? 'America/Los_Angeles';
   try { new Intl.DateTimeFormat('en-US', { timeZone: tzName }); } catch { fail('TZ_NAME must be a valid IANA timezone'); }
-  return { production, adminForcePasswordChange: bool('ADMIN_FORCE_PASSWORD_CHANGE', false), storeDriver, dataDir: resolve(env.DATA_DIR ?? '.data'),
+  return { production, shopCheckout, adminForcePasswordChange: bool('ADMIN_FORCE_PASSWORD_CHANGE', false), storeDriver, dataDir: resolve(env.DATA_DIR ?? '.data'),
     databaseUrl: env.DATABASE_URL, blobReadWriteToken: env.BLOB_READ_WRITE_TOKEN, sessionSecret,
     adminBootstrapUsers, adminBootstrapUser: env.ADMIN_BOOTSTRAP_USERNAME || env.ADMIN_BOOTSTRAP_USER || 'Phil', adminBootstrapPassword: env.ADMIN_BOOTSTRAP_PASSWORD || 'Phil',
     publicBaseUrl: base.origin, cookieSecure, cacheSmaxage: integer('CACHE_SMAXAGE', production ? 15 : 0),

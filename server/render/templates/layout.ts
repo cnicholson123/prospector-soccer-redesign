@@ -1,12 +1,12 @@
 import { html, type Html } from '../html.js';
-import { drawer } from '../shop/shared.js';
+import { pocBanner } from '../shop/shared.js';
 import { icon } from '../icons.js';
 import { type SnapshotView, type DocumentView } from '../snapshot-view.js';
 import type { PageName } from '../../../shared/schema.js';
 
 function navigation(site: DocumentView, pageName: string, shop: DocumentView): Html[] {
   const items = site.list('nav').filter(item => item.boolean('visible', true)).map(item => html`<li><a href="${item.text('href') ? item.url('href') : item.text('page') === 'home' ? '/' : '/' + item.text('page')}"${item.text('page') === pageName ? html` aria-current="page"` : html``}>${item.text('label')}</a></li>`);
-  if (shop.boolean('enabled') && shop.boolean('nav.showInHeader', true)) items.push(html`<li><a href="/shop"${pageName === 'shop' ? html` aria-current="page"` : html``}>${shop.text('nav.label') || 'Shop'}</a></li>`);
+  if (shop.boolean('enabled') && shop.boolean('nav.showInHeader', true)) items.push(html`<li><a href="/shop"${pageName === 'shop' ? html` aria-current="page"` : html``}>Merch (concept)</a></li>`);
   return items;
 }
 function announcement(site: DocumentView): Html {
@@ -37,7 +37,7 @@ export function layout(view: SnapshotView, pageName: PageName, content: Html, me
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,500;0,600;0,700;0,800;1,600&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/assets/css/styles.css">
-  <script src="/assets/js/main.js" defer></script>${(options.styles ?? []).map(href => html`<link rel="stylesheet" href="${href}">`)}${(options.scripts ?? (shop.boolean('enabled') ? ['/assets/js/shop.js'] : [])).map(src => html`<script src="${src}" defer></script>`)}${options.preloadImage ? html`<link rel="preload" as="image" href="${options.preloadImage}">` : html``}
+  <script src="/assets/js/main.js" defer></script>${(options.styles ?? []).map(href => html`<link rel="stylesheet" href="${href}">`)}${(options.scripts ?? (pageName === 'shop' ? ['/assets/js/shop.js'] : [])).map(src => html`<script src="${src}" defer></script>`)}${options.preloadImage ? html`<link rel="preload" as="image" href="${options.preloadImage}">` : html``}
   ${view.edit ? html`<link rel="stylesheet" href="/assets/css/admin-inline.css"><script src="/assets/js/admin-inline.js" defer></script>` : html``}
 </head>
 <body class="${"page-" + (pageName === "home" ? "index" : pageName)}">
@@ -68,12 +68,12 @@ ${navigation(site, pageName, shop)}
         </ul>
       </nav>
       <a class="btn btn--gold btn--sm site-header__cta" href="${site.url("headerCta.href")}"${site.external("headerCta")}>${site.text("headerCta.label")}</a>
-      ${shop.boolean("enabled") || pageName === "shop" && view.snapshot.docs.products?.length ? html`<a class="btn btn--sm" href="/shop/cart" data-cart-open aria-label="Open cart" aria-controls="cart-drawer" aria-expanded="false">Cart <span data-cart-count>0</span></a>` : html``}<button class="menu-toggle" type="button" aria-expanded="false" aria-controls="mobile-menu" data-menu-toggle>
+      ${pageName === "shop" && (shop.boolean("enabled") || view.snapshot.docs.products?.length) ? html`<a class="btn btn--sm" href="/shop/cart" data-cart-open aria-label="Open cart" aria-controls="cart-drawer" aria-expanded="false">Cart <span data-cart-count>0</span></a>` : html``}<button class="menu-toggle" type="button" aria-expanded="false" aria-controls="mobile-menu" data-menu-toggle>
         <span class="menu-toggle__label">Menu</span>
         <span class="menu-toggle__icon" aria-hidden="true"><span></span><span></span></span>
       </button>
     </div>
-  </header>
+  </header>${pageName === 'shop' ? pocBanner() : html``}
 
   <div class="mobile-menu" id="mobile-menu" data-mobile-menu hidden>
     <div class="mobile-menu__scrim" data-menu-close></div>
@@ -125,7 +125,6 @@ ${content}
       <a class="to-top" href="#main">Back to top ${icon("arrow-up", " viewBox=\"0 0 24 24\" aria-hidden=\"true\"")}</a>
     </div>
   </footer>
-${shop.boolean('enabled') && pageName !== 'shop' ? drawer() : html``}
 </body>
 </html>
 `;
