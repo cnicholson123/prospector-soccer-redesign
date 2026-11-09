@@ -28,6 +28,8 @@
   const menu = $("[data-mobile-menu]");
   const toggle = $("[data-menu-toggle]");
   if (menu && toggle) {
+    // The visible label is hidden on small phones; keep the enhanced control named.
+    toggle.setAttribute("aria-label", "Menu");
     const panel = $(".mobile-menu__panel", menu);
     const open = () => {
       menu.hidden = false;

@@ -148,7 +148,7 @@ Every changed document envelope now advances its version, including publish/unpu
 Restore with `publish:true` returns the committed `doc`. On success it also returns `published:true` and publication details; if publication fails it returns HTTP 200 with `published:false` and `publishError:{code,message,details?}`. Clients must show the saved draft and the separate publication failure, and must not display a success toast for that publication. This explicit partial-success contract avoids implying that a failed publish rolled back the restored draft. Generic revision restore of media is denied; approved metadata fields use the media editing endpoint.
 
 
-## Merch showcase (proof of concept)
+## Store showcase deployment
 
 The seed publishes ten concept products, three bundles and five categories, with `storeSettings.enabled=true`. The navigation reads **Merch (concept)**. Store pages label prices as illustrative and state that no orders are accepted.
 
@@ -156,4 +156,34 @@ The seed publishes ten concept products, three bundles and five categories, with
 
 `SHOP_CHECKOUT=enabled` is accepted only with `NODE_ENV=development` or `test`; configuration loading refuses it in production or any other environment. It exposes the existing development form for future work; order/payment implementation remains deferred.
 
-For local review use the filesystem driver (`STORE_DRIVER=fs`), `npm run seed`, and `npm run start`. Seed changes do not automatically update an already initialized store. The seed command refuses to overwrite edited content; use a fresh local `DATA_DIR` to inspect this showcase without replacing edits.
+### Existing production database (including the original 111 documents)
+
+**No database migration is required.** This showcase uses the existing `docs`, `revisions`, `publishes`, `snapshots` and `audit` tables. Content schema version 2 is snapshot metadata, not SQL migration 2. No order, payment or inventory tables are added. Do not run the general `npm run seed` against this live store: it refuses edited documents, and `--force` can replace live edits with repository content.
+
+From this checkout, with the intended production environment already loaded securely (`DATABASE_URL`, `SESSION_SECRET`, `ADMIN_BOOTSTRAP_USERS`, `PUBLIC_BASE_URL`, `COOKIE_SECURE` and other configured values), run:
+
+```sh
+npm ci
+npm run build
+NODE_ENV=production STORE_DRIVER=postgres SHOP_CHECKOUT=disabled npm run seed:store
+NODE_ENV=production STORE_DRIVER=postgres SHOP_CHECKOUT=disabled npm run seed:store
+```
+
+The first run against the original 111-document database reports `34 created, 34 published, 0 preserved` and advances the existing site version by one. It adds 10 products, 3 bundles, 5 categories, `shopPage`, `storeSettings` with `enabled=true`, 4 shop FAQs and 10 static store media records (20 existing WebP assets). The second run reports `0 created, 0 published, 34 preserved` at the same site version. It writes no new documents, revisions, audit or publication records. No bootstrap, restore, full seed, `--force`, SQL migration or Blob upload is part of this sequence. `seed:store` takes no arguments. It requires an initialized store with publication history and does not invoke bootstrap or modify users, sessions or operational data.
+
+Only missing store seed IDs are created. Existing documents—including store records, edited version-1 records, pending drafts, trash and disabled settings—keep their data, versions and history. New documents receive sealed `created` and `published` revisions and `content.create` / `content.publish` audit entries under actor `seed` (name `Store showcase seed`, source `seed:store`). Publication uses the normal locked/journaled Store transaction, appends a complete manifest reusing all existing revision references, preserves schedules and existing published content, and purges the content cache best-effort. A failure during creation can leave audited private drafts; rerunning resumes only this command's untouched drafts. A failed/interrupted publication is recovered by the existing FS journal or rolled back by Postgres. A concurrent edit/publication is preserved and may require rerunning the command after the other writer finishes.
+
+If store IDs already exist, the counts differ. The command deliberately does **not** enable an existing disabled `storeSettings`, publish an existing editor draft, restore trash, or repair an incompatible existing dependency. Incompatible dependencies fail validation instead of being overwritten. Review and publish those specific store changes through the admin UI if intended; do not use the general seed or a site restore to force the showcase. When all store IDs are new, the sequence above publishes the full showcase without touching the original 111 documents.
+
+After the application release is deployed, verify `/` has **Merch (concept)**; `/shop`, `/shop/p/crest-hoodie`, `/shop/b/coach-kit` and `/shop/c/apparel` render with the concept banner; cart quantities work; and `/shop/checkout` has no form. A POST to `/api/shop/checkout` must return HTTP 403 `{"error":"checkout_disabled"}`. Keep `SHOP_CHECKOUT=disabled` in the deployment environment. If cache invalidation is unavailable from the workstation, use a fresh `?v=<reported-site-version>` URL for verification and allow existing CDN entries to expire. The seed command does not deploy application code.
+
+### Local review and verification
+
+For a **new, isolated** filesystem store, run:
+
+```sh
+STORE_DRIVER=fs DATA_DIR=.cache/store-showcase-local npm run seed
+STORE_DRIVER=fs DATA_DIR=.cache/store-showcase-local SHOP_CHECKOUT=disabled npm run start
+```
+
+For an existing local filesystem store, use `STORE_DRIVER=fs DATA_DIR=<existing-directory> npm run seed:store` twice instead. The same preservation and audit rules apply on FS and Postgres. The store-seed contract suite starts from the original 111 records, includes live/pending edits, trash, schedules, users and session data, checks existing document and history values exactly, and exercises repeated runs and interrupted creation/publication. Run it with `npx vitest run tests/shop/seed-store.test.ts`; to test Postgres, use the disposable Docker PostgreSQL 17 + WebSocket proxy sequence in “Verification without hosting credentials” above with that test command. Real Neon/Blob checks remain **not run (no env)**; browser execution remains **not run (sandbox)** until run outside the sandbox.

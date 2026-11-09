@@ -34,11 +34,21 @@ for (const width of [390, 820, 1280]) test(`proof-of-concept browsing and disabl
   page.on('request', request => { if (request.url().includes('/api/shop/checkout')) checkoutRequests.push(request.url()); });
   await page.goto('/');
   // Below 1141px the header nav collapses into the Menu panel; open it to reach the link like a visitor would.
-  if (width < 1141) await page.getByRole('button', { name: /menu/i }).first().click();
-  await expect(page.getByRole('link', { name: 'Merch (concept)', exact: true }).first()).toBeVisible();
-  if (width < 1141) await page.keyboard.press('Escape');
-  await page.goto('/shop'); await banner(page);
-  await expect(page.getByRole('heading', { name: /Wear the gold/ })).toBeVisible();
+  if (width < 1141) {
+    const menu = page.getByRole('button', { name: 'Menu', exact: true });
+    await menu.click();
+    await expect(menu).toHaveAttribute('aria-expanded', 'true');
+  }
+  const nav = page.getByRole('navigation', { name: width < 1141 ? 'Mobile' : 'Main', exact: true });
+  // The mobile link includes a decorative CSS arrow in its accessible name.
+  const merch = nav.getByRole('link', { name: /^Merch \(concept\)(?: →)?$/ });
+  await expect(merch).toBeVisible(); await merch.click();
+  await expect(page).toHaveURL(/\/shop$/); await banner(page);
+  const headline = page.getByRole('heading', { name: /Wear the gold/ });
+  await expect(headline).toBeVisible();
+  await expect(headline).toHaveCSS('color', 'rgb(255, 255, 255)');
+  await expect(headline.locator('em')).toHaveCSS('color', 'rgb(248, 211, 106)');
+  await page.screenshot({ path: info.outputPath(`concept-hero-${width}.png`), fullPage: true });
   await page.getByRole('link').filter({ has: page.getByRole('heading', { name: 'Crest Hoodie', exact: true }) }).click();
   await banner(page);
   await page.getByRole('radio', { name: 'Youth M', exact: true }).check();
@@ -55,7 +65,8 @@ for (const width of [390, 820, 1280]) test(`proof-of-concept browsing and disabl
   await drawer.getByRole('link', { name: 'View cart', exact: true }).click(); await banner(page);
   await expect(page.locator('main [data-cart-total]')).toHaveText('$145.00');
   await page.reload(); await expect(page.locator('main [data-cart-total]')).toHaveText('$145.00');
-  const summary = page.locator('main .cart-summary');
+  const summary = page.locator('main aside.cart-summary');
+  await expect(summary).toHaveCount(1);
   await expect(summary.getByRole('button', { name: disabledLabel })).toBeDisabled(); await expect(summary).toContainText(explanation);
   await page.locator('main').getByRole('button', { name: 'Increase Crest Hoodie' }).first().click();
   await expect(page.locator('main [data-cart-total]')).toHaveText('$190.00');

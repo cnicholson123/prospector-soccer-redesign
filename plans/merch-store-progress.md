@@ -84,3 +84,35 @@ Final verification
 Open acceptance gates
 
 - Browser execution/design/accessibility remain unverified in this sandbox. No implementation requirement is deferred; visual/browser acceptance is not claimed from SSR or unit tests.
+
+## CHANGELOG — Phase 2 pre-deployment fix-up: Chrome failures and hero contrast — 2026-11-09
+
+Shipped against the concept browsing acceptance criteria
+
+- Read the supplied Chrome run and the three failing error contexts. The 390px failure is an application accessibility defect: the Menu label is hidden below 420px, leaving its icon-only button unnamed. The existing menu enhancement now assigns the accessible name `Menu`; no timeout was increased. Public server-rendered HTML, the base stylesheet and golden files are unchanged.
+- The 820px failure is a test assumption: the mobile navigation's CSS arrow contributes to the link's accessible name (`Merch (concept) →`). The spec now scopes to the correct Main/Mobile navigation, permits that decorative arrow, verifies the menu expanded, and follows the actual link to the store.
+- The 1280px strict-mode failure is a test selector defect: both the page summary and the intentionally retained cart drawer use `.cart-summary` inside `main`. The spec now targets the single `aside.cart-summary` and asserts its uniqueness. Banner and inline explanation copy already match the final scope contract; their exact assertions remain intact.
+- Fixed the real hero contrast defect in store-only CSS: the complete headline is white on navy, with the existing light-gold emphasis preserved. Added computed-color assertions and hero screenshots at all three widths to catch invisible text that a visibility assertion alone cannot detect. Cart editing, disabled checkout, persistent notices and keyboard coverage remain in the specs.
+
+Verification / limits
+
+- `npm run build` — PASS. Final `npm test` on FS — PASS: 699 passed, 25 hosted/Postgres skips; all eight unchanged public goldens and the plain-Node ESM `check:runtime` for admin/render/shop pass on Node v25.9.0.
+- `npm run test:e2e -- --list` — PASS: 37 tests in 10 files. Browser execution, computed-color assertions, screenshots and actual responsive/keyboard verification — **not run (sandbox)**. Claude must rerun Chrome; no visual pass is claimed here.
+- `npm run check-facts` — PASS: 122 facts. `node --check public/assets/js/main.js` and `git diff --check` — PASS.
+- The two-line public JS accessibility enhancement is necessary to fix the real 390px defect while preserving public HTML/CSS/design. No other public-page appearance changes, dependencies or golden adjustments were introduced. No commit, push or deployment was performed.
+
+## CHANGELOG — Phase 1 pre-deployment fix-up: Safe existing-store showcase seed — 2026-11-09
+
+Shipped against the production data-path acceptance criteria
+
+- Added `scripts/seed-store.ts` / `npm run seed:store` for initialized stores. The general seed is not safe for this deployment: it rejects edited content unless forced, and forcing it can replace live documents. The new command creates only missing IDs among the 10 products, 3 bundles, 5 categories, 2 store singletons, 4 shop FAQs and 10 static store media records. New settings retain `enabled=true`; `SHOP_CHECKOUT` stays disabled by default and in the documented deployment command.
+- New records get sealed creation revisions and audits as actor `seed`, with the `seed:store` source. One normal Store publication writes only the newly created store envelopes, appends sealed publication revisions and an audit with the exact item list, and reuses existing manifest revision IDs. Existing non-store and store content, draft/live versions, trash, schedules, media, users, sessions, metadata and all previous history remain intact. No SQL, Store interface or driver changes were necessary.
+- Repeated runs make no changes. Interrupted creations resume only the command's own untouched version-1 drafts; unrelated editor drafts are never published. Publication uses the existing FS journal/Postgres transaction recovery. Conflicting dependencies fail instead of being changed; a concurrent edit to a seed product causes CAS refusal, while a concurrent non-store draft edit survives publication.
+- Replaced the deployment README's showcase section with **Store showcase deployment**, including the exact production environment/command sequence, expected 34-new/zero-repeat counts, existing-record limitations, verification URLs, cache behavior and local FS instructions. **No database migration is required**: content schema version 2 uses the existing migration-1 JSONB tables, not a new SQL schema or operational ledger.
+
+Verification / limits
+
+- Added the same eight seed contract cases on FS and Postgres, starting with the original 111 site records. Coverage includes published/pending edits, trash, schedules, unchanged historical revisions/audit/manifests, users/sessions/metadata, existing disabled settings, incompatible drafts, idempotence, interrupted creation/publication, and concurrent editors. HTTP checks verify the newly seeded showcase pages and no-form checkout.
+- Final FS `npm test` — PASS: 699 tests, 25 explicit no-env skips. `npm run build` and `check:runtime` — PASS; no dependency or lockfile change.
+- Final `DATABASE_URL=… POSTGRES_TEST_WS_PROXY=… npm test` against disposable Docker **PostgreSQL 17.11** through the existing Neon WebSocket test proxy — PASS: **740 tests, 1 private-Blob no-env skip**, including all eight seed contract cases on both FS and Postgres, the shared Store/SQL contracts, goldens and all three runtime packages. The test fixtures use isolated schemas; the two task-specific containers were stopped and removed after verification.
+- Real Neon, private Blob and production seeding — **not run (no env)**. Docker verification is local PostgreSQL, not a claim of hosted-service verification. No payment credentials, user messages, global configuration edits, commits, pushes or deployments were used.
