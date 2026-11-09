@@ -1,7 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import type { Locator, Page } from '@playwright/test';
-import { expect, test, restoreSeed } from './fixtures.js';
+import { recordPageError, expect, test, restoreSeed } from './fixtures.js';
 import { adminPassword } from './credentials.js';
 import type { Revision } from '../../shared/types.js';
 
@@ -25,7 +25,7 @@ for (const width of [390, 1280]) {
   test(`history, revision restore, audit and filtered CSV at ${width}px`, async ({ page, context }, info) => {
     test.setTimeout(120000);
     await page.setViewportSize({ width, height: 900 });
-    const errors: string[] = []; page.on('pageerror', error => errors.push(error.message));
+    const errors: string[] = []; page.on('pageerror', error => recordPageError(errors, error));
     await login(page);
     const me = await (await context.request.get('/api/admin/auth/me')).json();
     const marker = `History ${randomBytes(5).toString('hex')}`;

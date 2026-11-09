@@ -1,5 +1,5 @@
 import type { APIRequestContext, Locator, Page } from '@playwright/test';
-import { test, expect, restoreSeed } from './fixtures.js';
+import { recordPageError, test, expect, restoreSeed } from './fixtures.js';
 import { adminPassword } from './credentials.js';
 
 const explanation = 'Proof of concept only — no orders are accepted. Prices are illustrative.';
@@ -30,7 +30,7 @@ for (const width of [390, 820, 1280]) test(`proof-of-concept browsing and disabl
   test.setTimeout(90000);
   await page.setViewportSize({ width, height: 900 });
   const errors: string[] = [], checkoutRequests: string[] = [];
-  page.on('pageerror', error => errors.push(error.message));
+  page.on('pageerror', error => recordPageError(errors, error));
   page.on('request', request => { if (request.url().includes('/api/shop/checkout')) checkoutRequests.push(request.url()); });
   await page.goto('/');
   // Below 1201px the header nav collapses into the Menu panel; open it to reach the link like a visitor would.

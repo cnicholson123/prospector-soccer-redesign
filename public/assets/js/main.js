@@ -6,6 +6,36 @@
   const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
   const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
+  /* Register before other enhancements can fail or navigation can start.
+     Admin/API documents do not opt in to public cross-document transitions. */
+  let privateNavigation = false;
+  let transitionOptOut;
+  const quiet = (vt) => { if (!vt) return; for (const k of ["ready", "finished", "updateCallbackDone"]) vt[k]?.catch?.(() => {}); };
+  document.addEventListener("click", (event) => {
+    const link = event.target.closest?.("a[href]");
+    if (!link || event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || link.hasAttribute("download") || link.target && link.target !== "_self") return;
+    const to = new URL(link.href, location.href);
+    privateNavigation = to.origin === location.origin && /^\/(admin|api)(\/|$)/.test(to.pathname);
+    transitionOptOut?.remove();
+    transitionOptOut = undefined;
+    if (privateNavigation) {
+      transitionOptOut = document.createElement("style");
+      transitionOptOut.textContent = "@view-transition { navigation: none; }";
+      document.head.appendChild(transitionOptOut);
+    }
+  }, true);
+  window.addEventListener("pageswap", (event) => {
+    quiet(event.viewTransition);
+    const to = event.activation?.entry?.url;
+    if (event.viewTransition && (privateNavigation || to && /^\/(admin|api)(\/|$)/.test(new URL(to).pathname))) event.viewTransition.skipTransition();
+  });
+  window.addEventListener("pagereveal", (event) => {
+    quiet(event.viewTransition);
+    privateNavigation = false;
+    transitionOptOut?.remove();
+    transitionOptOut = undefined;
+  });
+
   // A local hint only. Authentication is always checked by the admin API.
   try {
     const adminLink = $(".utility-bar__admin");
@@ -284,17 +314,6 @@
      Warm the next page when a visitor hovers or starts to press a link. */
   // Admin preview/edit renders run inside the admin's iframe under a strict CSP: no prerendering there.
   const inAdminPreview = window.top !== window.self || /[?&](preview|edit)=/.test(location.search);
-
-  /* ---------- Cross-document view transitions: fail quietly ----------
-     The admin and API pages do not opt in, and some navigations abort a transition.
-     Skip transitions into those pages and swallow the aborted-transition promises. */
-  const quiet = (vt) => { if (!vt) return; for (const k of ["ready", "finished", "updateCallbackDone"]) vt[k]?.catch?.(() => {}); };
-  window.addEventListener("pageswap", (e) => {
-    quiet(e.viewTransition);
-    const to = e.activation?.entry?.url;
-    if (e.viewTransition && to && /^\/(admin|api)(\/|$)/.test(new URL(to).pathname)) e.viewTransition.skipTransition();
-  });
-  window.addEventListener("pagereveal", (e) => quiet(e.viewTransition));
 
   if (!inAdminPreview && HTMLScriptElement.supports?.("speculationrules") && !navigator.connection?.saveData) {
     const internal = { href_matches: "/*" };

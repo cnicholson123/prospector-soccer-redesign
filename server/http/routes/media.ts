@@ -2,7 +2,7 @@ import type { Hono } from 'hono';
 import { actor, type AdminEnv } from '../middleware/auth.js';
 import { requirePermission } from '../middleware/permission.js';
 import { ApiError, object, string, version } from '../middleware/errors.js';
-import { commitMedia, finalizeMedia, prepareMedia, readBounded, readGrant, uploadGrant } from '../../media.js';
+import { commitMedia, finalizeMedia, mediaFinalization, requireUnusedUpload, prepareMedia, readBounded, readGrant, uploadGrant } from '../../media.js';
 import { rateLimit } from '../../auth/ratelimit.js';
 import { validate, ValidationError } from '../../content/validate.js';
 import { revision } from '../../content/revisions.js';
@@ -23,6 +23,7 @@ export function mediaRoutes(app: Hono<AdminEnv>) {
     const body = object(await c.req.json()), config = c.get('config'), blobs = c.get('blobs'), now = c.get('now');
     if (body.type === 'blob.generate-client-token') {
       const grant = readGrant(c.req.query('ticket') ?? '', c.get('user').id, config, now);
+      await requireUnusedUpload(c.get('store'), grant);
       return c.json(await blobs.clientUpload(c.req.raw, body, { path:grant.path, mime:grant.mime, size:grant.size, expires:grant.expires }));
     }
     await rateLimit(c.get('store'), 'uploads-' + c.get('user').id, 60, 3600, now);
@@ -37,6 +38,7 @@ export function mediaRoutes(app: Hono<AdminEnv>) {
   app.put('/api/admin/media/local-upload', requirePermission('media.upload'), async c => {
     if (c.get('config').storeDriver !== 'fs') throw new ApiError(404,'not_found','Route not found');
     const grant = readGrant(c.req.query('ticket') ?? '', c.get('user').id, c.get('config'), c.get('now'));
+    await requireUnusedUpload(c.get('store'), grant);
     if (!c.req.raw.body) throw new ApiError(422,'validation','Upload body is required');
     if (c.req.header('content-type') !== grant.mime) throw new ApiError(422,'validation','MIME type differs from ticket');
     const bytes = await readBounded(c.req.raw.body, grant.size);
@@ -58,15 +60,24 @@ export function mediaRoutes(app: Hono<AdminEnv>) {
     const current = doc.draft as Record<string, unknown>;
     if (!can(c.get('user'), 'media.edit', { uploadedBy: current.uploadedBy as string })) throw new ApiError(403, 'forbidden', 'You cannot replace this media');
     const input = object(await c.req.json()), expected = version(input.baseVersion);
-    if (expected !== doc.version) throw new ApiError(409, 'conflict', 'Someone else saved this. Reload and compare', { current: doc });
     const grant = readGrant(string(input.ticket, 'ticket', 4096), c.get('user').id, c.get('config'), c.get('now'));
     if (String(current.mime).startsWith('image/') !== grant.mime.startsWith('image/')) throw new ApiError(422, 'validation', 'Replace with the same kind of media');
     const web = input.webTicket ? readGrant(string(input.webTicket, 'webTicket', 4096), c.get('user').id, c.get('config'), c.get('now')) : undefined;
-    const prepared = await prepareMedia(store, c.get('blobs'), grant, web, { ...current, uploadedAt: c.get('now').toISOString() });
+    const upload = mediaFinalization(grant, web, 'replace', [doc.id, expected]);
+    const previous = await store.getUploadResult(upload);
+    if (previous) return c.json({ doc: previous });
+    if (expected !== doc.version) throw new ApiError(409, 'conflict', 'Someone else saved this. Reload and compare', { current: doc });
+    let prepared: Awaited<ReturnType<typeof prepareMedia>>;
+    try { prepared = await prepareMedia(store, c.get('blobs'), grant, web, { ...current, uploadedAt: c.get('now').toISOString() }); }
+    catch (error) {
+      const completed = await store.getUploadResult(upload);
+      if (completed) return c.json({ doc: completed });
+      throw error;
+    }
     const draft = { ...current, ...prepared.data, uploadedBy: current.uploadedBy, uploadedAt: c.get('now').toISOString() };
     const next = { ...doc, draft, version: doc.version + 1 };
     const updated = await commitMedia(store, c.get('blobs'), prepared, async () => {
-      const updated = await store.mutateDoc({ collection: 'media', id: doc.id, expectedVersion: expected,
+      const updated = await store.mutateDoc({ collection: 'media', id: doc.id, expectedVersion: expected, upload,
         patch: { draft, status: doc.published ? 'changed' : 'draft', updatedBy: c.get('user').id, updatedAt: c.get('now').toISOString() },
         revision: { append: revision(next, actor(c), 'edited', c.get('now')) }, audit: audit(actor(c), 'media.replace', { collection: 'media', docId: doc.id }, c.get('now')) });
       if (updated === 'conflict') throw new ApiError(409, 'conflict', 'Someone else saved this. Reload and compare', { current: await store.getDoc('media', doc.id) });

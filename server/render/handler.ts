@@ -90,7 +90,7 @@ export function createRenderHandler(store: Store, config: Config, now: () => Dat
     if (shopPath !== null) {
       const ids = view.collection('products').flatMap(p => p.list('variants').map(v => `${p.id}.${v.text('_key')}`));
       const result = renderShop({ view, checkoutEnabled: config.shopCheckout === 'enabled', stock: await temporaryShopStore.getStock(ids) }, shopPath.replace(/^\/+|\/+$/g, ''), { preview, secret: config.sessionSecret, error: url.searchParams.has('error') });
-      if (!preview && !result.private) { tagContent(); tagShop(); }
+      if (!preview && !result.private) { await tagContent(); tagShop(); }
       const until = Math.min(...selected.scheduled.map(s => (Date.parse(s.at) - view.now.getTime()) / 1000).filter(n => n > 0));
       return new Response(request.method === 'HEAD' ? null : preview ? noTransitions(result.body) : result.body, { status: result.status, headers: { ...headers, 'Content-Type': 'text/html; charset=utf-8', 'Referrer-Policy': result.private ? 'no-referrer' : headers['Referrer-Policy'], 'Cache-Control': preview || result.private ? 'no-store' : `public, max-age=0, s-maxage=${Math.min(15, Math.max(0, Math.floor(until)))}, stale-while-revalidate=${until <= 75 ? 0 : 60}` } });
     }
@@ -116,7 +116,7 @@ export function createRenderHandler(store: Store, config: Config, now: () => Dat
     const responseHeaders = { ...headers, 'Content-Type': contentType, ETag: etag,
       ...(url.searchParams.has('edit') ? { 'Content-Security-Policy': "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://*.public.blob.vercel-storage.com; connect-src 'self'; frame-ancestors 'self'; base-uri 'self'; form-action 'none'", 'X-Frame-Options': 'SAMEORIGIN' } : {}),
       'Cache-Control': preview ? 'no-store' : `public, max-age=0, s-maxage=${seconds}, stale-while-revalidate=${scheduleNear ? 0 : config.cacheSwr}` };
-    if (!preview) tagContent();
+    if (!preview) await tagContent();
     const matches = (request.headers.get('If-None-Match') ?? '').split(',').map(value => value.trim().replace(/^W\//, ''));
     if (!preview && status === 200 && (matches.includes(etag.replace(/^W\//, '')) || matches.includes('*'))) return new Response(null, { status: 304, headers: responseHeaders });
     return new Response(request.method === 'HEAD' ? null : preview ? noTransitions(body) : body, { status, headers: responseHeaders });

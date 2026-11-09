@@ -51,7 +51,7 @@ describe('private media quarantine',()=>{
     expect(doc.draft).toMatchObject({width:1,height:1,filename:'club.png',alt:'Club crest',mime:'image/png'});
     expect(doc.draft.variants.original).toMatch(/^\/blobs\/media\/2030\/media_/);
     expect(await createMediaBlobs(f.config,f.store).read(path)).toBeNull();
-    expect((await f.req('/media','POST',{ticket:g.ticket,webTicket:g.webTicket})).status).toBe(201);
+    expect((await f.req('/media','POST',{ticket:g.ticket,webTicket:g.webTicket,alt:'Club crest'})).status).toBe(201);
     expect(await f.store.listDocs('media')).toHaveLength(1);
     expect((await f.store.queryAudit({action:'media.upload',limit:10})).items).toHaveLength(1);
     const blobs=createMediaBlobs(f.config,f.store);

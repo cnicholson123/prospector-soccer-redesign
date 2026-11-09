@@ -706,3 +706,41 @@ Shipped against the account and command findings, including the Phase 4 auth/Sto
 - Final `npm run check-facts` — PASS, **122 facts**. `npm run test:e2e -- --list` — PASS, **53 tests in 13 files**. `git diff --check` — PASS. Public HTML golden fixtures were not regenerated. The sole public CSS change is the required no-JavaScript header fallback.
 - Deferred as specified by the review and documented in both READMEs: full bounded server-side image decoding (A3), strict zero-write cold/aged reads (A2), and draft-media lookup optimization (F11). Browser/Chrome/Lighthouse execution remains **not run (sandbox)**. Real Neon cloud, private Blob and deployment remain **not run (no env)**.
 - Branch placement remains the supplied `main` checkout because `admin-cms` is absent and `.git` is read-only. Work is uncommitted. No push, deployment, hosting credentials, dependency change or global configuration edit was made.
+
+## CHANGELOG — Phase 10 deployment gate — Media revocation and single-use uploads — 2026-11-09
+
+Shipped against findings 1–2 in `plans/reviews/2026-11-09-chrisbot-gate.md`
+
+- Public media GET/HEAD responses use the shared `content` cache tag and `public, max-age=0, s-maxage=300, stale-while-revalidate=60`. Draft/private responses stay no-store. Media and page handlers await the installed SDK's asynchronous tag registration before returning. Existing publication purges cover their shared tag. Previously cached responses retain their earlier freshness lifetimes.
+- Added durable grant receipts through the existing Store interface and `meta` storage. Original and web grants are consumed together with the media document, revision and audit. FS includes the receipts in its replay journal before the document commit. Postgres includes them in the existing locked transaction. No schema migration or dependency is needed.
+- Receipt fingerprints bind both grants to the create metadata or replacement target/base version. Identical retries return the originally committed document without copying or appending another revision/audit. Other reuse returns 409 `upload_consumed`, including reuse of just the web ticket and reuse across create/replace. The token and local PUT endpoints reject consumed grants. Quota reservation at issuance remains durable and includes abandoned attempts.
+- Pre-commit validation/copy/transaction failures leave grants retryable. Interrupted FS commits recover to one result, while SQL failures roll back. A slower identical request whose quarantine read loses a race with the winning request returns that winner's receipt. Cleanup and retained-binary rules remain in place.
+- New signed grants carry protocol version 2. Pre-upgrade tickets lack consumption history and are intentionally rejected with instructions to request another upload. Existing stored media remains readable. This rollout choice closes replay through still-valid old tickets.
+- Added `tests/unit/deployment-gate.test.ts` with FS/Postgres concurrent-writer, create/replacement failure injection, exact retry, shared-web-ticket reuse, quota-bypass and password/media HTTP cases. Updated existing media cache expectations and the prior retry fixture to resend the same metadata. Extended the real-HTTP media Playwright spec with single-use/retry/header assertions.
+
+## CHANGELOG — Phase 11 deployment gate — Genuine password changes — 2026-11-09
+
+Shipped against finding 3
+
+- After verifying the current password, `/auth/password` rejects an identical next password with validation 422. The existing credential CAS, session rotation and audit run only for an accepted different password. Rejection preserves the hash, credential generation, sessions and `mustChangePassword` flag.
+- Regression coverage exercises newly created temporary accounts, reset temporary accounts and ordinary optional changes through the real auth API, with FS and PostgreSQL metadata. Tests assert rejected requests preserve all account/session state and that a different password clears the flag. Existing 390px/1280px account browser flows now attempt the unchanged password, verify the visible error and restricted workspace, then change it successfully.
+
+## CHANGELOG — Phase 12 deployment gate — Transition mitigation and verification — 2026-11-09
+
+- Registered public `pageswap`/`pagereveal` handlers before the other enhancements. A capture-phase same-window click into `/admin` or `/api` disables cross-document transitions before navigation and records a fallback destination flag. Reveal resets the flag/style for bfcache restoration. Normal public transitions, reduced-motion handling and preview speculation exclusions remain intact.
+- Browser error collectors ignore only the exact reviewed message, `Transition was aborted because of invalid state. ViewTransition opt-in disabled`. Other page errors continue to fail their assertions. VM regressions exercise early registration, missing activation data, modifier clicks, destination checks and reveal cleanup.
+- Updated README and deployment guidance for the six-minute failed-purge fallback, atomic single-use grants, pre-upgrade ticket invalidation and password inequality. Public HTML/CSS, seeds, goldens, dependency manifest/lockfile and hosting configuration have no changes.
+
+Verification
+
+- Node 22.12.0 `npm run build` — PASS, Vite and both strict TypeScript projects.
+- Node 22.12.0 `npm test` on FS — PASS, **792 passed, 49 service-dependent skips**. Includes all three unbundled plain-Node `check:runtime` function packages, all eight public goldens, facts-related unit coverage and the existing FS performance budgets.
+- Docker PostgreSQL **17.11**, targeted HTTP suites with `POSTGRES_HTTP_TESTS=1` — PASS, **48 tests** across deployment-gate, predeploy-remediation, media and media-phase10. Metadata is PostgreSQL and binary storage is FS. Both create and replacement receipt rollback/retry tests and the quarantine-read race pass.
+- Node 22.12.0 full Docker PostgreSQL suite, `DATABASE_URL=<local PostgreSQL> POSTGRES_TEST_WS_PROXY=<local proxy> npm test -- --maxWorkers=1` — PASS, **859 passed, one private-Blob no-env skip**. Includes shared Store contracts, rollback/immutability coverage, local Neon HTTP serialization, public goldens and Postgres performance budgets. The final source was held fixed for this run. The disposable PostgreSQL and WebSocket proxy containers were stopped afterward.
+- `npm run check-facts` — PASS, **122 facts**. `npm run test:e2e -- --list` — PASS, **53 tests in 13 files**. `git diff --check` — PASS.
+- Playwright execution, Chrome visual/focus confirmation and Lighthouse — **not run (sandbox)**. Real Neon cloud, private Blob and hosted purge/deployment checks — **not run (no env)**. Local Docker PostgreSQL does not establish hosted-service acceptance.
+
+Deviations and open issues
+
+- This checkout is on `main`, with no local `admin-cms` branch. Creating the requested branch failed with `admin-cms.lock: Operation not permitted` because the sandbox makes `.git` read-only. Edits remain uncommitted in the supplied working tree. No commit, push, deployment, global configuration change or file edit outside the repository was made.
+- The version-2 ticket rollout and awaiting shared content-tag registration are the implementation decisions noted above. The requested four gate items are implemented. Browser and hosted-service acceptance remain open as explicitly reported.

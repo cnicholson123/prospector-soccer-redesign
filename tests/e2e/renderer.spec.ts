@@ -1,4 +1,4 @@
-import { expect, test } from './fixtures.js';
+import { recordPageError, expect, test } from './fixtures.js';
 import { readFile } from 'node:fs/promises';
 import { normalizeHtml } from '../normalize.js';
 
@@ -45,7 +45,7 @@ for (const width of [390, 1280]) {
   test(`public pages retain responsive layouts at ${width}px`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width, height: 900 });
     const errors: string[] = [];
-    page.on('pageerror', error => errors.push(error.message));
+    page.on('pageerror', error => recordPageError(errors, error));
     for (const name of ['', ...pages]) {
       await page.goto('/' + name);
       await expect(page.locator('h1')).toBeVisible();

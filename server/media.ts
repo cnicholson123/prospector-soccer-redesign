@@ -1,6 +1,6 @@
-import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
+import { createHash, createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import type { Config } from './config.js';
-import type { MediaStorage, Store, Doc, MediaCleanup } from './store/types.js';
+import type { MediaStorage, Store, Doc, MediaCleanup, UploadFinalization } from './store/types.js';
 import { ApiError } from './http/middleware/errors.js';
 import { revision } from './content/revisions.js';
 import { audit, type Actor } from './audit.js';
@@ -8,10 +8,11 @@ import { validate, ValidationError } from './content/validate.js';
 import { readSession } from './auth/session.js';
 import { can } from './permissions.js';
 import { effectiveSnapshot } from './content/scheduled-view.js';
+import { tagContent } from './render/cdn.js';
 import { retained } from './store/blobs/common.js';
 
 const extensions: Record<string, string> = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/gif': 'gif', 'application/pdf': 'pdf' };
-interface Grant { id: string; owner: string; filename: string; mime: string; size: number; path: string; expires: number; year: string }
+interface Grant { version: 2; id: string; owner: string; filename: string; mime: string; size: number; path: string; expires: number; year: string }
 const invalid = (message: string): never => { throw new ApiError(422, 'validation', message); };
 export function uploadGrant(input: Record<string, unknown>, owner: string, config: Config, now: Date) {
   if (typeof input.mime !== 'string' || !extensions[input.mime]) invalid('Upload JPEG, PNG, WebP, GIF or PDF; SVG is not allowed');
@@ -20,7 +21,7 @@ export function uploadGrant(input: Record<string, unknown>, owner: string, confi
   if (typeof input.filename !== 'string' || input.filename.length > 255) invalid('Invalid filename');
   const filename = (input.filename as string).split(/[\\/]/).at(-1)!.replace(/[^a-zA-Z0-9._ -]/g, '_').replace(/^\.+/, '').trim() || 'upload.' + extensions[mime];
   const id = 'media_' + randomBytes(16).toString('hex');
-  const grant: Grant = { id, owner, filename, mime, size: size as number, path: `media/incoming/${id}/original.${extensions[mime]}`, expires: now.getTime() + 15*60000, year: String(now.getUTCFullYear()) };
+  const grant: Grant = { version: 2, id, owner, filename, mime, size: size as number, path: `media/incoming/${id}/original.${extensions[mime]}`, expires: now.getTime() + 15*60000, year: String(now.getUTCFullYear()) };
   const payload = Buffer.from(JSON.stringify(grant)).toString('base64url');
   return { grant, ticket: payload + '.' + createHmac('sha256', config.sessionSecret).update(payload).digest('base64url') };
 }
@@ -30,8 +31,18 @@ export function readGrant(ticket: string, owner: string, config: Config, now: Da
   const received = Buffer.from(signature ?? '', 'base64url');
   if (extra || received.length !== expected.length || !timingSafeEqual(received, expected)) invalid('Invalid upload ticket');
   let grant: Grant; try { grant = JSON.parse(Buffer.from(payload, 'base64url').toString()) as Grant; } catch { return invalid('Invalid upload ticket'); }
+  if (grant.version !== 2) invalid('Upload ticket is from an older protocol; request a new upload');
   if (grant.owner !== owner || grant.expires <= now.getTime()) invalid('Upload ticket expired or belongs to another user');
   return grant;
+}
+/** Bind both grants to the exact logical operation, independent of copy paths/time. */
+export function mediaFinalization(grant: Grant, web: Grant | undefined, operation: string, values: unknown[]): UploadFinalization {
+  if (grant.id === web?.id) invalid('Original and web variants require separate upload tickets');
+  return { grantIds: web ? [grant.id, web.id] : [grant.id],
+    fingerprint: createHash('sha256').update(JSON.stringify([operation, grant.id, web?.id ?? null, ...values])).digest('hex') };
+}
+export async function requireUnusedUpload(store: Store, grant: Grant): Promise<void> {
+  if (await store.isUploadConsumed(grant.id)) throw new ApiError(409, 'upload_consumed', 'Upload ticket has already been used');
 }
 export async function readBounded(stream: ReadableStream<Uint8Array>, limit: number): Promise<Buffer> {
   const reader = stream.getReader(), chunks: Uint8Array[] = []; let size = 0;
@@ -120,19 +131,19 @@ export async function commitMedia(store: Store, blobs: MediaStorage, prepared: A
   }
 }
 export async function finalizeMedia(store: Store, blobs: MediaStorage, grant: Grant, input: Record<string, unknown>, actor: Actor, now: Date, webGrant?: Grant): Promise<Doc> {
-  const existing = await store.getDoc('media', grant.id);
+  const upload = mediaFinalization(grant, webGrant, 'create', [input.alt ?? '', input.caption ?? '']);
+  const existing = await store.getUploadResult(upload);
   if (existing) return existing;
-  const prepared = await prepareMedia(store, blobs, grant, webGrant, { alt: input.alt ?? '', caption: input.caption ?? '', focal: { x: 0.5, y: 0.5 }, uploadedAt: now.toISOString() });
-  const doc: Doc = { id: grant.id, collection: 'media', draft: prepared.data, version: 1, status: 'draft', createdAt: now.toISOString(), updatedAt: now.toISOString(), createdBy: actor.id, updatedBy: actor.id };
-  return commitMedia(store, blobs, prepared, async () => {
-    try { return await store.createDoc({ doc, revision: revision(doc, actor, 'created', now), audit: audit(actor, 'media.upload', { collection: 'media', docId: doc.id }, now) }); }
-    catch (error) {
-      await store.recoverPublish();
-      const winner = await store.getDoc('media', doc.id);
-      if (!winner) throw error;
-      return winner;
-    }
-  });
+  try {
+    const prepared = await prepareMedia(store, blobs, grant, webGrant, { alt: input.alt ?? '', caption: input.caption ?? '', focal: { x: 0.5, y: 0.5 }, uploadedAt: now.toISOString() });
+    const doc: Doc = { id: grant.id, collection: 'media', draft: prepared.data, version: 1, status: 'draft', createdAt: now.toISOString(), updatedAt: now.toISOString(), createdBy: actor.id, updatedBy: actor.id };
+    return await commitMedia(store, blobs, prepared, () => store.createDoc({ doc, revision: revision(doc, actor, 'created', now), audit: audit(actor, 'media.upload', { collection: 'media', docId: doc.id }, now), upload }));
+  } catch (error) {
+    // A concurrent identical request may have committed and removed quarantine.
+    const completed = await store.getUploadResult(upload);
+    if (completed) return completed;
+    throw error;
+  }
 }
 async function cleanMediaAttempt(store: Store, blobs: MediaStorage, intent: MediaCleanup) {
   for (const url of intent.urls) if (!await retained(store, url)) await blobs.delete(url);
@@ -173,5 +184,6 @@ export async function serveMedia(request: Request, store: Store, blobs: MediaSto
   const publicData = snapshot?.docs.media?.find(item => Object.values((item.data as { variants?: Record<string, string> }).variants ?? {}).includes(url))?.data as { filename?: string } | undefined;
   const filename = (published ? publicData?.filename : (doc?.draft as { filename?: string } | undefined)?.filename) ?? path.split('/').at(-1)!;
   const safeFilename = filename.replace(/[^a-zA-Z0-9._ -]/g, '_').replace(/^\.+/, '').trim() || 'download.pdf';
-  return new Response(request.method==='HEAD' ? null : blob.stream, { headers: { 'Content-Type':blob.contentType, 'Content-Length':String(blob.size), 'Content-Disposition':blob.contentType === 'application/pdf' ? `inline; filename="${safeFilename}"` : 'inline', 'X-Content-Type-Options':'nosniff', 'Content-Security-Policy':"sandbox; default-src 'none'", 'Cache-Control':published?'public, max-age=0, s-maxage=86400':'private, no-store' } });
+  if (published) await tagContent();
+  return new Response(request.method==='HEAD' ? null : blob.stream, { headers: { 'Content-Type':blob.contentType, 'Content-Length':String(blob.size), 'Content-Disposition':blob.contentType === 'application/pdf' ? `inline; filename="${safeFilename}"` : 'inline', 'X-Content-Type-Options':'nosniff', 'Content-Security-Policy':"sandbox; default-src 'none'", 'Cache-Control':published?'public, max-age=0, s-maxage=300, stale-while-revalidate=60':'private, no-store' } });
 }

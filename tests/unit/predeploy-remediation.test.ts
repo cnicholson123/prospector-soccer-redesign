@@ -112,7 +112,7 @@ it('uses the time-effective media snapshot before and at a schedule deadline wit
   for (const [time, live, unavailable] of [[new Date('2030-01-01T12:00:59.999Z'), oldUrl, newUrl], [new Date('2030-01-01T12:01:00Z'), newUrl, oldUrl]] as const) {
     expect(new SnapshotView(snapshot, time).doc('media', id).text('variants.web')).toBe(live);
     const delivered = await serveMedia(new Request('http://localhost:3000' + live), f.store, blobs, time);
-    expect(delivered.status).toBe(200); expect(delivered.headers.get('cache-control')).toBe('public, max-age=0, s-maxage=86400');
+    expect(delivered.status).toBe(200); expect(delivered.headers.get('cache-control')).toBe('public, max-age=0, s-maxage=300, stale-while-revalidate=60');
     expect((await serveMedia(new Request('http://localhost:3000' + unavailable), f.store, blobs, time)).status).toBe(404);
   }
   expect(await f.store.getSnapshot()).toEqual(snapshot); // Delivery does not settle or write.

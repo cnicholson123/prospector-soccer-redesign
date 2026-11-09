@@ -1,5 +1,5 @@
 import type { Page } from '@playwright/test';
-import { expect, test, restoreSeed } from './fixtures.js';
+import { recordPageError, expect, test, restoreSeed } from './fixtures.js';
 import { randomBytes } from 'node:crypto';
 import { adminPassword } from './credentials.js';
 // This suite runs only against Playwright's isolated FS store. Preserve the
@@ -22,7 +22,7 @@ async function publish(page: Page) {
 for (const width of [390, 1280]) test(`breadth editors publish board, sponsor and page copy at ${width}px`, async ({ page, context }, testInfo) => {
   test.setTimeout(90000);
   await page.setViewportSize({ width, height: 900 });
-  const errors: string[] = []; page.on('pageerror', e => errors.push(e.message));
+  const errors: string[] = []; page.on('pageerror', error => recordPageError(errors, error));
   const unique = randomBytes(4).toString('hex'), member = `Club volunteer ${unique}`, sponsor = `Community sponsor ${unique}`, lead = `A club for our community ${unique}.`;
   await login(page);
   await page.goto('/admin/boardMembers/mem_1');

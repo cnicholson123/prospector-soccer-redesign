@@ -1,3 +1,5 @@
+import { uploadResult, uploadReceiptKey } from './upload-grants.js';
+import type { UploadFinalization, UploadReceipt } from './types.js';
 import { authorizeUserChange } from './user-changes.js';
 import { completeCounts } from './counts.js';
 import { measureQuery } from './metrics.js';
@@ -100,28 +102,45 @@ export class PostgresStore implements Store {
       if (new Date(time).toISOString().slice(0, 7) !== entry.at.slice(0, 7)) throw new Error('Audit id timestamp must match its month');
     }
   }
-  private async commitMutation(doc: Doc, revisions: Revision[], audit: AuditEntry, expectedVersion?: number): Promise<Doc> {
+  getUploadResult(upload: UploadFinalization): Promise<Doc | null> {
+    return this.exclusive(() => uploadResult(upload, id => this.read<UploadReceipt>('meta', id)));
+  }
+  async isUploadConsumed(grantId: string): Promise<boolean> {
+    return !!await this.read<UploadReceipt>('meta', uploadReceiptKey(grantId));
+  }
+  private async commitMutation(doc: Doc, revisions: Revision[], audit: AuditEntry, expectedVersion?: number, upload?: UploadFinalization): Promise<Doc> {
     await this.checkAudit(audit);
     if (await this.read('audit', audit.id)) throw new Error('Audit entry already exists');
     for (const rev of revisions) await this.write('revisions', rev.id, rev);
     await this.write('audit', audit.id, audit);
+    if (upload) for (const id of upload.grantIds) await this.write('meta', uploadReceiptKey(id), { fingerprint: upload.fingerprint, doc } satisfies UploadReceipt);
     await this.write('docs', doc.id, doc, expectedVersion);
     await this.setMeta('health-cache', null);
     await this.setMeta('health-generation', audit.id);
     return structuredClone(doc);
   }
-  createDoc({ doc, revision, audit }: CreateDoc): Promise<Doc> {
+  createDoc({ doc, revision, audit, upload }: CreateDoc): Promise<Doc> {
     return this.exclusive(async () => {
+      if (upload) {
+        const result = await uploadResult(upload, id => this.read<UploadReceipt>('meta', id));
+        if (result) return result;
+        if (doc.collection !== 'media') throw new Error('Upload grants require media');
+      }
       if (await this.read('docs', doc.id)) throw new Error('Document already exists');
       if (doc.version !== 1) throw new Error('New document version must be 1');
       this.checkRevision(revision, doc);
       if (await this.read('revisions', revision.id)) throw new Error('Revision already exists');
-      return this.commitMutation(doc, [revision], audit);
+      return this.commitMutation(doc, [revision], audit, undefined, upload);
     });
   }
   mutateDoc(mutation: DocMutation): Promise<Doc | 'conflict'> {
     return this.exclusive(async () => {
-      const { collection, id, expectedVersion, patch, audit } = mutation;
+      const { collection, id, expectedVersion, patch, audit, upload } = mutation;
+      if (upload) {
+        const result = await uploadResult(upload, id => this.read<UploadReceipt>('meta', id));
+        if (result) return result;
+        if (collection !== 'media' || mutation.relatedOrder) throw new Error('Upload grants require media');
+      }
       const current = await this.getDoc(collection, id);
       if (!current || current.version !== expectedVersion) return 'conflict';
       for (const guard of mutation.guardVersions ?? []) if ((await this.getDoc(collection, guard.id))?.version !== guard.expectedVersion) return 'conflict';
@@ -168,7 +187,7 @@ export class PostgresStore implements Store {
         for (const sibling of siblings) await this.write('docs', sibling.id, sibling, sibling.version - 1);
         return structuredClone(doc);
       }
-      return this.commitMutation(doc, revisions, audit, expectedVersion);
+      return this.commitMutation(doc, revisions, audit, expectedVersion, upload);
     });
   }
   getSnapshot() { return this.read<Snapshot>('snapshots', 'published'); }

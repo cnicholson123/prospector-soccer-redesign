@@ -19,8 +19,14 @@ test('quarantines an upload, verifies it and serves only finalized media',async(
   expect(doc.draft.width).toBe(1);expect(doc.draft.height).toBe(1);
   const file=await api.get(doc.draft.variants.original);expect(file.ok()).toBeTruthy();expect(file.headers()['content-type']).toBe('image/png');
   expect(await file.body()).toEqual(bytes);
+  const retry=await api.post('/api/admin/media',{headers,data:{ticket:grant.ticket,webTicket:web.ticket,alt:'Uploaded crest',width:99999}});
+  expect(retry.status()).toBe(201);expect((await retry.json()).doc).toEqual(doc);
+  expect((await api.put(grant.uploadUrl,{headers:{...headers,'Content-Type':'image/png'},data:bytes})).status()).toBe(409);
+  expect((await api.post('/api/admin/media/'+doc.id+'/replace',{headers,data:{ticket:grant.ticket,webTicket:web.ticket,baseVersion:doc.version}})).status()).toBe(409);
   const published=await api.post('/api/admin/publish',{headers,data:{items:[{collection:'media',id:doc.id,expectedVersion:doc.version}]}});
   expect(published.ok()).toBeTruthy();
   await api.post('/api/admin/auth/logout',{headers});
-  expect((await api.get(doc.draft.variants.original)).ok()).toBeTruthy();
+  const publicFile=await api.get(doc.draft.variants.original);
+  expect(publicFile.ok()).toBeTruthy();
+  expect(publicFile.headers()['cache-control']).toBe('public, max-age=0, s-maxage=300, stale-while-revalidate=60');
 });

@@ -13,6 +13,15 @@ async function signIn(page: Page, username: string, password: string, temporary 
     expect((await page.request.get('/api/admin/docs/events')).status()).toBe(403);
     await page.goto('/admin/events');
     await expect(page).toHaveURL(/\/admin\/profile/);
+    await page.getByRole('textbox', { name: 'Current password', exact: true }).fill(password);
+    await page.getByRole('textbox', { name: 'New password', exact: true }).fill(password);
+    await page.getByRole('textbox', { name: 'Confirm new password', exact: true }).fill(password);
+    const unchanged = page.waitForResponse(r => r.url().endsWith('/api/admin/auth/password') && r.request().method() === 'POST');
+    await page.getByRole('button', { name: 'Update password', exact: true }).click();
+    expect((await unchanged).status()).toBe(422);
+    await expect(page.getByText('New password must differ from the current password', { exact: true })).toBeVisible();
+    await expect(page.getByRole('region', { name: 'Password change required' })).toBeVisible();
+    expect((await page.request.get('/api/admin/docs/events')).status()).toBe(403);
     const next = randomBytes(24).toString('base64url');
     await page.getByRole('textbox', { name: 'Current password', exact: true }).fill(password);
     await page.getByRole('textbox', { name: 'New password', exact: true }).fill(next);

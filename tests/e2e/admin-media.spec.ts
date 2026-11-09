@@ -1,6 +1,6 @@
 import { randomBytes } from 'node:crypto';
 import type { Page } from '@playwright/test';
-import { test, expect, restoreSeed } from './fixtures.js';
+import { recordPageError, test, expect, restoreSeed } from './fixtures.js';
 import { adminPassword } from './credentials.js';
 
 test.afterEach(async ({ context }) => restoreSeed(context));
@@ -25,7 +25,7 @@ async function publishOnly(page: Page, id: string) {
 for (const width of [390, 1280]) test(`media JPEG, focal point, sponsor, usage refusal and uploaded PDF at ${width}px`, async ({ page, context }, testInfo) => {
   test.setTimeout(120000);
   await page.setViewportSize({ width, height: 900 }); await login(page);
-  const errors: string[] = []; page.on('pageerror', error => errors.push(error.message));
+  const errors: string[] = []; page.on('pageerror', error => recordPageError(errors, error));
   await page.goto('/admin/media');
   // Existing site and store images are selectable before any upload.
   await expect(page.getByRole('button', { name: 'Details for hero.webp', exact: true })).toBeVisible();

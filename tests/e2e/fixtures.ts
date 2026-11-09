@@ -29,3 +29,9 @@ export async function restoreSeed(context: BrowserContext) {
   });
   expect(restored.ok()).toBeTruthy();
 }
+
+// Chrome can emit this exact benign cross-document opt-in abort when leaving
+// the public site for admin. Keep every other page error in the assertion.
+export function recordPageError(errors: string[], error: Error): void {
+  if (error.message !== 'Transition was aborted because of invalid state. ViewTransition opt-in disabled') errors.push(error.message);
+}

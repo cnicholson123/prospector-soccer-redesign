@@ -77,6 +77,7 @@ export function authRoutes(app: Hono<AdminEnv>) {
     const current = string(input.current, 'current', 1024), next = string(input.next, 'next', 1024);
     await rateLimit(store, `password-${user.id}`, 10, 900, c.get('now'));
     if (!await verifyPassword(current, user.passwordHash)) throw new ApiError(401, 'unauthenticated', 'Current password is incorrect');
+    if (next === current) throw new ApiError(422, 'validation', 'New password must differ from the current password');
     checkPassword(next, user.username);
     const updated = await store.changePassword(user.id, user.passwordHash, await hashPassword(next), audit(actor(c), 'auth.password', {}, c.get('now')));
     if (!updated) throw new ApiError(409, 'conflict', 'Credentials changed; sign in again');

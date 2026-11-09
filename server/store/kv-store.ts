@@ -1,3 +1,5 @@
+import { uploadResult, uploadReceiptKey } from './upload-grants.js';
+import type { UploadFinalization, UploadReceipt } from './types.js';
 import { authorizeUserChange } from './user-changes.js';
 import { keyPart, documentId, username } from './identifiers.js';
 import { loginGenerationKey, usernameRateKey } from '../auth/ratelimit.js';
@@ -88,29 +90,46 @@ export class KvStore implements Store {
       if (new Date(time).toISOString().slice(0, 7) !== entry.at.slice(0, 7)) throw new Error('Audit id timestamp must match its month');
     }
   }
-  private async commitMutation(doc: Doc, revisions: Revision[], audit: AuditEntry): Promise<Doc> {
+  getUploadResult(upload: UploadFinalization): Promise<Doc | null> {
+    return this.exclusive(() => uploadResult(upload, id => this.read<UploadReceipt>(`meta/${id}.json`)));
+  }
+  isUploadConsumed(grantId: string): Promise<boolean> {
+    return this.exclusive(async () => !!await this.read<UploadReceipt>(`meta/${uploadReceiptKey(grantId)}.json`));
+  }
+  private async commitMutation(doc: Doc, revisions: Revision[], audit: AuditEntry, upload?: UploadFinalization): Promise<Doc> {
     await this.checkAudit(audit);
     if (await this.kv.get(auditKey(audit))) throw new Error('Audit entry already exists');
     const writes: MutationJournal['writes'] = [...revisions.map(value => ({ key: revKey(value), value })), { key: auditKey(audit), value: audit }];
+    if (upload) for (const id of upload.grantIds) writes.push({ key: `meta/${uploadReceiptKey(id)}.json`, value: { fingerprint: upload.fingerprint, doc } satisfies UploadReceipt });
     writes.push({ key: 'meta/health-cache.json', value: null }, { key: 'meta/health-generation.json', value: audit.id });
     await this.kv.put(mutationKey, { writes, doc } satisfies MutationJournal);
     await this.resumeMutation();
     return structuredClone(doc);
   }
-  createDoc({ doc, revision, audit }: CreateDoc): Promise<Doc> {
+  createDoc({ doc, revision, audit, upload }: CreateDoc): Promise<Doc> {
     return this.exclusive(async () => {
       await this.readyToMutate();
+      if (upload) {
+        const result = await uploadResult(upload, id => this.read<UploadReceipt>(`meta/${id}.json`));
+        if (result) return result;
+        if (doc.collection !== 'media') throw new Error('Upload grants require media');
+      }
       if (await this.getDoc(doc.collection, doc.id)) throw new Error('Document already exists');
       if (doc.version !== 1) throw new Error('New document version must be 1');
       this.checkRevision(revision, doc);
       await this.assertIdentical(revKey(revision), revision);
-      return this.commitMutation(doc, [revision], audit);
+      return this.commitMutation(doc, [revision], audit, upload);
     });
   }
   mutateDoc(mutation: DocMutation): Promise<Doc | 'conflict'> {
     return this.exclusive(async () => {
       await this.readyToMutate();
-      const { collection, id, expectedVersion, patch, audit } = mutation;
+      const { collection, id, expectedVersion, patch, audit, upload } = mutation;
+      if (upload) {
+        const result = await uploadResult(upload, id => this.read<UploadReceipt>(`meta/${id}.json`));
+        if (result) return result;
+        if (collection !== 'media' || mutation.relatedOrder) throw new Error('Upload grants require media');
+      }
       const current = await this.getDoc(collection, id);
       if (!current || current.version !== expectedVersion) return 'conflict';
       for (const guard of mutation.guardVersions ?? []) if ((await this.getDoc(collection, guard.id))?.version !== guard.expectedVersion) return 'conflict';
@@ -154,7 +173,7 @@ export class KvStore implements Store {
         await this.resumeMutation();
         return structuredClone(doc);
       }
-      return this.commitMutation(doc, revisions, audit);
+      return this.commitMutation(doc, revisions, audit, upload);
     });
   }
   async getSnapshot(): Promise<Snapshot | null> {

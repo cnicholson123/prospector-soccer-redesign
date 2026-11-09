@@ -1,5 +1,5 @@
 import type { Locator, Page } from '@playwright/test';
-import { expect, test, restoreSeed } from './fixtures.js';
+import { recordPageError, expect, test, restoreSeed } from './fixtures.js';
 import { randomBytes } from 'node:crypto';
 import { adminPassword, reminderPassword } from './credentials.js';
 
@@ -26,7 +26,7 @@ async function keyboardField(page: Page, target: Locator, value: string) {
 for (const { width, keyboard } of [{ width: 390, keyboard: false }, { width: 1280, keyboard: false }, { width: 1280, keyboard: true }]) {
   test(`full event workflow ${width}px${keyboard ? ' keyboard only' : ''}`, async ({ page, context }, testInfo) => {
     test.setTimeout(90000);
-    const errors: string[] = []; page.on('pageerror', error => errors.push(error.message));
+    const errors: string[] = []; page.on('pageerror', error => recordPageError(errors, error));
     const title = `Club gathering ${randomBytes(5).toString('hex')}`;
     const activate = async (target: Locator) => keyboard ? keyboardActivate(page, target) : target.click();
     const fill = async (target: Locator, value: string) => keyboard ? keyboardField(page, target, value) : target.fill(value);

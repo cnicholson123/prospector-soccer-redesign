@@ -63,7 +63,7 @@ describe('Phase 10 verified media workflows', () => {
     expect(denied.status).toBe(409); expect((await denied.json()).error.details.usage).toContainEqual(expect.objectContaining({ id: sponsor.id, path: 'logo' }));
     const usage = await (await f.req(`/media/${doc.id}/usage`)).json(); expect(usage.usage).toContainEqual(expect.objectContaining({ id: sponsor.id }));
     const publicFile = await serveMedia(new Request('http://localhost:3000' + doc.draft.variants.web), f.store, createMediaBlobs(f.config, f.store));
-    expect(publicFile.status).toBe(200); expect(publicFile.headers.get('cache-control')).toBe('public, max-age=0, s-maxage=86400');
+    expect(publicFile.status).toBe(200); expect(publicFile.headers.get('cache-control')).toBe('public, max-age=0, s-maxage=300, stale-while-revalidate=60');
   });
   it('keeps media review writes forbidden while a Contributor can review ordinary pending content', async () => {
     const f = await fixture(true), { doc: media } = await image(f);

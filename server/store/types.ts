@@ -7,12 +7,12 @@ export interface AuditQuery {
   from?: string; to?: string; text?: string; limit: number; cursor?: string;
 }
 export interface CreateDoc {
-  doc: Doc; revision: Revision; audit: AuditEntry;
+  doc: Doc; revision: Revision; audit: AuditEntry; upload?: UploadFinalization;
 }
 export interface DocMutation {
   collection: CollectionName; id: string; expectedVersion: number; patch: Partial<Doc>;
   revision?: { upsert: Revision } | { append: Revision };
-  seal?: string[]; audit: AuditEntry;
+  seal?: string[]; audit: AuditEntry; upload?: UploadFinalization;
   /** Atomic, metadata-only reorder siblings; share the primary mutation audit. */
   guardVersions?: { id: string; expectedVersion: number }[];
   relatedOrder?: { id: string; expectedVersion: number; order: number }[];
@@ -24,7 +24,11 @@ export interface PublishTx {
 export interface AdminCounts { counts: Record<string, number>; pendingCount: number; reviewCount: number; scheduledCount: number }
 export interface SessionContext { session: Session; user: User | null; scheduleVersion: number; nextDueAt: string | null; counts?: AdminCounts }
 export interface MediaCleanup { id: string; at: string; urls: string[]; kind: 'media-finalization' }
+export interface UploadFinalization { grantIds: string[]; fingerprint: string }
+export interface UploadReceipt { fingerprint: string; doc: Doc }
 export interface Store {
+  getUploadResult(upload: UploadFinalization): Promise<Doc | null>;
+  isUploadConsumed(grantId: string): Promise<boolean>;
   listMediaCleanups(before: string, limit: number): Promise<MediaCleanup[]>;
   deleteMediaCleanup(id: string): Promise<void>;
   getSessionContext(hash: string, includeCounts?: boolean): Promise<SessionContext | null>;
