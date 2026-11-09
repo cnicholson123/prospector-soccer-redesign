@@ -7,3 +7,5 @@ import './styles/forms.css';
 import './styles/responsive.css';
 import './styles/media.css';
 render(<App />, document.getElementById('app')!);
+
+import './styles/accounts.css';

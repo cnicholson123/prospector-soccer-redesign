@@ -11,15 +11,17 @@ import { Preview } from '../components/Preview.js';
 import { Timeline } from '../components/Timeline.js';
 import { Dialog } from '../components/ConfirmDialog.js';
 import { DiffView, contentDiff } from '../components/DiffView.js';
-import { docTitle, editorPath } from '../state/content.js';
+import { compareDocs, docTitle, editorPath } from '../state/content.js';
 import { PublishButton, type PublishMode } from '../components/PublishButton.js';
 import { InlineEditor } from '../components/InlineEditor.js';
 import { api, publicOrigin } from '../api.js';
 import { previewPath } from '../state/content.js';
+import { EditorPresence } from '../components/EditorPresence.js';
+import { typingTarget } from '../state/palette.js';
 import { Icon } from '../components/Icon.js';
 export function DocEditor({ id, collection = 'events', publish, refresh }: { id: string; collection?: CollectionName; publish: (mode?: PublishMode) => void; refresh: number }) {
   const state = useMemo(() => new EditorState(id, collection), [id, collection]);
-  const { route } = useLocation();
+  const { route, url } = useLocation();
   const [ready, setReady] = useState(false), [error, setError] = useState(''), [panel, setPanel] = useState(() => new URLSearchParams(location.search).get('panel') === 'history' ? 'history' : 'form'), [other, setOther] = useState('');
   const [inline, setInline] = useState(false), [focusedPath, setFocusedPath] = useState(''), [siteVersion, setSiteVersion] = useState<number | null>(null);
   const definition = collections[collection], label = definition.label, singleton = definition.kind === 'singleton';
@@ -50,7 +52,8 @@ export function DocEditor({ id, collection = 'events', publish, refresh }: { id:
     for (let element: HTMLElement | null = target; element; element = element.parentElement) if (element instanceof HTMLDetailsElement) element.open = true;
     target.scrollIntoView({ block: 'center' });
     if (!(target instanceof HTMLDetailsElement)) target.focus();
-  }, [ready]);
+  }, [ready, url]);
+  useEffect(() => { const preview = () => setPanel('preview'); window.addEventListener('psc:preview-ipad', preview); return () => window.removeEventListener('psc:preview-ipad', preview); }, []);
   const serialized = JSON.stringify(state.draft.value);
   useEffect(() => {
     if (!ready || !editable || !state.doc.value || !state.dirty.value || state.conflict.value || state.recovery.value) return;
@@ -67,6 +70,26 @@ export function DocEditor({ id, collection = 'events', publish, refresh }: { id:
     };
     const timer = setInterval(() => void poll(), 20000); if (refresh) void poll(); return () => clearInterval(timer);
   }, [ready, refresh, id]);
+  useEffect(() => {
+    if (singleton || id === 'new') return;
+    let moving = false;
+    const next = async (event: KeyboardEvent) => {
+      if (!['[', ']'].includes(event.key) || event.metaKey || event.ctrlKey || event.altKey || event.shiftKey || typingTarget(event.target) || document.querySelector('dialog[open]') || moving) return;
+      event.preventDefault(); moving = true;
+      try {
+        if (!await state.flush()) return;
+        const listed = (await api<{ docs: EventDoc[] }>(`/docs/${collection}`)).docs;
+        // Follow exactly the order the collection list shows by default.
+        const docs = listed.filter(d => !d.trashedAt).sort(compareDocs(collections[collection].orderable ? 'order' : 'date') as (a: EventDoc, b: EventDoc) => number);
+        // Read the document from the address bar at keypress time: a fast second press can arrive
+        // before this editor re-renders for the document the first press navigated to.
+        const currentId = (typeof location !== 'undefined' ? decodeURIComponent(location.pathname.split('/').pop() ?? '') : '') || id;
+        const index = docs.findIndex(d => d.id === currentId), target = index < 0 ? undefined : docs[index + (event.key === ']' ? 1 : -1)];
+        if (target) route(editorPath(collection, target.id)); else notify(event.key === ']' ? 'This is the last item' : 'This is the first item');
+      } catch (e) { notify(message(e)); } finally { moving = false; }
+    };
+    window.addEventListener('keydown', next); return () => window.removeEventListener('keydown', next);
+  }, [state, singleton, id, collection]);
   async function checkpoint() {
     // Blur may already be saving. Keep the action operable and let EditorState
     // queue it; disabling on blur can discard the click before it arrives.
@@ -80,6 +103,8 @@ export function DocEditor({ id, collection = 'events', publish, refresh }: { id:
   const live = new URL(previewPath(collection, state.draft.value), publicOrigin); if (siteVersion !== null) live.searchParams.set('v', String(siteVersion));
   return <><a href={collection === "storeSettings" ? "/admin/products" : singleton ? "/admin/pages" : `/admin/${collection}`} class="back-link">← {collection === "storeSettings" ? "Store" : singleton ? "All pages" : `All ${definition.labelPlural.toLowerCase()}`}</a><header class="page-heading editor-heading"><div><span class="eyebrow">{definition.labelPlural} / {id === 'new' ? 'Create' : 'Edit'}</span><h1>{id === 'new' ? `New ${label.toLowerCase()}` : singleton ? label : doc ? docTitle({ ...doc, draft: state.draft.value }) : label}</h1><div class="save-line"><span class={`badge status-${doc?.status ?? 'draft'}`}>{doc?.status ?? 'draft'}</span><span role="status" aria-live="polite">{state.status.value}</span></div></div>
     <div class="editor-actions">{editable && <button class="button secondary" disabled={!ready} onClick={() => void checkpoint()}>{id === 'new' ? `Create ${label.toLowerCase()}` : 'Save checkpoint'}</button>}{doc && <PublishButton open={publish} />}</div></header>
+    {doc && <EditorPresence collection={collection} id={doc.id} />}
+    {doc?.reviewNote && <section class="notice" aria-label={doc.reviewRequestedBy ? "Review request" : "Review returned"}><strong>{doc.reviewRequestedBy ? "Review request" : "Returned for changes"}</strong><p>{doc.reviewNote}</p></section>}
     {doc && <div class="editor-page-tools">{editable && <button class="text-button" onClick={async () => { if (await state.flush()) setInline(true); }}>Edit on page</button>}{siteVersion !== null && <a class="text-link" href={live.href} target="_blank" rel="noreferrer">View live</a>}</div>}
     {error && <p role="alert" class="error-box">{error}</p>}{other && <p class="notice">{other}</p>}
     {state.recovery.value && <section class="notice recovery"><strong>We found an unsaved draft on this device.</strong><p>Recover it to continue where you left off, or use the saved version.</p><button class="button secondary" onClick={() => state.recover()}>Recover draft</button><button class="text-button" onClick={() => state.clearRecovery()}>Use saved version</button></section>}

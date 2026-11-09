@@ -3,7 +3,7 @@ import { audit, publicUser } from '../../audit.js';
 import { checkOrigin } from '../../auth/csrf.js';
 import { verifyPassword, passwordWeak, checkPassword, hashPassword } from '../../auth/password.js';
 import { failedLogin, lockKey, loginGenerationKey, usernameRateKey, rateLimit, type LockState } from '../../auth/ratelimit.js';
-import { newSession, cookie } from '../../auth/session.js';
+import { newSession, cookie, DAY } from '../../auth/session.js';
 import { actor, type AdminEnv } from '../middleware/auth.js';
 import { ApiError, object, string } from '../middleware/errors.js';
 import { username as validUsername } from '../../store/identifiers.js';
@@ -75,11 +75,12 @@ export function authRoutes(app: Hono<AdminEnv>) {
     c.header('Set-Cookie', cookie(token, c.get('config')));
     return c.json({ user: publicUser(updated), csrfToken: session.csrfToken, passwordWeak: false });
   });
-  app.get('/api/admin/auth/sessions', async c => c.json({ sessions: (await c.get('store').listSessions(c.get('user').id)).map(({ csrfToken: _csrf, ...s }) => ({ ...s, current: s.hash === c.get('session').hash })) }));
+  app.get('/api/admin/auth/sessions', async c => c.json({ sessions: (await c.get('store').listSessions(c.get('user').id)).filter(s => (s.authVersion ?? 0) === (c.get('user').authVersion ?? 0) && Date.parse(s.expiresAt) > c.get('now').getTime() && Date.parse(s.createdAt) + 30 * DAY > c.get('now').getTime()).map(({ csrfToken: _csrf, ...s }) => ({ ...s, current: s.hash === c.get('session').hash })) }));
   app.delete('/api/admin/auth/sessions/:hash', async c => {
     const s = await c.get('store').getSession(c.req.param('hash'));
     if (!s || s.userId !== c.get('user').id) throw new ApiError(404, 'not_found', 'Session not found');
     if (!await c.get('store').revokeSessions(c.get('user').id, audit(actor(c), 'auth.session_revoke', {}, c.get('now')), { hash: s.hash })) throw new ApiError(404, 'not_found', 'Session not found');
+    if (s.hash === c.get('session').hash) c.header('Set-Cookie', cookie('', c.get('config'), 0));
     return c.json({ ok: true });
   });
   app.post('/api/admin/auth/sessions/revoke-others', async c => {

@@ -40,7 +40,7 @@ export function createShopApp(factory: () => Store = createStore, options: { con
     let snapshot = await store.getSnapshot();
     if (preview) {
       const session = await readSession(store, c.req.raw, now(), config.production);
-      if (!session || session.user.mustChangePassword) return c.json({ error: { code: 'forbidden', message: 'Preview requires authentication.' } }, 403);
+      if (!session) return c.json({ error: { code: 'forbidden', message: 'Preview requires authentication.' } }, 403);
       if (snapshot) snapshot = buildSnapshot((await allDocs(store)).filter(d => !d.trashedAt).map(d => ({ ...d, published: d.draft, publishedVersion: d.version })), snapshot);
     }
     if (!snapshot) return c.json({ error: { code: 'not_found', message: 'Shop not found.' } }, 404);

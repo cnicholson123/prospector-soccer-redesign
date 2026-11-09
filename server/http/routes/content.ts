@@ -84,8 +84,9 @@ export function contentRoutes(app: Hono<AdminEnv>) {
     const input = object(await c.req.json());
     return c.json(await restoreSite(c.get('store'), version(Number(c.req.param('siteVersion'))), actor(c), c.get('now'), input.summary === undefined ? undefined : string(input.summary, 'summary', 1000), input.token === undefined ? undefined : string(input.token, 'token', 64)));
   });
-  app.post('/api/admin/rebuild', requirePermission('content.publish'), async c => c.json(await commitSnapshot(c.get('store'), await c.get('store').capturePublication(), [], actor(c), c.get('now'), { kind: 'rebuild' })));
-  app.get('/api/admin/search', requirePermission('content.read'), async c => c.json({ results: await search(c.get('store'), c.req.query('q') ?? '') }));
+  app.post('/api/admin/rebuild', requirePermission('users.manage'), async c => c.json(await commitSnapshot(c.get('store'), await c.get('store').capturePublication(), [], actor(c), c.get('now'), { kind: 'rebuild' })));
+  app.get('/api/admin/reviews', requirePermission('content.publish'), async c => c.json({ docs: (await allDocs(c.get('store'))).filter(doc => doc.reviewRequestedBy && !doc.trashedAt) }));
+  app.get('/api/admin/search', requirePermission('content.read'), async c => c.json({ results: await search(c.get('store'), c.req.query('q') ?? '', c.req.query('title') === '1') }));
   app.get('/api/admin/counts', requirePermission('content.read'), async c => c.json(c.get('counts') ?? await c.get('store').adminCounts()));
   app.get('/api/admin/dashboard', requirePermission('content.read'), async c => {
     const section = c.req.query('section');

@@ -11,6 +11,7 @@ import { ApiError } from './middleware/errors.js';
 import { authRoutes } from './routes/auth.js';
 import { userRoutes } from './routes/users.js';
 import { auditRoutes } from './routes/audit.js';
+import { presenceRoutes } from './routes/presence.js';
 import { docRoutes } from './routes/docs.js';
 import { contentRoutes, cronRoutes } from './routes/content.js';
 import { requirePermission } from './middleware/permission.js';
@@ -82,7 +83,7 @@ export function createAdminApp(storeFactory: () => Store = createStore, options:
     await next();
   });
   app.get('/api/admin/shop/status', requirePermission('content.read'), c => c.json({ checkout: c.get('config').shopCheckout }));
-  mediaRoutes(app); userRoutes(app); auditRoutes(app); docRoutes(app); contentRoutes(app);
+  mediaRoutes(app); userRoutes(app); auditRoutes(app); docRoutes(app); presenceRoutes(app); contentRoutes(app);
   app.onError((error, c) => {
     if (error instanceof ApiError) {
       if (error.retryAfter) c.header('Retry-After', String(error.retryAfter));

@@ -594,3 +594,33 @@ Deviations and open acceptance gates
 - This checkout is still `main`, with no local `admin-cms` branch. Applied the fix in place and preserved prior uncommitted changes; no commit, push or deployment was made.
 - Playwright execution, Chrome/visual checks and Lighthouse — **not run (sandbox)**. Claude must run the installed Chrome afterwards. Real Neon cloud/private Blob and hosted deployment checks — **not run (no env)**. PostgreSQL verification uses disposable local Docker PostgreSQL 17 and the existing test WebSocket transport; media binaries remain on FS.
 - No dependency, public-site HTML/CSS, golden, seed, global configuration or file outside the repository was changed by this fix.
+
+## CHANGELOG — Phase 11 — Users, profile, reviews, dashboard and shortcuts — 2026-11-09
+
+Shipped against §8 / §14 and the §18 / §19 amendments
+
+- Added `/admin/users` with search/status filters, role/status/last sign-in, account creation, role/name/email editing, deactivate/reactivate, administrator password reset and sign-out-everywhere. It uses the existing audited account APIs. Admins can select/manage only Viewer–Editor roles; Owners can manage all roles; self-role changes and last-active-Owner removal remain prohibited. Create/reset passwords appear in an acknowledgement dialog with copy/manual-copy support, are discarded on close and are never put into persistent browser storage or the user list. Password hashes remain excluded by the existing server serializer. Self-reset preserves the once-only password display before signing out.
+- Extended Profile with advisory password-strength guidance, existing server policy enforcement, current/other active sessions, individual revocation and revoke-others. Session listing now excludes expired, absolute-expired and invalidated credential generations; revoking the current session expires its cookie. Password changes remain optional: removed the legacy forced-change gates from the SPA, admin middleware, public draft preview and shop draft API. Legacy account flags are retained without blocking work; no account migration or credential overwrite is performed.
+- Added a linked Awaiting review dashboard card and Editor+ review queue with live/draft differences. Approval uses the existing versioned publication transaction; returning requires a nonblank note, preserves the draft and records the note in revision/audit summaries. Returned notes are visible in the document editor. Stale decisions refresh the queue and require another review. The existing request-review flow remains, with publication/scheduling controls hidden from Contributors. New `/reviews` is read-only; review-return permission is now Editor+.
+- Added an accessible command palette (⌘K / Ctrl+K), title-only document search, every screen/collection, new-item commands, settings sections, Review changes, Publish all and current-editor iPad preview. Publish all waits for editor flushes, reads fresh pending versions and retains server conflict checks. Added `?` help and `[` / `]` previous/next collection navigation that saves first and leaves field typing alone. Native dialogs retain focus containment and opener restoration; the palette explicitly focuses its ARIA combobox and exposes listbox/option selection.
+- Polished dashboard quick actions and field/section health links, including event dates, nested references and store pages. Added confirmed Owner/Admin Rebuild snapshot through the existing audited `rebuild` transaction; Editors are now rejected. The new account/review/palette layouts use the existing navy/blue/gold/cream tokens and fonts, with 390px styles and 44px controls.
+- Added advisory editing presence via the dedicated, authenticated, CSRF-protected POST heartbeat. Browser remounts/panes share a 30-second-per-document budget; hidden pages skip heartbeats. Server entries expire after 75 seconds and live in a bounded instance-local map. Heartbeats and normal content GETs make no presence DB writes. Peers on other instances are not visible, restarts clear entries and closed editors can remain until expiry. Optimistic locking remains authoritative. This tradeoff is documented in `README.md`.
+
+Files changed (summary)
+
+- New admin components: `CommandPalette`, `EditorPresence`, `ReviewQueue`; new Users route, account styles and palette/users/presence state helpers. Integrated with App, Shell, Profile, Dashboard, DocEditor, Preview, PublishButton, Dialog and API caching.
+- Server: dedicated presence route and existing auth/users/review/search/health/rebuild handlers, plus removal of legacy preview password gates. No Store schema, driver, dependencies, seed, public CSS/assets or golden fixtures changed.
+- Tests: Phase 11 HTTP and component/state suites, expanded zero-write performance checks and optional-password regression; six new Playwright scenarios. README documents administration, shortcuts and presence limitations.
+
+Verification
+
+- `npm run build` — **PASS**, Vite and both strict TypeScript configurations.
+- `npm test` — **PASS: 755 tests, 40 service-dependent skips**. Includes `check:runtime` for all three plain-Node function packages, all eight public goldens, existing filesystem performance budgets and added zero-write users/sessions/reviews/search/heartbeat checks.
+- `npm run check-facts` — **PASS: 122 facts**. `git diff --check` — **PASS**.
+- `npm run test:e2e -- --list` — **PASS: 50 tests in 13 files**, including six new Phase 11 scenarios. Browser execution, actual 390px/1280px appearance, keyboard/focus behavior, Lighthouse and the no-serious-accessibility-violations gate — **not run (sandbox)**. Claude must run the installed Chrome afterwards. Required content form fields use role/name locators and new-item buttons use `Create <thing>`.
+- Real Neon/Postgres and private Blob verification — **not run (no env)**. All executed application checks use filesystem storage. No commit, push, deployment or global configuration change was made.
+
+Deviations / open acceptance gates
+
+- This checkout starts on `main` with no local `admin-cms` branch. Creating `admin-cms` failed because the managed sandbox makes `.git` read-only (`admin-cms.lock: Operation not permitted`). Changes remain uncommitted on `main`; branch placement must be completed outside the sandbox.
+- No requested Phase 11 implementation item is deferred. Instance-local presence is the explicitly permitted tradeoff described above. Real-browser responsiveness/accessibility and E2E acceptance remain unverified until Claude's Chrome run; hosted-service acceptance remains unverified without environment credentials.

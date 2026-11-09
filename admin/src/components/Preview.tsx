@@ -28,6 +28,7 @@ export function Preview({ version, id, collection = 'events', draft = {}, focuse
     return () => observer.disconnect();
   }, []);
   const [width, setWidth] = useState(390);
+  useEffect(() => { const ipad = () => setWidth(820); window.addEventListener('psc:preview-ipad', ipad); return () => window.removeEventListener('psc:preview-ipad', ipad); }, []);
   const [refresh, setRefresh] = useState(0);
   const scale = Math.max(0.1, Math.min(1, available / width));
   const [path, anchor] = previewPath(collection, draft).split('#');

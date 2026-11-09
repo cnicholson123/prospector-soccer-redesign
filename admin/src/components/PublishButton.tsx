@@ -12,6 +12,7 @@ export function PublishButton({ open, disabled = false }: { open: (mode: Publish
   }, [expanded]);
   if (!allowed('content.edit')) return <button class="button" onClick={() => open('publish')}>Review changes</button>;
   const publisher = allowed('content.publish');
+  if (!publisher) return <button class="button" disabled={disabled} onClick={() => open('review')}>Request review</button>;
   return <div ref={host} class="publish-split" onKeyDown={event => { if (event.key === 'Escape') { setExpanded(false); toggle.current?.focus(); } }}>
     <button class="button" disabled={disabled} onClick={() => open(publisher ? 'publish' : 'review')}>{publisher ? 'Review & publish' : 'Request review'}</button>
     <button ref={toggle} class="button split-toggle" disabled={disabled} aria-label="Publish options" aria-expanded={expanded} onClick={() => setExpanded(!expanded)}>▾</button>

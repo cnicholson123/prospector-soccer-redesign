@@ -66,7 +66,6 @@ export function createRenderHandler(store: Store, config: Config, now: () => Dat
     const preview = url.searchParams.has('preview') || url.searchParams.has('edit');
     const auth = preview ? await readSession(store, request, now(), config.production) : null;
     if (preview && !auth) return new Response('Preview requires authentication', { status: 401, headers: { ...headers, 'Cache-Control': 'no-store' } });
-    if (preview && auth?.user.mustChangePassword) return new Response('Change your password to continue', { status: 403, headers: { ...headers, 'Cache-Control': 'no-store' } });
     const redirect = /^\/(index|home|recreational|competitive|referees|sponsors|board|resources|about)\.html$/.exec(url.pathname);
     if (redirect) {
       const target = ['index', 'home'].includes(redirect[1]) ? '/' : `/${redirect[1]}`;
@@ -92,7 +91,7 @@ export function createRenderHandler(store: Store, config: Config, now: () => Dat
       const result = renderShop({ view, checkoutEnabled: config.shopCheckout === 'enabled', stock: await temporaryShopStore.getStock(ids) }, shopPath.replace(/^\/+|\/+$/g, ''), { preview, secret: config.sessionSecret, error: url.searchParams.has('error') });
       if (!preview && !result.private) { tagContent(); tagShop(); }
       const until = Math.min(...selected.scheduled.map(s => (Date.parse(s.at) - view.now.getTime()) / 1000).filter(n => n > 0));
-      return new Response(request.method === 'HEAD' ? null : result.body, { status: result.status, headers: { ...headers, 'Content-Type': 'text/html; charset=utf-8', 'Referrer-Policy': result.private ? 'no-referrer' : headers['Referrer-Policy'], 'Cache-Control': preview || result.private ? 'no-store' : `public, max-age=0, s-maxage=${Math.min(15, Math.max(0, Math.floor(until)))}, stale-while-revalidate=${until <= 75 ? 0 : 60}` } });
+      return new Response(request.method === 'HEAD' ? null : preview ? noTransitions(result.body) : result.body, { status: result.status, headers: { ...headers, 'Content-Type': 'text/html; charset=utf-8', 'Referrer-Policy': result.private ? 'no-referrer' : headers['Referrer-Policy'], 'Cache-Control': preview || result.private ? 'no-store' : `public, max-age=0, s-maxage=${Math.min(15, Math.max(0, Math.floor(until)))}, stale-while-revalidate=${until <= 75 ? 0 : 60}` } });
     }
     let body: string;
     let status = 200;
@@ -119,11 +118,17 @@ export function createRenderHandler(store: Store, config: Config, now: () => Dat
     if (!preview) tagContent();
     const matches = (request.headers.get('If-None-Match') ?? '').split(',').map(value => value.trim().replace(/^W\//, ''));
     if (!preview && status === 200 && (matches.includes(etag.replace(/^W\//, '')) || matches.includes('*'))) return new Response(null, { status: 304, headers: responseHeaders });
-    return new Response(request.method === 'HEAD' ? null : body, { status, headers: responseHeaders });
+    return new Response(request.method === 'HEAD' ? null : preview ? noTransitions(body) : body, { status, headers: responseHeaders });
   };
 }
 let handler: ReturnType<typeof createRenderHandler> | undefined;
 export function renderPublic(request: Request): Promise<Response> {
   if (!handler) { const config = loadConfig(); handler = createRenderHandler(createStore(config), config); }
   return handler(request);
+}
+
+/** Admin preview/edit iframes reload on every keystroke-driven save; cross-document view
+ *  transitions there only produce aborted-transition errors, so previews opt out. */
+function noTransitions(html: string): string {
+  return html.replace('</head>', '<style>@view-transition { navigation: none; }</style></head>');
 }

@@ -19,12 +19,20 @@ import { Pages } from './routes/Pages.js';
 import { History } from './routes/History.js';
 import { Audit } from './routes/Audit.js';
 import { Media } from './routes/Media.js';
+import { Users } from './routes/Users.js';
+import { CommandPalette, ShortcutHelp } from './components/CommandPalette.js';
+import { typingTarget, type Command } from './state/palette.js';
+import { api, allowed } from './api.js';
+import { editorFlush } from './state/autosave.js';
+import { changed, type ContentDoc } from './state/content.js';
+import { notify } from './state/toasts.js';
 import { Profile } from './routes/Profile.js';
 function Workspace() {
   const { path, route } = useLocation();
   const acceptedUrl = useRef(location.pathname + location.search + location.hash);
   useEffect(() => { acceptedUrl.current = location.pathname + location.search + location.hash; }, [path]);
   const [loading, setLoading] = useState(true), [publish, setPublish] = useState<string[] | null>(null), [refresh, setRefresh] = useState(0), [leave, setLeave] = useState<string | null>(null);
+  const [palette, setPalette] = useState(false), [help, setHelp] = useState(false);
   const [publishMode, setPublishMode] = useState<PublishMode>('publish');
   function openPublish(ids: string[] = [], mode: PublishMode = 'publish') { setPublishMode(mode); setPublish(ids); }
   useEffect(() => { prefetchRoute(location.href); void loadSession().finally(() => setLoading(false)); }, []);
@@ -37,9 +45,8 @@ function Workspace() {
     if (loading) return;
     if (!session.value && path !== '/admin/login') route('/admin/login', true);
     if (session.value && path === '/admin/login') route('/admin', true);
-    if (session.value?.user.mustChangePassword && path !== '/admin/profile') route('/admin/profile', true);
     const section = path.split('/')[2] as CollectionName;
-    document.title = `${collections[section]?.labelPlural || (String(section) === 'pages' ? 'Pages' : String(section) === 'settings' ? 'Site settings' : String(section) === 'profile' ? 'Profile' : String(section) === 'history' ? 'History' : String(section) === 'audit' ? 'Audit log' : 'Dashboard')} · Prospector Admin`;
+    document.title = `${collections[section]?.labelPlural || (String(section) === 'pages' ? 'Pages' : String(section) === 'settings' ? 'Site settings' : String(section) === 'users' ? 'Users' : String(section) === 'profile' ? 'Profile' : String(section) === 'history' ? 'History' : String(section) === 'audit' ? 'Audit log' : 'Dashboard')} · Prospector Admin`;
   }, [loading, !!session.value, path]);
   useEffect(() => {
     const click = (event: MouseEvent) => {
@@ -52,7 +59,13 @@ function Workspace() {
       const destination = url.origin === location.origin && url.pathname.startsWith('/admin') ? url.pathname + url.search + url.hash : url.href;
       void navigationGuard.value().then(ok => { if (ok) navigate(destination); else setLeave(destination); });
     };
-    const key = (event: KeyboardEvent) => { if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key.toLowerCase() === 'p') { event.preventDefault(); openPublish(); } };
+    const key = (event: KeyboardEvent) => {
+      if (!session.value) return;
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') { event.preventDefault(); if (!document.querySelector('dialog[open]')) setPalette(true); return; }
+      if (document.querySelector('dialog[open]')) return;
+      if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key.toLowerCase() === 'p') { event.preventDefault(); openPublish(); }
+      if (event.key === '?' && !event.ctrlKey && !event.metaKey && !event.altKey && !typingTarget(event.target)) { event.preventDefault(); setHelp(true); }
+    };
     const pop = (event: PopStateEvent) => {
       if (!navigationGuard.value) return;
       const destination = location.pathname + location.search + location.hash;
@@ -65,10 +78,24 @@ function Workspace() {
     return () => { window.removeEventListener('popstate', pop, true); document.removeEventListener('click', click, true); document.removeEventListener('keydown', key); };
   }, []);
   function navigate(destination: string) { destination.startsWith('/admin') ? route(destination) : location.assign(destination); }
+  async function execute(command: Command) {
+    if (command.href) { if (!navigationGuard.value || await navigationGuard.value()) navigate(command.href); else setLeave(command.href); }
+    if (command.action === 'review') openPublish();
+    if (command.action === 'help') setHelp(true);
+    if (command.action === 'preview-ipad') window.dispatchEvent(new Event('psc:preview-ipad'));
+    if (command.action === 'publish') {
+      if (!allowed('content.publish')) throw new Error('Your role cannot publish.');
+      if (editorFlush.value && !await editorFlush.value()) throw new Error('Resolve your unsaved changes before publishing.');
+      const { docs } = await api<{ docs: ContentDoc[] }>('/pending');
+      if (!docs.length) { notify('All saved changes are already published'); return; }
+      const result = await api<{ siteVersion: number; purged: boolean }>('/publish', 'POST', { all: true, items: docs.map(d => ({ collection: d.collection, id: d.id, expectedVersion: d.version })) });
+      changed(); notify(result.purged ? 'Live now' : 'Published · Live within about 5 minutes', `/?v=${result.siteVersion}`);
+    }
+  }
   if (loading) return <main class="initial-loading" role="status">Opening the clubhouse…</main>;
   if (!session.value) return <Login />;
   const revision = refresh + contentChanged.value;
-  return <><Shell publish={() => openPublish()} refresh={revision}><Router>
+  return <><Shell publish={() => openPublish()} palette={() => setPalette(true)} help={() => setHelp(true)} refresh={revision}><Router>
     <Route component={Dashboard} path="/admin" publish={() => openPublish()} refresh={revision} />
     <Route component={Dashboard} path="/admin/" publish={() => openPublish()} refresh={revision} />
     <Route component={Pages} path="/admin/pages" refresh={revision} />
@@ -83,9 +110,12 @@ function Workspace() {
     <Route component={Media} path="/admin/media/:id" id={path.split('/').at(-1)!} refresh={revision} />
     <Route component={History} path="/admin/history" refresh={revision} />
     <Route component={Audit} path="/admin/audit" />
+    <Route component={Users} path="/admin/users" />
     <Route component={Profile} path="/admin/profile" />
     <Route default component={() => <div class="card empty-state"><h1>Workspace not found.</h1><p>Choose a page or collection from the navigation.</p><a class="button" href="/admin/events">Go to events</a></div>} />
   </Router></Shell>
+    {palette && <CommandPalette close={() => setPalette(false)} execute={execute} />}
+    {help && <ShortcutHelp close={() => setHelp(false)} />}
     {publish !== null && <PublishTray initialMode={publishMode} selectedIds={publish} close={() => setPublish(null)} published={() => setRefresh(value => value + 1)} />}
     {leave && <Dialog title="Leave with unsaved changes?" close={() => setLeave(null)}><p>Your changes are kept on this device for recovery. You can stay to finish saving or resolve a conflict.</p><div class="dialog-actions"><button class="button secondary" onClick={() => setLeave(null)}>Stay and edit</button><button class="button" onClick={() => { const destination = leave; setLeave(null); navigate(destination); }}>Leave editor</button></div></Dialog>}
     {toast.value && <div class="toast" role="status"><span>{toast.value.text}</span>{toast.value.undo && <button class="text-button" onClick={() => { const undo = toast.value?.undo; toast.value = null; void undo?.(); }}>Undo</button>}{toast.value.href && <a href={toast.value.href} target="_blank" rel="noreferrer">View live</a>}<button class="icon-button" aria-label="Dismiss notification" onClick={() => { toast.value = null; }}>×</button></div>}

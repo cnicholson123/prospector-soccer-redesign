@@ -1,0 +1,41 @@
+.account-filters { display: grid; grid-template-columns: minmax(0, 1fr) 190px; gap: 20px; margin-bottom: 14px; }
+.account-list, .session-list, .review-list { list-style: none; padding: 0; margin: 0; }
+.account-row { display: grid; grid-template-columns: minmax(170px, 1fr) minmax(170px, 1fr); gap: 16px; padding: 24px 0; border-top: 1px solid var(--border); }
+.account-identity { display: flex; align-items: flex-start; gap: 14px; min-width: 0; }
+.account-identity h2 { font-size: 25px; overflow-wrap: anywhere; }
+.account-identity p, .account-meta p { margin: 5px 0 0; color: var(--muted); overflow-wrap: anywhere; }
+.account-identity small { font: 12px var(--font-body); }
+.account-meta .badge { margin: 0 6px 6px 0; }
+.account-actions { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; }
+.account-actions small { color: var(--muted); }
+.temporary-password { width: 100%; margin-top: 10px; font-family: monospace; font-size: 18px; }
+.profile-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 24px; align-items: start; }
+.profile-grid .profile-card { max-width: none; }
+.password-strength { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; }
+.password-strength meter { flex: 1; min-width: 100px; height: 14px; }
+.session-list li, .review-list li { border-top: 1px solid var(--border); padding: 20px 0; display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.session-list li > div, .review-list li > div { min-width: 0; }
+.session-agent { overflow-wrap: anywhere; font-size: 12px; }
+.session-list p { margin: 5px 0; }
+.review-queue { margin-bottom: 24px; scroll-margin-top: 20px; }
+.review-list a { font-weight: 800; }
+.review-list p { white-space: pre-wrap; overflow-wrap: anywhere; }
+.review-list button { flex-shrink: 0; max-width: 50%; }
+.dashboard-actions { display: flex; gap: 12px; flex-wrap: wrap; margin: -8px 0 26px; }
+a.stat-card { color: inherit; text-decoration: none; }
+.presence { color: var(--muted); font-size: 12px; margin: -12px 0 18px; }
+.palette-trigger { display: inline-flex; align-items: center; gap: 10px; }
+kbd { font: 11px var(--font-body); border: 1px solid #c9d2e0; border-radius: 5px; padding: 4px 7px; background: #f4f6f9; color: var(--navy); }
+#command-query { width: 100%; font-size: 16px; }
+.palette-hint { font-size: 12px; margin: 10px 0; }
+.command-results { max-height: min(52vh, 420px); overflow-y: auto; }
+.command-option { min-height: 52px; display: flex; gap: 12px; justify-content: space-between; align-items: center; border-radius: 8px; padding: 12px; cursor: pointer; }
+.command-option span { font-weight: 700; }
+.command-option small { color: var(--muted); text-align: right; }
+.command-option[aria-selected="true"] { background: #edf2fa; box-shadow: inset 3px 0 var(--gold); }
+.shortcut-list > div { display: grid; grid-template-columns: 180px minmax(0, 1fr); gap: 16px; padding: 16px 0; border-bottom: 1px solid var(--border); }
+.shortcut-list dd { margin: 0; }
+@media (min-width: 1200px) { .account-row { grid-template-columns: minmax(150px, 1fr) minmax(180px, 1fr) minmax(210px, 1.2fr); }.account-actions { grid-column: auto; } }
+@media (max-width: 1000px) { .profile-grid { grid-template-columns: minmax(0, 1fr); }.palette-trigger kbd { display: none; } }
+@media (max-width: 760px) { .account-filters { grid-template-columns: minmax(0, 1fr); gap: 0; }.account-row { grid-template-columns: minmax(0, 1fr); }.account-actions { grid-column: auto; }.session-list li, .review-list li { flex-direction: column; }.review-list button { max-width: 100%; }.shortcut-list > div { grid-template-columns: minmax(0, 1fr); gap: 8px; }.palette-trigger { font-size: 0; width: 44px; padding: 8px; }.palette-trigger::before { content: '⌕'; font-size: 25px; }.command-option { align-items: flex-start; }.command-option small { max-width: 40%; }.profile-grid .section-heading { flex-wrap: wrap; } }
+@media (max-width: 760px) { .topbar .workspace-title { display: none; }.topbar-actions { width: 100%; justify-content: space-between; }.topbar .palette-trigger { font-size: 0; flex-shrink: 0; } }

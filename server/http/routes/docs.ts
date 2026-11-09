@@ -55,9 +55,12 @@ export function docRoutes(app: Hono<AdminEnv>) {
     const trash = action === 'trash';
     return c.json({ doc: await saveDraft(c.get('store'), doc, version(input.baseVersion), doc.draft, actor(c), c.get('now'), { action: trash ? 'trashed' : 'untrashed', patch: { trashedAt: trash ? c.get('now').toISOString() : undefined, trashedBy: trash ? c.get('user').id : undefined, status: trash ? 'trashed' : doc.published === undefined ? 'draft' : 'changed' } }) });
   });
-  for (const method of ['post', 'delete'] as const) app[method]('/api/admin/docs/:collection/:id/review', requirePermission('content.edit'), async c => {
+  for (const method of ['post', 'delete'] as const) app[method]('/api/admin/docs/:collection/:id/review', requirePermission(method === 'delete' ? 'content.publish' : 'content.edit'), async c => {
     const doc = await document(c), input = object(await c.req.json());
-    return c.json({ doc: await saveDraft(c.get('store'), doc, version(input.baseVersion), doc.draft, actor(c), c.get('now'), { auditAction: method === 'post' ? 'content.review_request' : 'content.review_return', patch: { reviewRequestedBy: method === 'post' ? c.get('user').id : undefined, reviewNote: input.note === undefined ? undefined : string(input.note, 'note', 1000), status: method === 'post' ? 'review' : doc.published === undefined ? 'draft' : 'changed' } }) });
+    if (doc.trashedAt) throw new ApiError(422, 'validation', 'Restore this item before requesting review');
+    if (method === 'delete' && !doc.reviewRequestedBy) throw new ApiError(409, 'conflict', 'This item is no longer awaiting review');
+    if (method === 'delete' && (typeof input.note !== 'string' || !input.note.trim())) throw new ApiError(422, 'validation', 'Add a note for the contributor');
+    return c.json({ doc: await saveDraft(c.get('store'), doc, version(input.baseVersion), doc.draft, actor(c), c.get('now'), { summary: input.note === undefined ? undefined : string(input.note, 'note', 1000), auditAction: method === 'post' ? 'content.review_request' : 'content.review_return', patch: { reviewRequestedBy: method === 'post' ? c.get('user').id : undefined, reviewNote: input.note === undefined ? undefined : string(input.note, 'note', 1000), status: method === 'post' ? 'review' : doc.published === undefined ? 'draft' : 'changed' } }) });
   });
   app.post('/api/admin/docs/:collection/reorder', requirePermission('content.manage'), async c => {
     const col = collection(c), input = object(await c.req.json());

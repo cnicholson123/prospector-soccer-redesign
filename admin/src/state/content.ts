@@ -32,3 +32,14 @@ export function moveItem<T>(items: T[], from: number, to: number): T[] {
   if (from < 0 || to < 0 || from >= items.length || to >= items.length || from === to) return items;
   const next = [...items]; next.splice(to, 0, next.splice(from, 1)[0]); return next;
 }
+
+/** Shared list ordering for collection screens and `[`/`]` navigation: the chosen key, then stable tie-breakers. */
+export function compareDocs(sort: string) {
+  return (a: ContentDoc, b: ContentDoc) => {
+    const primary = sort === 'order' ? (a.order ?? 0) - (b.order ?? 0)
+      : sort === 'updatedAt' ? b.updatedAt.localeCompare(a.updatedAt)
+      : sort === 'title' ? docTitle(a).localeCompare(docTitle(b))
+      : String(getPath(a.draft, sort) ?? '').localeCompare(String(getPath(b.draft, sort) ?? ''));
+    return primary || docTitle(a).localeCompare(docTitle(b)) || a.id.localeCompare(b.id);
+  };
+}

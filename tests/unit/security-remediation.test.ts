@@ -160,12 +160,10 @@ it('F-M3: overlong keys, invalid doc IDs and invalid login usernames return 4xx 
   for (const username of ['a'.repeat(101), 'a/b', '..']) expect((await f.req('/auth/login', 'POST', { username, password: 'bad' })).status).toBe(422);
   recover.mockClear(); expect((await f.req('/auth/me')).status).toBe(200); expect(recover).not.toHaveBeenCalled();
 });
-it('bootstrap policy is opt-in and forced accounts allow only me/password/logout until changed', async () => {
+it('section 19 keeps password changes optional even for legacy forced accounts', async () => {
   const f = await fixture(false, { adminForcePasswordChange: true });
   expect((await f.req('/auth/me')).status).toBe(200);
-  for (const path of ['/dashboard','/auth/sessions','/future']) {
-    const r = await f.req(path); expect(r.status).toBe(403); expect((await r.json()).error.code).toBe('password_change_required');
-  }
+  for (const path of ['/dashboard','/auth/sessions']) expect((await f.req(path)).status).toBe(200);
   const changed = await f.req('/auth/password', 'POST', { current: 'Phil', next: 'Strong replacement phrase' }); expect(changed.status).toBe(200);
   expect((await f.login('Phil', 'Strong replacement phrase')).response.status).toBe(200); expect((await f.req('/dashboard')).status).toBe(200);
   expect(f.config.adminForcePasswordChange).toBe(true);

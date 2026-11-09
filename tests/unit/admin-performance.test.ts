@@ -38,7 +38,7 @@ for (const postgres of [false, true]) describe.skipIf(postgres && !process.env.D
   it('keeps steady GET/HEAD reads write-free and uses a single counts aggregate', async () => {
     const f = await fixture(postgres);
     await f.req('/dashboard'); // Warm persisted health cache and schedule state.
-    for (const path of ['/auth/me','/docs/events','/counts','/pending','/dashboard','/media','/media?unused=1','/media?missingAlt=1','/media/missing/usage']) {
+    for (const path of ['/auth/me','/auth/sessions','/users','/reviews','/search?title=1&q=test','/docs/events','/counts','/pending','/dashboard','/media','/media?unused=1','/media?missingAlt=1','/media/missing/usage']) {
       f.reset();
       const response = await f.req(path);
       expect(response.status).toBe(200);
@@ -170,4 +170,14 @@ it('clears an old schedule error when a new snapshot has no due items', async ()
   await work.settle(store, at, { scheduleVersion: 2, nextDueAt: null });
   expect(setScheduleError).toHaveBeenCalledExactlyOnceWith(null);
   expect(getMeta).toHaveBeenCalledTimes(1);
+});
+
+it('dedicated presence heartbeat makes no filesystem writes', async () => {
+  const f = await fixture(false);
+  const { doc } = await (await f.req('/docs/events', 'POST', { draft: { title: 'Open event', date: '2030-01-04' } })).json();
+  f.reset();
+  expect((await f.req(`/docs/events/${doc.id}/presence`, 'POST')).status).toBe(200);
+  expect(f.writes()).toBe(0);
+  expect((await f.req(`/docs/events/${doc.id}`)).status).toBe(200);
+  expect(f.writes()).toBe(0);
 });

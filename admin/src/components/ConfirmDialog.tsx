@@ -1,12 +1,13 @@
 import { useEffect, useRef } from 'preact/hooks';
 import type { ComponentChildren } from 'preact';
 import { Icon } from './Icon.js';
-export function Dialog({ title, close, children, wide = false, dismissible = true, drawer = false }: { title: string; close: () => void; children: ComponentChildren; wide?: boolean; dismissible?: boolean; drawer?: boolean }) {
+export function Dialog({ title, close, children, wide = false, dismissible = true, drawer = false, initialFocus }: { title: string; close: () => void; children: ComponentChildren; wide?: boolean; dismissible?: boolean; drawer?: boolean; initialFocus?: string }) {
   const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     const before = document.activeElement as HTMLElement | null;
     const dialog = ref.current;
     dialog?.showModal();
+    if (initialFocus) dialog?.querySelector<HTMLElement>(initialFocus)?.focus();
     return () => { dialog?.close(); before?.focus(); };
   }, []);
   return <dialog ref={ref} class={`dialog${wide ? ' dialog-wide' : ''}${drawer ? ' dialog-drawer' : ''}`} aria-label={title} onKeyDown={event => {

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { collections, type CollectionName } from '../../../shared/schema.js';
 import { api, cachedApi, peek, allowed } from '../api.js';
-import { changed, docTitle, editorPath, getPath, moveItem, record, type ContentDoc } from '../state/content.js';
+import { changed, compareDocs, docTitle, editorPath, getPath, moveItem, record, type ContentDoc } from '../state/content.js';
 import { notify } from '../state/toasts.js';
 import { Icon } from '../components/Icon.js';
 import { Dialog } from '../components/ConfirmDialog.js';
@@ -33,7 +33,7 @@ export function CollectionList({ collection = 'events', refresh, publish }: { co
   const active = docs.filter(d => !d.trashedAt), trashed = docs.filter(d => d.trashedAt), base = trash ? trashed : active;
   const filterEntry = Object.entries(definition.fields).find(([key, field]) => field.type === 'select' && ['type', 'category', 'page', 'level', 'program'].includes(key));
   const filterField = filterEntry?.[1];
-  const visible = base.filter(doc => JSON.stringify(doc.draft).toLowerCase().includes(query.toLowerCase()) && (!status || doc.status === status) && (!filter || doc.draft[filterEntry![0]] === filter)).sort((a, b) => sort === 'order' ? (a.order ?? 0) - (b.order ?? 0) : sort === 'updatedAt' ? b.updatedAt.localeCompare(a.updatedAt) : sort === 'title' ? docTitle(a).localeCompare(docTitle(b)) : String(getPath(a.draft, sort) ?? '').localeCompare(String(getPath(b.draft, sort) ?? '')));
+  const visible = base.filter(doc => JSON.stringify(doc.draft).toLowerCase().includes(query.toLowerCase()) && (!status || doc.status === status) && (!filter || doc.draft[filterEntry![0]] === filter)).sort(compareDocs(sort));
   const checked = visible.filter(doc => selected.includes(doc.id));
   const reorderEnabled = !!definition.orderable && allowed('content.manage') && !trash && !query && !status && !filter && sort === 'order';
   async function reorder(from: number, to: number) {

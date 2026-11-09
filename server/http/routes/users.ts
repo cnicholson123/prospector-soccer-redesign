@@ -38,14 +38,14 @@ export function userRoutes(app: Hono<AdminEnv>) {
     if (next.username !== user.username) next.passwordWeak = true;
     const revoke = next.role !== user.role || next.active !== user.active;
     if (revoke) next.authVersion = (user.authVersion ?? 0) + 1;
-    await c.get('store').changeUser(next, c.get('user').id, audit(actor(c), 'users.update', { meta: { userId: user.id, role: next.role } }, c.get('now')), user);
+    await c.get('store').changeUser(next, c.get('user').id, audit(actor(c), 'users.update', { meta: { userId: user.id, role: next.role, previousRole: user.role, active: next.active, previousActive: user.active } }, c.get('now')), user);
     return c.json({ user: publicUser(next) });
   });
   app.post('/api/admin/users/:id/reset-password', async c => {
     const user = await c.get('store').getUser(c.req.param('id'));
     if (!user) throw new ApiError(404, 'not_found', 'User not found');
     const password = randomBytes(18).toString('base64url');
-    const next = { ...user, passwordHash: await hashPassword(password), passwordChangedAt: c.get('now').toISOString(), passwordWeak: false, authVersion: (user.authVersion ?? 0) + 1 };
+    const next = { ...user, passwordHash: await hashPassword(password), passwordChangedAt: c.get('now').toISOString(), passwordWeak: false, mustChangePassword: false, authVersion: (user.authVersion ?? 0) + 1 };
     await c.get('store').changeUser(next, c.get('user').id, audit(actor(c), 'users.reset_password', { meta: { userId: user.id } }, c.get('now')), user);
     return c.json({ temporaryPassword: password });
   });
