@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'preact/hooks';
-import { collections, type CollectionName } from '../../../shared/schema';
-import { api, allowed } from '../api';
-import { changed, docTitle, editorPath, getPath, moveItem, record, type ContentDoc } from '../state/content';
-import { notify } from '../state/toasts';
-import { Icon } from '../components/Icon';
-import { Dialog } from '../components/ConfirmDialog';
-import { DragList } from '../components/DragList';
-import { Preview } from '../components/Preview';
-import { Failure, actionFailure, trashDoc, type ActionFailure } from '../components/ContentActions';
+import { collections, type CollectionName } from '../../../shared/schema.js';
+import { api, allowed } from '../api.js';
+import { changed, docTitle, editorPath, getPath, moveItem, record, type ContentDoc } from '../state/content.js';
+import { notify } from '../state/toasts.js';
+import { Icon } from '../components/Icon.js';
+import { Dialog } from '../components/ConfirmDialog.js';
+import { DragList } from '../components/DragList.js';
+import { Preview } from '../components/Preview.js';
+import { Failure, actionFailure, trashDoc, type ActionFailure } from '../components/ContentActions.js';
 export function CollectionList({ collection = 'events', refresh, publish }: { collection?: CollectionName; refresh: number; publish: (ids?: string[]) => void }) {
   const definition = collections[collection];
   const [mediaDocs, setMediaDocs] = useState<ContentDoc[]>([]), [docs, setDocs] = useState<ContentDoc[]>([]), [query, setQuery] = useState(''), [status, setStatus] = useState(''), [filter, setFilter] = useState(''), [sort, setSort] = useState(definition.orderable ? 'order' : 'date'), [trash, setTrash] = useState(false);

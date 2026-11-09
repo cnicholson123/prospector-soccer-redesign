@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'preact/hooks';
 import type { ComponentChildren } from 'preact';
-import { Icon } from './Icon';
+import { Icon } from './Icon.js';
 export function Dialog({ title, close, children, wide = false, dismissible = true }: { title: string; close: () => void; children: ComponentChildren; wide?: boolean; dismissible?: boolean }) {
   const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => {

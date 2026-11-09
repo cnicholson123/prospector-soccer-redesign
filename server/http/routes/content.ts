@@ -1,21 +1,21 @@
-import { collectIncoming } from '../../media';
+import { collectIncoming } from '../../media.js';
 import type { Hono } from 'hono';
-import { safeEqual } from '../../auth/csrf';
-import { documentId } from '../../store/identifiers';
-import { collectionNames, collections, type CollectionName } from '../../../shared/schema';
-import { allDocs, pending, publishDocuments, title, commitSnapshot, type Item } from '../../content/publish';
-import { diff } from '../../content/diff';
-import { scheduleDocuments, settleSchedules } from '../../content/schedule';
-import { findRevision, restoreRevision, restoreSite } from '../../content/restore';
-import { health } from '../../content/health';
-import { search } from '../../content/search';
-import { checkLinks } from '../../content/links';
-import { audit } from '../../audit';
-import { can } from '../../permissions';
-import { actor, type AdminEnv } from '../middleware/auth';
-import { requirePermission } from '../middleware/permission';
-import { ApiError, object, string, version } from '../middleware/errors';
-import { collection } from './docs';
+import { safeEqual } from '../../auth/csrf.js';
+import { documentId } from '../../store/identifiers.js';
+import { collectionNames, collections, type CollectionName } from '../../../shared/schema.js';
+import { allDocs, pending, publishDocuments, title, commitSnapshot, type Item } from '../../content/publish.js';
+import { diff } from '../../content/diff.js';
+import { scheduleDocuments, settleSchedules } from '../../content/schedule.js';
+import { findRevision, restoreRevision, restoreSite } from '../../content/restore.js';
+import { health } from '../../content/health.js';
+import { search } from '../../content/search.js';
+import { checkLinks } from '../../content/links.js';
+import { audit } from '../../audit.js';
+import { can } from '../../permissions.js';
+import { actor, type AdminEnv } from '../middleware/auth.js';
+import { requirePermission } from '../middleware/permission.js';
+import { ApiError, object, string, version } from '../middleware/errors.js';
+import { collection } from './docs.js';
 function items(input: unknown): Item[] {
   if (!Array.isArray(input) || !input.length || input.length > 1000) throw new ApiError(422, 'validation', 'Select versioned items to publish');
   return input.map(value => {

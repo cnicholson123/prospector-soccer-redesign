@@ -1,9 +1,9 @@
-import { bootstrapEnvironment } from '../helpers/password';
+import { bootstrapEnvironment } from '../helpers/password.js';
 import { describe, expect, it, vi } from 'vitest';
-import { adminApp } from '../../server/http/hono-app';
-import { loadConfig } from '../../server/config';
-import { tagContent, purgeContent } from '../../server/render/cdn';
-import { renderPublic } from '../../server/render/handler';
+import { adminApp } from '../../server/http/hono-app.js';
+import { loadConfig } from '../../server/config.js';
+import { tagContent, purgeContent } from '../../server/render/cdn.js';
+import { renderPublic } from '../../server/render/handler.js';
 
 describe('Phase 0 scaffold', () => {
   it('health endpoint responds with ok', async () => {

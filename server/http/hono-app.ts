@@ -1,18 +1,18 @@
-import { mediaCallbacks, mediaRoutes } from './routes/media';
+import { mediaCallbacks, mediaRoutes } from './routes/media.js';
 import { Hono } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
-import { createMediaBlobs, createStore } from '../store';
-import type { MediaStorage, Store } from '../store/types';
-import { loadConfig, type Config } from '../config';
-import { bootstrap } from '../auth/bootstrap';
-import { authenticate, type AdminEnv } from './middleware/auth';
-import { ApiError } from './middleware/errors';
-import { authRoutes } from './routes/auth';
-import { userRoutes } from './routes/users';
-import { auditRoutes } from './routes/audit';
-import { docRoutes } from './routes/docs';
-import { contentRoutes, cronRoutes } from './routes/content';
-import { audit } from '../audit';
+import { createMediaBlobs, createStore } from '../store/index.js';
+import type { MediaStorage, Store } from '../store/types.js';
+import { loadConfig, type Config } from '../config.js';
+import { bootstrap } from '../auth/bootstrap.js';
+import { authenticate, type AdminEnv } from './middleware/auth.js';
+import { ApiError } from './middleware/errors.js';
+import { authRoutes } from './routes/auth.js';
+import { userRoutes } from './routes/users.js';
+import { auditRoutes } from './routes/audit.js';
+import { docRoutes } from './routes/docs.js';
+import { contentRoutes, cronRoutes } from './routes/content.js';
+import { audit } from '../audit.js';
 
 export function createAdminApp(storeFactory: () => Store = createStore, options: { config?: Config; now?: () => Date; media?: MediaStorage } = {}) {
   const app = new Hono<AdminEnv>();

@@ -1,12 +1,12 @@
 import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
-import type { Config } from './config';
-import type { MediaStorage, Store, Doc } from './store/types';
-import { ApiError } from './http/middleware/errors';
-import { revision } from './content/revisions';
-import { audit, type Actor } from './audit';
-import { validate, ValidationError } from './content/validate';
-import { readSession } from './auth/session';
-import { can } from './permissions';
+import type { Config } from './config.js';
+import type { MediaStorage, Store, Doc } from './store/types.js';
+import { ApiError } from './http/middleware/errors.js';
+import { revision } from './content/revisions.js';
+import { audit, type Actor } from './audit.js';
+import { validate, ValidationError } from './content/validate.js';
+import { readSession } from './auth/session.js';
+import { can } from './permissions.js';
 
 const extensions: Record<string, string> = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/gif': 'gif', 'application/pdf': 'pdf' };
 interface Grant { id: string; owner: string; filename: string; mime: string; size: number; path: string; expires: number; year: string }

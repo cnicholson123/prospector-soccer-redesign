@@ -1,10 +1,10 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { readFile } from 'node:fs/promises';
-import { loadSeed, seedSnapshot } from '../scripts/seed';
-import { renderPage } from '../server/render/handler';
-import { pageNames } from '../shared/schema';
-import type { Snapshot } from '../shared/types';
-import { normalizeHtml } from './normalize';
+import { loadSeed, seedSnapshot } from '../scripts/seed.js';
+import { renderPage } from '../server/render/handler.js';
+import { pageNames } from '../shared/schema.js';
+import type { Snapshot } from '../shared/types.js';
+import { normalizeHtml } from './normalize.js';
 let snapshot: Snapshot;
 beforeAll(async () => { snapshot = seedSnapshot(await loadSeed()); });
 describe('published seed matches all legacy pages', () => {

@@ -1,13 +1,13 @@
-import { keyPart, documentId, username } from './identifiers';
-import { loginGenerationKey, usernameRateKey } from '../auth/ratelimit';
-import { ApiError } from '../http/middleware/errors';
-import { can } from '../permissions';
+import { keyPart, documentId, username } from './identifiers.js';
+import { loginGenerationKey, usernameRateKey } from '../auth/ratelimit.js';
+import { ApiError } from '../http/middleware/errors.js';
+import { can } from '../permissions.js';
 import { isDeepStrictEqual } from 'node:util';
-import { collectionNames, type CollectionName } from '../../shared/schema';
-import { validate, ValidationError } from '../content/validate';
-import { buildSnapshot } from '../content/snapshot';
-import { referenceUsage } from '../content/references';
-import type { AuditEntry, AuditQuery, CreateDoc, Doc, DocMutation, KvPrimitives, PublishRecord, PublishTx, Revision, RunExclusive, Session, Snapshot, Store, User } from './types';
+import { collectionNames, type CollectionName } from '../../shared/schema.js';
+import { validate, ValidationError } from '../content/validate.js';
+import { buildSnapshot } from '../content/snapshot.js';
+import { referenceUsage } from '../content/references.js';
+import type { AuditEntry, AuditQuery, CreateDoc, Doc, DocMutation, KvPrimitives, PublishRecord, PublishTx, Revision, RunExclusive, Session, Snapshot, Store, User } from './types.js';
 
 const part = (value: string): string => {
   keyPart(value);

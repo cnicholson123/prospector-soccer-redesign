@@ -1,6 +1,6 @@
-import { SCHEMA_VERSION } from '../../shared/schema';
-import type { Doc, PublishRecord, Snapshot } from '../../shared/types';
-import { references } from './references';
+import { SCHEMA_VERSION } from '../../shared/schema.js';
+import type { Doc, PublishRecord, Snapshot } from '../../shared/types.js';
+import { references } from './references.js';
 
 export function buildSnapshot(docs: Doc[], metadata: Pick<Snapshot, 'siteVersion' | 'publishedAt' | 'templateHash'> & Partial<Pick<Snapshot, 'scheduled' | 'effectiveAt'>>, manifest?: PublishRecord['manifest']): Snapshot {
   const published: Snapshot['docs'] = {};

@@ -1,5 +1,5 @@
-import { adminPassword, chrisPassword, reminderPassword } from './tests/e2e/credentials';
-import { hashPassword } from './server/auth/password';
+import { adminPassword, chrisPassword, reminderPassword } from './tests/e2e/credentials.js';
+import { hashPassword } from './server/auth/password.js';
 import { defineConfig } from '@playwright/test';
 import { mkdirSync, mkdtempSync } from 'node:fs';
 import { resolve } from 'node:path';

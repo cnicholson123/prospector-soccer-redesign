@@ -1,11 +1,11 @@
-import { loadConfig, type Config } from '../config';
-import { KvStore } from './kv-store';
-import { FsPrimitives } from './primitives/fs';
-import { FsBlobs } from './blobs/fs';
-import { PostgresStore } from './postgres-store';
-import { postgresPool } from './postgres';
-import { VercelBlobs } from './blobs/vercel';
-import type { MediaStorage, Store } from './types';
+import { loadConfig, type Config } from '../config.js';
+import { KvStore } from './kv-store.js';
+import { FsPrimitives } from './primitives/fs.js';
+import { FsBlobs } from './blobs/fs.js';
+import { PostgresStore } from './postgres-store.js';
+import { postgresPool } from './postgres.js';
+import { VercelBlobs } from './blobs/vercel.js';
+import type { MediaStorage, Store } from './types.js';
 export function createStore(config: Config = loadConfig()): Store {
   if (config.storeDriver === 'postgres') {
     if (!config.databaseUrl) throw new Error('DATABASE_URL is required');

@@ -1,6 +1,6 @@
 import { timingSafeEqual } from 'node:crypto';
-import type { Config } from '../config';
-import { ApiError } from '../http/middleware/errors';
+import type { Config } from '../config.js';
+import { ApiError } from '../http/middleware/errors.js';
 export function checkOrigin(request: Request, config: Config) {
   const origin = request.headers.get('origin');
   const allowed = [config.publicBaseUrl, ...(!config.production ? ['http://localhost:5173'] : [])];

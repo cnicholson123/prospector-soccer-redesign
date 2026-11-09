@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { raw, type Html } from './html';
+import { raw, type Html } from './html.js';
 
 const bodies: Record<string, string> = {
   "menu": '<path d="M4 6h16M4 12h16M4 18h16"/>',

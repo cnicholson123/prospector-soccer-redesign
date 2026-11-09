@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'preact/hooks';
-import type { AuditEntry } from '../../../shared/types';
-import { api, allowed, message, session } from '../api';
-import { activityText, groupActivity, relativeTime } from '../state/activity';
-import { Icon } from '../components/Icon';
+import type { AuditEntry } from '../../../shared/types.js';
+import { api, allowed, message, session } from '../api.js';
+import { activityText, groupActivity, relativeTime } from '../state/activity.js';
+import { Icon } from '../components/Icon.js';
 interface DashboardData { pendingCount: number; reviewCount: number; scheduled: unknown[]; health: { code: string; message: string; href: string }[]; recent: AuditEntry[] }
 export function Dashboard({ publish, refresh }: { publish: () => void; refresh: number }) {
   const [data, setData] = useState<DashboardData>(), [error, setError] = useState('');

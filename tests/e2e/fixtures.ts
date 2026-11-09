@@ -1,7 +1,7 @@
 import { test as base, expect, type BrowserContext } from '@playwright/test';
 import { resolve, sep } from 'node:path';
-import { KvStore } from '../../server/store/kv-store';
-import { FsPrimitives } from '../../server/store/primitives/fs';
+import { KvStore } from '../../server/store/kv-store.js';
+import { FsPrimitives } from '../../server/store/primitives/fs.js';
 
 // All browser contexts share the local server's socket peer. Give each test
 // its own login budget without relaxing the application's production limits.

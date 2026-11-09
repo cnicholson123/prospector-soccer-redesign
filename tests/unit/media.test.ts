@@ -1,10 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { rm, readFile, stat, utimes } from 'node:fs/promises';
 import { join } from 'node:path';
-import { adminFixture } from '../helpers/admin';
-import { createMediaBlobs } from '../../server/store';
-import { collectIncoming, readGrant, serveMedia, uploadGrant, verifyMedia } from '../../server/media';
-import { loadConfig } from '../../server/config';
+import { adminFixture } from '../helpers/admin.js';
+import { createMediaBlobs } from '../../server/store/index.js';
+import { collectIncoming, readGrant, serveMedia, uploadGrant, verifyMedia } from '../../server/media.js';
+import { loadConfig } from '../../server/config.js';
 const roots: string[]=[];
 afterEach(async()=>{ vi.restoreAllMocks(); await Promise.all(roots.splice(0).map(root=>rm(root,{recursive:true,force:true}))); });
 // Real one-pixel PNG.

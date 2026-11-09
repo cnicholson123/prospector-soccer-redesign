@@ -1,6 +1,6 @@
-import { expect, test } from './fixtures';
+import { expect, test } from './fixtures.js';
 import { readFile } from 'node:fs/promises';
-import { normalizeHtml } from '../normalize';
+import { normalizeHtml } from '../normalize.js';
 
 const pages = ['recreational', 'competitive', 'referees', 'sponsors', 'board', 'resources', 'about'];
 test('renderer serves the home page, cache headers, assets and health', async ({ request }) => {

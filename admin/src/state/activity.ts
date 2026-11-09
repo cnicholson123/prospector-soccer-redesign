@@ -1,4 +1,4 @@
-import type { AuditEntry } from '../../../shared/types';
+import type { AuditEntry } from '../../../shared/types.js';
 export function relativeTime(at: string, now = Date.now()): string {
   const seconds = Math.max(0, Math.floor((now - Date.parse(at)) / 1000));
   if (seconds < 60) return 'Just now';

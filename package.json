@@ -8,8 +8,9 @@
   "scripts": {
     "dev": "tsx --env-file-if-exists=.env scripts/dev.ts",
     "start": "tsx --env-file-if-exists=.env scripts/dev.ts --built",
-    "build": "vite build --config admin/vite.config.ts && tsc --noEmit",
-    "test": "vitest run",
+    "build": "vite build --config admin/vite.config.ts && tsc --noEmit && tsc -p admin/tsconfig.json --noEmit",
+    "test": "npm run check:runtime && vitest run",
+    "check:runtime": "node scripts/check-runtime.mjs",
     "test:e2e": "PLAYWRIGHT_BROWSERS_PATH=.cache/playwright playwright test",
     "test:e2e:install": "PLAYWRIGHT_BROWSERS_PATH=.cache/playwright playwright install chromium --only-shell",
     "seed": "tsx --env-file-if-exists=.env scripts/seed.ts",

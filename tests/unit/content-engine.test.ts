@@ -1,14 +1,14 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { rm } from 'node:fs/promises';
 import { createServer } from 'node:http';
-import { adminFixture } from '../helpers/admin';
-import { createRenderHandler, renderPage } from '../../server/render/handler';
-import { diff } from '../../server/content/diff';
-import { health } from '../../server/content/health';
-import { checkLink, publicAddress } from '../../server/content/links';
-import { settleSchedules } from '../../server/content/schedule';
-import type { Snapshot } from '../../shared/types';
-import { allDocs } from '../../server/content/publish';
+import { adminFixture } from '../helpers/admin.js';
+import { createRenderHandler, renderPage } from '../../server/render/handler.js';
+import { diff } from '../../server/content/diff.js';
+import { health } from '../../server/content/health.js';
+import { checkLink, publicAddress } from '../../server/content/links.js';
+import { settleSchedules } from '../../server/content/schedule.js';
+import type { Snapshot } from '../../shared/types.js';
+import { allDocs } from '../../server/content/publish.js';
 const roots: string[] = [];
 afterEach(async () => { vi.restoreAllMocks(); await Promise.all(roots.splice(0).map(root => rm(root, { recursive: true, force: true }))); });
 async function fixture() { const f = await adminFixture(true); roots.push(f.root); await f.login(); return f; }
@@ -62,7 +62,7 @@ describe('Phase 5 HTTP content lifecycle', () => {
     const bad = await f.req('/publish', 'POST', { items: [{ collection: 'home', id: 'home', expectedVersion: 2 }] }); expect(bad.status).toBe(422); expect((await bad.json()).error.details.some((x: { path: string }) => x.path === 'home.home.hero')).toBe(true);
     const issues = await health(f.store, new Date('2030-01-01')); expect(issues.some(i => i.code === 'past_event')).toBe(true); expect(issues.some(i => i.code === 'weak_owner_password')).toBe(true);
     const data = { filename: 'missing.jpg', mime: 'image/jpeg' };
-    const { revision } = await import('../../server/content/revisions'); const { audit } = await import('../../server/audit');
+    const { revision } = await import('../../server/content/revisions.js'); const { audit } = await import('../../server/audit.js');
     const d = { id: 'media_missing', collection: 'media' as const, draft: data, version: 1, status: 'draft' as const, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), createdBy: 'test', updatedBy: 'test' };
     await f.store.createDoc({ doc: d, revision: revision(d, { id: 'test', displayName: 'Test' }, 'created', new Date()), audit: audit({ id: 'test', displayName: 'Test' }, 'test') });
     expect((await health(f.store)).some(i => i.code === 'missing_alt')).toBe(true);

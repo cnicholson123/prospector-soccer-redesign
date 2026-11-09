@@ -1,22 +1,22 @@
-import { bootstrapEnvironment } from '../helpers/password';
+import { bootstrapEnvironment } from '../helpers/password.js';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { newSession } from '../../server/auth/session';
-import { bootstrap } from '../../server/auth/bootstrap';
-import { loadConfig } from '../../server/config';
-import { createStore, createMediaBlobs } from '../../server/store';
-import { createDocument } from '../../server/content/documents';
-import { applyDefaults, validate, validateFields, ValidationError } from '../../server/content/validate';
-import { references } from '../../server/content/references';
-import { createHistoryId } from '../../server/content/ids';
-import { buildSnapshot } from '../../server/content/snapshot';
-import { seedStore, loadSeed, seedSnapshot } from '../../scripts/seed';
-import { adminApp, createAdminApp } from '../../server/http/hono-app';
-import type { Doc, PublishRecord } from '../../shared/types';
-import type { PublishTx } from '../../server/store/types';
-import type { CollectionName } from '../../shared/schema';
+import { newSession } from '../../server/auth/session.js';
+import { bootstrap } from '../../server/auth/bootstrap.js';
+import { loadConfig } from '../../server/config.js';
+import { createStore, createMediaBlobs } from '../../server/store/index.js';
+import { createDocument } from '../../server/content/documents.js';
+import { applyDefaults, validate, validateFields, ValidationError } from '../../server/content/validate.js';
+import { references } from '../../server/content/references.js';
+import { createHistoryId } from '../../server/content/ids.js';
+import { buildSnapshot } from '../../server/content/snapshot.js';
+import { seedStore, loadSeed, seedSnapshot } from '../../scripts/seed.js';
+import { adminApp, createAdminApp } from '../../server/http/hono-app.js';
+import type { Doc, PublishRecord } from '../../shared/types.js';
+import type { PublishTx } from '../../server/store/types.js';
+import type { CollectionName } from '../../shared/schema.js';
 
 const at = '2026-11-09T12:00:00.000Z';
 function makeDoc(collection: CollectionName, id: string, draft: unknown): Doc {
@@ -46,7 +46,7 @@ describe('Phase 1b config and runtime dispatch', () => {
   it('dispatches Request objects to both Vercel fetch entrypoints', async () => {
     const { root, store } = await local(); await seedStore(store);
     vi.stubEnv('DATA_DIR', root); vi.stubEnv('STORE_DRIVER', 'fs'); vi.stubEnv('SESSION_SECRET', 'x'.repeat(32));
-    const [{ default: render }, { default: admin }] = await Promise.all([import('../../api/render'), import('../../api/admin')]);
+    const [{ default: render }, { default: admin }] = await Promise.all([import('../../api/render.js'), import('../../api/admin.js')]);
     function fromNode(url: string) {
       const incoming = { url, headers: { host: 'localhost:3000', accept: 'text/html' }, method: 'GET' };
       return new Request(new URL(incoming.url, `http://${incoming.headers.host}`), { method: incoming.method, headers: incoming.headers });

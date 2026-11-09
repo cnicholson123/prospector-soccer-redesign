@@ -1,16 +1,16 @@
 import { useEffect, useMemo, useState } from 'preact/hooks';
 import { useLocation } from 'preact-iso';
-import { collections, type CollectionName } from '../../../shared/schema';
-import { allowed, message } from '../api';
-import { EditorState, editorFlush, navigationGuard, type EventDoc } from '../state/autosave';
-import { notify } from '../state/toasts';
-import { Form } from '../components/Form';
-import { Preview } from '../components/Preview';
-import { Timeline } from '../components/Timeline';
-import { Dialog } from '../components/ConfirmDialog';
-import { DiffView, contentDiff } from '../components/DiffView';
-import { docTitle, editorPath } from '../state/content';
-import { Icon } from '../components/Icon';
+import { collections, type CollectionName } from '../../../shared/schema.js';
+import { allowed, message } from '../api.js';
+import { EditorState, editorFlush, navigationGuard, type EventDoc } from '../state/autosave.js';
+import { notify } from '../state/toasts.js';
+import { Form } from '../components/Form/index.js';
+import { Preview } from '../components/Preview.js';
+import { Timeline } from '../components/Timeline.js';
+import { Dialog } from '../components/ConfirmDialog.js';
+import { DiffView, contentDiff } from '../components/DiffView.js';
+import { docTitle, editorPath } from '../state/content.js';
+import { Icon } from '../components/Icon.js';
 export function DocEditor({ id, collection = 'events', publish, refresh }: { id: string; collection?: CollectionName; publish: () => void; refresh: number }) {
   const state = useMemo(() => new EditorState(id, collection), [id, collection]);
   const { route } = useLocation();

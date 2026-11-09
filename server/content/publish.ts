@@ -1,15 +1,15 @@
 import { isDeepStrictEqual } from 'node:util';
-import { collectionNames, type CollectionName } from '../../shared/schema';
-import type { Doc, PublishRecord, Revision, ScheduledItem, Snapshot } from '../../shared/types';
-import type { Store } from '../store/types';
-import { audit, type Actor } from '../audit';
-import { buildSnapshot } from './snapshot';
-import { revision, conflict } from './revisions';
-import { purgeContent } from '../render/cdn';
-import { ApiError } from '../http/middleware/errors';
-import { references } from './references';
-import { documentTitle as title } from './documents';
-export { documentTitle as title } from './documents';
+import { collectionNames, type CollectionName } from '../../shared/schema.js';
+import type { Doc, PublishRecord, Revision, ScheduledItem, Snapshot } from '../../shared/types.js';
+import type { Store } from '../store/types.js';
+import { audit, type Actor } from '../audit.js';
+import { buildSnapshot } from './snapshot.js';
+import { revision, conflict } from './revisions.js';
+import { purgeContent } from '../render/cdn.js';
+import { ApiError } from '../http/middleware/errors.js';
+import { references } from './references.js';
+import { documentTitle as title } from './documents.js';
+export { documentTitle as title } from './documents.js';
 export interface Item { collection: CollectionName; id: string; expectedVersion: number }
 export const allDocs = async (store: Store) => (await Promise.all(collectionNames.map(c => store.listDocs(c, { includeTrashed: true })))).flat();
 export const pending = (docs: Doc[]) => docs.filter(doc => doc.trashedAt ? doc.published !== undefined : doc.published === undefined || !isDeepStrictEqual(doc.draft, doc.published) || doc.version !== doc.publishedVersion);

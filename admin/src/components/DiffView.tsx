@@ -1,8 +1,8 @@
 export interface Change { path: string; label: string; kind?: string; before?: unknown; after?: unknown; words?: { value: string; added?: boolean; removed?: boolean }[] }
 export const displayValue = (value: unknown): string => value === undefined || value === '' ? '—' : typeof value === 'boolean' ? value ? 'Yes' : 'No' : typeof value === 'object' ? JSON.stringify(value) : String(value);
 // The server and compare panel share the same stable-key, schema-aware algorithm.
-export { diff as contentDiff } from '../../../shared/content-diff';
-import { diff } from '../../../shared/content-diff';
+export { diff as contentDiff } from '../../../shared/content-diff.js';
+import { diff } from '../../../shared/content-diff.js';
 export const eventDiff = (before: Record<string, unknown>, after: Record<string, unknown>) => diff('events', before, after);
 export function DiffView({ changes, beforeLabel = 'Earlier', afterLabel = 'Now' }: { changes: Change[]; beforeLabel?: string; afterLabel?: string }) {
   return <div class="diff-view">{changes.length ? changes.map(change => <div class="diff-row" key={change.path}>

@@ -1,15 +1,15 @@
-import { keyPart, documentId, username } from './identifiers';
-import { loginGenerationKey, usernameRateKey } from '../auth/ratelimit';
+import { keyPart, documentId, username } from './identifiers.js';
+import { loginGenerationKey, usernameRateKey } from '../auth/ratelimit.js';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { Pool, type PoolClient } from '@neondatabase/serverless';
-import { ApiError } from '../http/middleware/errors';
-import { can } from '../permissions';
+import { ApiError } from '../http/middleware/errors.js';
+import { can } from '../permissions.js';
 import { isDeepStrictEqual } from 'node:util';
-import { type CollectionName } from '../../shared/schema';
-import { validate, ValidationError } from '../content/validate';
-import { buildSnapshot } from '../content/snapshot';
-import { referenceUsage } from '../content/references';
-import type { AuditEntry, AuditQuery, CreateDoc, Doc, DocMutation, PublishRecord, PublishTx, Revision, Session, Snapshot, Store, User } from './types';
+import { type CollectionName } from '../../shared/schema.js';
+import { validate, ValidationError } from '../content/validate.js';
+import { buildSnapshot } from '../content/snapshot.js';
+import { referenceUsage } from '../content/references.js';
+import type { AuditEntry, AuditQuery, CreateDoc, Doc, DocMutation, PublishRecord, PublishTx, Revision, Session, Snapshot, Store, User } from './types.js';
 
 const equal = (a: unknown, b: unknown) => isDeepStrictEqual(JSON.parse(JSON.stringify(a)), JSON.parse(JSON.stringify(b)));
 const pageLimit = (limit: number) => { if (!Number.isInteger(limit) || limit < 1 || limit > 1000) throw new Error('Limit must be 1–1000'); return limit; };

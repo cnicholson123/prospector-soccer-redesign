@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'preact/hooks';
 import type { ComponentChildren } from 'preact';
 import { useLocation } from 'preact-iso';
-import { api, message, session, setSession, publicOrigin } from '../api';
-import { navigationGuard } from '../state/autosave';
-import { Dialog } from './ConfirmDialog';
-import { Icon } from './Icon';
-import { notify } from '../state/toasts';
+import { api, message, session, setSession, publicOrigin } from '../api.js';
+import { navigationGuard } from '../state/autosave.js';
+import { Dialog } from './ConfirmDialog.js';
+import { Icon } from './Icon.js';
+import { notify } from '../state/toasts.js';
 export function Shell({ children, publish, refresh }: { children: ComponentChildren; publish: () => void; refresh: number }) {
   const { path, route } = useLocation();
   const [dismissed, setDismissed] = useState(() => sessionStorage.getItem('psc_password_banner') === session.value?.user.id);

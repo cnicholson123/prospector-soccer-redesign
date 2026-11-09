@@ -1,6 +1,6 @@
-import { html, type Html } from '../html';
-import { icon } from '../icons';
-import { type SnapshotView } from '../snapshot-view';
+import { html, type Html } from '../html.js';
+import { icon } from '../icons.js';
+import { type SnapshotView } from '../snapshot-view.js';
 
 export function about(view: SnapshotView): Html {
   const page = view.doc("about", "about");

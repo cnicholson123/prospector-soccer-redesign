@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
-import type { CollectionName } from '../../../shared/schema';
-import { previewPath } from '../state/content';
-import { Icon } from './Icon';
+import type { CollectionName } from '../../../shared/schema.js';
+import { previewPath } from '../state/content.js';
+import { Icon } from './Icon.js';
 export function Preview({ version, id, collection = 'events', draft = {} }: { version: number; id: string; collection?: CollectionName; draft?: Record<string, unknown> }) {
   const frame = useRef<HTMLDivElement>(null);
   const [available, setAvailable] = useState(390);

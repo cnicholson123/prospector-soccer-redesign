@@ -1,7 +1,7 @@
 import { createHash, randomBytes } from 'node:crypto';
-import type { Store } from '../store/types';
-import type { Session, User } from '../../shared/types';
-import type { Config } from '../config';
+import type { Store } from '../store/types.js';
+import type { Session, User } from '../../shared/types.js';
+import type { Config } from '../config.js';
 export const DAY = 86400000;
 export const tokenHash = (token: string) => createHash('sha256').update(token).digest('hex');
 export function cookie(token: string, config: Config, expires = 14 * DAY / 1000) {

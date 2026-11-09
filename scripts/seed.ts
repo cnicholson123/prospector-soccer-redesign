@@ -1,14 +1,14 @@
 import { readFile } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
 import { resolve } from 'node:path';
-import { collectionNames, collections } from '../shared/schema';
-import type { Doc, Revision, Snapshot } from '../shared/types';
-import { validate } from '../server/content/validate';
-import { createStore } from '../server/store';
-import type { Store } from '../server/store/types';
-import { buildSnapshot } from '../server/content/snapshot';
-import { createHistoryId } from '../server/content/ids';
-import { templateHash } from '../server/render/handler';
+import { collectionNames, collections } from '../shared/schema.js';
+import type { Doc, Revision, Snapshot } from '../shared/types.js';
+import { validate } from '../server/content/validate.js';
+import { createStore } from '../server/store/index.js';
+import type { Store } from '../server/store/types.js';
+import { buildSnapshot } from '../server/content/snapshot.js';
+import { createHistoryId } from '../server/content/ids.js';
+import { templateHash } from '../server/render/handler.js';
 
 export async function loadSeed(): Promise<Doc[]> {
   const docs: Doc[] = [];

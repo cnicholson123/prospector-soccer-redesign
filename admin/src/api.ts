@@ -1,5 +1,5 @@
 import { signal } from '@preact/signals';
-import type { User } from '../../shared/types';
+import type { User } from '../../shared/types.js';
 export interface Session { user: Omit<User, 'passwordHash'>; csrfToken: string; passwordWeak: boolean; permissions: string[] }
 export const session = signal<Session | null>(null);
 export class ApiError extends Error {

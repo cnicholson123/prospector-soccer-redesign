@@ -1,12 +1,12 @@
-import { serveMedia } from '../server/media';
-import { createMediaBlobs, createStore } from '../server/store';
-import { seedStore } from './seed';
+import { serveMedia } from '../server/media.js';
+import { createMediaBlobs, createStore } from '../server/store/index.js';
+import { seedStore } from './seed.js';
 import { createServer } from 'node:http';
 import { once } from 'node:events';
-import { loadConfig } from '../server/config';
-import { adminApp } from '../server/http/hono-app';
-import { staticFile } from '../server/http/static';
-import { createRenderHandler } from '../server/render/handler';
+import { loadConfig } from '../server/config.js';
+import { adminApp } from '../server/http/hono-app.js';
+import { staticFile } from '../server/http/static.js';
+import { createRenderHandler } from '../server/render/handler.js';
 import { join } from 'node:path';
 import type { ViteDevServer } from 'vite';
 

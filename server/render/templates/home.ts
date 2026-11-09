@@ -1,7 +1,7 @@
-import { html, type Html } from '../html';
-import { icon } from '../icons';
-import { type SnapshotView } from '../snapshot-view';
-import { delay, eventCard, calloutCard, resultCard, sponsorCard } from './shared';
+import { html, type Html } from '../html.js';
+import { icon } from '../icons.js';
+import { type SnapshotView } from '../snapshot-view.js';
+import { delay, eventCard, calloutCard, resultCard, sponsorCard } from './shared.js';
 
 export function home(view: SnapshotView): Html {
   const page = view.doc("home", "home");

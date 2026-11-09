@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'preact/hooks';
-import type { Doc } from '../../../shared/types';
-import { collections } from '../../../shared/schema';
-import { api, allowed, message, publicOrigin } from '../api';
-import { editorFlush } from '../state/autosave';
-import { changed, docTitle, previewPath } from '../state/content';
-import { notify } from '../state/toasts';
-import { Dialog } from './ConfirmDialog';
-import { DiffView, type Change } from './DiffView';
+import type { Doc } from '../../../shared/types.js';
+import { collections } from '../../../shared/schema.js';
+import { api, allowed, message, publicOrigin } from '../api.js';
+import { editorFlush } from '../state/autosave.js';
+import { changed, docTitle, previewPath } from '../state/content.js';
+import { notify } from '../state/toasts.js';
+import { Dialog } from './ConfirmDialog.js';
+import { DiffView, type Change } from './DiffView.js';
 export function PublishTray({ close, published, selectedIds = [] }: { selectedIds?: string[]; close: () => void; published: () => void }) {
   const [docs, setDocs] = useState<(Doc<Record<string, unknown>> & { diff: Change[] })[]>([]), [selected, setSelected] = useState<string[]>([]);
   const [error, setError] = useState(''), [busy, setBusy] = useState(false), [loading, setLoading] = useState(true), [note, setNote] = useState('');

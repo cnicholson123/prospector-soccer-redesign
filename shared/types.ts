@@ -1,4 +1,4 @@
-import type { CollectionName } from './schema';
+import type { CollectionName } from './schema.js';
 export type Role = 'Owner' | 'Admin' | 'Editor' | 'Contributor' | 'Viewer';
 export type DocStatus = 'draft' | 'published' | 'changed' | 'scheduled' | 'review' | 'trashed';
 export interface Doc<T = unknown> {

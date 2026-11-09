@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
-import { EditorState } from '../../admin/src/state/autosave';
-import type { EventDoc } from '../../admin/src/state/autosave';
-import { session } from '../../admin/src/api';
-import { eventDiff } from '../../admin/src/components/DiffView';
+import { EditorState } from '../../admin/src/state/autosave.js';
+import type { EventDoc } from '../../admin/src/state/autosave.js';
+import { session } from '../../admin/src/api.js';
+import { eventDiff } from '../../admin/src/components/DiffView.js';
 const original: EventDoc = { id: 'evt_sample', collection: 'events', draft: { title: 'Original', date: '2099-01-01', showOnHome: true }, version: 1, status: 'draft', createdAt: '', createdBy: 'a', updatedAt: '', updatedBy: 'a' };
 let storage: Map<string, string>;
 const reply = (value: unknown, status = 200) => new Response(JSON.stringify(value), { status, headers: { 'Content-Type': 'application/json' } });

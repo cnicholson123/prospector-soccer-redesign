@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import type { Snapshot } from '../../shared/types';
+import type { Snapshot } from '../../shared/types.js';
 export function scheduleStateHash(snapshot: Snapshot, now: Date, representation = '') {
   const due = snapshot.scheduled.filter(s => Date.parse(s.at) <= now.getTime()).map(s => [s.collection, s.id, s.at, s.version]).sort();
   // Retain the existing callout/event representation invalidation as well.

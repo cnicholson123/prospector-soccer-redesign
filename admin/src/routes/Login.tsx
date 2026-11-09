@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'preact/hooks';
 import { useLocation } from 'preact-iso';
-import { api, ApiError, setSession, type Session, message } from '../api';
-import { Icon } from '../components/Icon';
+import { api, ApiError, setSession, type Session, message } from '../api.js';
+import { Icon } from '../components/Icon.js';
 export function Login() {
   const { route } = useLocation();
   const [username, setUsername] = useState(''), [password, setPassword] = useState(''), [show, setShow] = useState(false);

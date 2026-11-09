@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'preact/hooks';
-import type { Revision } from '../../../shared/types';
-import { api, allowed, message } from '../api';
-import type { EventDoc } from '../state/autosave';
-import { collections } from '../../../shared/schema';
-import { DiffView, type Change } from './DiffView';
-import { Dialog } from './ConfirmDialog';
+import type { Revision } from '../../../shared/types.js';
+import { api, allowed, message } from '../api.js';
+import type { EventDoc } from '../state/autosave.js';
+import { collections } from '../../../shared/schema.js';
+import { DiffView, type Change } from './DiffView.js';
+import { Dialog } from './ConfirmDialog.js';
 export function Timeline({ doc, restore, prepare }: { doc: EventDoc; restore: (doc: EventDoc) => void; prepare: () => Promise<EventDoc | null> }) {
   const [revisions, setRevisions] = useState<Revision[]>([]), [before, setBefore] = useState<string>();
   const [selected, setSelected] = useState<Revision | null>(null), [changes, setChanges] = useState<Change[]>([]);

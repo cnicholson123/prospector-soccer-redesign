@@ -1,8 +1,8 @@
-import { renderPublic } from '../server/render/handler';
-import { createStore, createMediaBlobs } from '../server/store';
-import { loadConfig } from '../server/config';
-import { serveMedia } from '../server/media';
-import type { Store, MediaStorage } from '../server/store/types';
+import { renderPublic } from '../server/render/handler.js';
+import { createStore, createMediaBlobs } from '../server/store/index.js';
+import { loadConfig } from '../server/config.js';
+import { serveMedia } from '../server/media.js';
+import type { Store, MediaStorage } from '../server/store/types.js';
 let mediaStore: Store | undefined, blobs: MediaStorage | undefined;
 export default { fetch: (request: Request) => {
   const url = new URL(request.url);

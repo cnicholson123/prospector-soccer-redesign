@@ -1,4 +1,4 @@
-import { hashPassword } from '../server/auth/password';
+import { hashPassword } from '../server/auth/password.js';
 
 // TTY input is raw so the terminal never echoes the password. Piped input is
 // read directly from stdin, never from argv, the environment or a log message.

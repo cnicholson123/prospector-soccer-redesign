@@ -1,7 +1,7 @@
 import type { Page } from '@playwright/test';
-import { expect, test, restoreSeed } from './fixtures';
+import { expect, test, restoreSeed } from './fixtures.js';
 import { randomBytes } from 'node:crypto';
-import { adminPassword } from './credentials';
+import { adminPassword } from './credentials.js';
 // This suite runs only against Playwright's isolated FS store. Preserve the
 // original public fixture for the following renderer golden checks.
 test.afterEach(async ({ context }) => restoreSeed(context));

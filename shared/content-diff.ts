@@ -1,5 +1,5 @@
 import { diffWords } from 'diff';
-import { collections, type CollectionName, type Field } from './schema';
+import { collections, type CollectionName, type Field } from './schema.js';
 const isDeepStrictEqual = (a: unknown, b: unknown): boolean => {
   if (Object.is(a, b)) return true;
   if (!a || !b || typeof a !== 'object' || typeof b !== 'object' || Array.isArray(a) !== Array.isArray(b)) return false;

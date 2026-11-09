@@ -1,9 +1,9 @@
 import { afterEach, expect, it } from 'vitest';
 import { rm } from 'node:fs/promises';
-import { adminFixture } from '../helpers/admin';
-import { createRenderHandler } from '../../server/render/handler';
-import { collections } from '../../shared/schema';
-import type { Doc } from '../../shared/types';
+import { adminFixture } from '../helpers/admin.js';
+import { createRenderHandler } from '../../server/render/handler.js';
+import { collections } from '../../shared/schema.js';
+import type { Doc } from '../../shared/types.js';
 const roots: string[] = [];
 afterEach(async () => { await Promise.all(roots.splice(0).map(root => rm(root, { recursive: true, force: true }))); });
 const item = (doc: Doc) => ({ collection: doc.collection, id: doc.id, expectedVersion: doc.version });

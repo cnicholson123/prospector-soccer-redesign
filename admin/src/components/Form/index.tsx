@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { collections, iconNames, type Field } from '../../../../shared/schema';
-import type { ValidationIssue } from '../../../../shared/types';
-import { richtext } from '../../../../server/render/richtext';
-import { api, message } from '../../api';
-import { defaults, docTitle, duplicateItem, freshKey, moveItem, record, type ContentDoc } from '../../state/content';
-import { DragList } from '../DragList';
+import { collections, iconNames, type Field } from '../../../../shared/schema.js';
+import type { ValidationIssue } from '../../../../shared/types.js';
+import { richtext } from '../../../../server/render/richtext.js';
+import { api, message } from '../../api.js';
+import { defaults, docTitle, duplicateItem, freshKey, moveItem, record, type ContentDoc } from '../../state/content.js';
+import { DragList } from '../DragList.js';
 export const fieldLabel = (name: string, field: Field) => field.label ?? ({ showOnHome: 'Show on home page', calendarTitle: 'Calendar title', locationDetail: 'Location details', endTime: 'End time', notes: 'Notes', link: 'Link', meta: 'Page details', cta: 'Call to action', headerCta: 'Header call to action', seo: 'Search engines', srSummary: 'Screen reader summary', resultIds: 'Results', documentIds: 'Documents', boardMemberId: 'Board member', startsAt: 'Starts at', endsAt: 'Ends at' }[name] ?? name.replace(/([A-Z])/g, ' $1').replace(/^./, x => x.toUpperCase()));
 function RichText({ id, label, value, change, disabled, describedBy, invalid, inline }: { id: string; label: string; value: string; change: (value: string) => void; disabled: boolean; describedBy?: string; invalid: boolean; inline?: boolean }) {
   const ref = useRef<HTMLTextAreaElement>(null);

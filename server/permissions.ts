@@ -1,6 +1,6 @@
-import { permissionTable, roles, type Permission } from '../shared/permissions-table';
-import type { CollectionName } from '../shared/schema';
-import type { User } from '../shared/types';
+import { permissionTable, roles, type Permission } from '../shared/permissions-table.js';
+import type { CollectionName } from '../shared/schema.js';
+import type { User } from '../shared/types.js';
 export function can(user: User, action: Permission, target?: { collection?: CollectionName; uploadedBy?: string; role?: User['role'] }): boolean {
   if (!user.active || roles.indexOf(user.role) < permissionTable[action]) return false;
   if (target?.collection === 'site' && ['content.create', 'content.edit', 'content.manage'].includes(action) && roles.indexOf(user.role) < 2) return false;

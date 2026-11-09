@@ -1,6 +1,6 @@
-import { api, ApiError, message } from '../api';
-import { editorPath, type ContentDoc } from '../state/content';
-import type { CollectionName } from '../../../shared/schema';
+import { api, ApiError, message } from '../api.js';
+import { editorPath, type ContentDoc } from '../state/content.js';
+import type { CollectionName } from '../../../shared/schema.js';
 export interface Usage { collection: CollectionName; id: string; title: string; path: string }
 export interface ActionFailure { message: string; usage: Usage[] }
 export function actionFailure(error: unknown): ActionFailure {

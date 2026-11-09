@@ -1,8 +1,8 @@
-import type { Store } from '../store/types';
-import type { Actor } from '../audit';
-import { commitSnapshot, select, type Item } from './publish';
-import { validateFields } from './validate';
-import { ApiError } from '../http/middleware/errors';
+import type { Store } from '../store/types.js';
+import type { Actor } from '../audit.js';
+import { commitSnapshot, select, type Item } from './publish.js';
+import { validateFields } from './validate.js';
+import { ApiError } from '../http/middleware/errors.js';
 export async function scheduleDocuments(store: Store, items: Item[], at: string | null, actor: Actor, now: Date) {
   if (at !== null && (!validateFields({ at: { type: 'datetime', required: true } }, { at }).valid || Date.parse(at) <= now.getTime())) throw new ApiError(422, 'validation', 'Choose a future datetime with timezone');
   await store.recoverPublish();

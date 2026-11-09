@@ -1,6 +1,6 @@
-import type { CollectionName } from '../../shared/schema';
-import type { AuditEntry, Doc, PublishRecord, Revision, Session, Snapshot, User } from '../../shared/types';
-export type { AuditEntry, Doc, PublishRecord, Revision, Session, Snapshot, User } from '../../shared/types';
+import type { CollectionName } from '../../shared/schema.js';
+import type { AuditEntry, Doc, PublishRecord, Revision, Session, Snapshot, User } from '../../shared/types.js';
+export type { AuditEntry, Doc, PublishRecord, Revision, Session, Snapshot, User } from '../../shared/types.js';
 export interface AuditQuery {
   actorId?: string; action?: string; collection?: CollectionName; docId?: string;
   from?: string; to?: string; text?: string; limit: number; cursor?: string;

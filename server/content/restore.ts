@@ -1,8 +1,8 @@
-import type { Store } from '../store/types';
-import type { Actor } from '../audit';
-import { saveDraft } from './revisions';
-import { allDocs, commitSnapshot, publishDocuments } from './publish';
-import { ApiError } from '../http/middleware/errors';
+import type { Store } from '../store/types.js';
+import type { Actor } from '../audit.js';
+import { saveDraft } from './revisions.js';
+import { allDocs, commitSnapshot, publishDocuments } from './publish.js';
+import { ApiError } from '../http/middleware/errors.js';
 export async function findRevision(store: Store, id: string, docId?: string) {
   if (docId) return store.getRevision(docId, id);
   // Compatibility for the plan's unscoped URL; clients should send ?docId=.

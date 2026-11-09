@@ -1,8 +1,8 @@
 import { randomBytes } from 'node:crypto';
-import type { Config } from '../config';
-import type { Store } from '../store/types';
-import { hashPassword, passwordWeak } from './password';
-import { audit } from '../audit';
+import type { Config } from '../config.js';
+import type { Store } from '../store/types.js';
+import { hashPassword, passwordWeak } from './password.js';
+import { audit } from '../audit.js';
 export async function bootstrap(store: Store, config: Config, now = new Date()) {
   if (config.adminBootstrapUsers) {
     const entries = config.adminBootstrapUsers.map(u => {

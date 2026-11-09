@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
 import type { Pool } from '@neondatabase/serverless';
-import { postgresPool } from '../server/store/postgres';
+import { postgresPool } from '../server/store/postgres.js';
 export async function migrate(pool: Pool): Promise<void> {
   const sql = await readFile(new URL('../server/store/postgres-schema.sql', import.meta.url), 'utf8');
   const client = await pool.connect();

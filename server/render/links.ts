@@ -1,4 +1,4 @@
-import { isSafeUrl } from '../content/validate';
+import { isSafeUrl } from '../content/validate.js';
 export function cleanUrl(value: string): string {
   return value.replace(/^(?:\/?)(index|home)\.html(?=[?#]|$)/, '/').replace(/^\/?(recreational|competitive|referees|sponsors|board|resources|about)\.html(?=[?#]|$)/, '/$1');
 }

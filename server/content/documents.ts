@@ -1,7 +1,7 @@
-import type { CreateDoc, Store } from '../store/types';
-import { collections, type CollectionName } from '../../shared/schema';
-import type { Doc } from '../../shared/types';
-import { applyDefaults, validate, ValidationError } from './validate';
+import type { CreateDoc, Store } from '../store/types.js';
+import { collections, type CollectionName } from '../../shared/schema.js';
+import type { Doc } from '../../shared/types.js';
+import { applyDefaults, validate, ValidationError } from './validate.js';
 
 /** Creation entry point for the API. Existing drafts never receive defaults. */
 export async function createDocument(store: Store, input: CreateDoc): Promise<Doc> {

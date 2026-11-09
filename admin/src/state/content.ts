@@ -1,6 +1,6 @@
 import { signal } from '@preact/signals';
-import { collections, type CollectionName, type Field } from '../../../shared/schema';
-import type { Doc } from '../../../shared/types';
+import { collections, type CollectionName, type Field } from '../../../shared/schema.js';
+import type { Doc } from '../../../shared/types.js';
 export type ContentDoc = Doc<Record<string, unknown>>;
 export const contentChanged = signal(0);
 export const changed = () => { contentChanged.value++; };

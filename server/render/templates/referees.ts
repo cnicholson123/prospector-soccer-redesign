@@ -1,7 +1,7 @@
-import { html, type Html } from '../html';
-import { icon } from '../icons';
-import { type SnapshotView } from '../snapshot-view';
-import { documentCard, refereeContact } from './shared';
+import { html, type Html } from '../html.js';
+import { icon } from '../icons.js';
+import { type SnapshotView } from '../snapshot-view.js';
+import { documentCard, refereeContact } from './shared.js';
 
 export function referees(view: SnapshotView): Html {
   const page = view.doc("referees", "referees");

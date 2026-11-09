@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'preact/hooks';
-import { collections } from '../../../shared/schema';
-import { api, message } from '../api';
-import { editorPath, type ContentDoc } from '../state/content';
+import { collections } from '../../../shared/schema.js';
+import { api, message } from '../api.js';
+import { editorPath, type ContentDoc } from '../state/content.js';
 export function Pages({ refresh }: { refresh: number }) {
   const [docs, setDocs] = useState<ContentDoc[]>([]), [query, setQuery] = useState(''), [status, setStatus] = useState(''), [sort, setSort] = useState('title'), [error, setError] = useState('');
   useEffect(() => { Promise.all(Object.values(collections).filter(d => d.kind === 'singleton' && d.name !== 'site').map(d => api<{ docs: ContentDoc[] }>(`/docs/${d.name}`))).then(result => setDocs(result.flatMap(r => r.docs))).catch(e => setError(message(e))); }, [refresh]);

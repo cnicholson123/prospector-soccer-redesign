@@ -1,12 +1,12 @@
 import { afterEach, expect, it, vi } from 'vitest';
 import { rm } from 'node:fs/promises';
-import { adminFixture } from '../helpers/admin';
-import { KvStore } from '../../server/store/kv-store';
-import { FsPrimitives } from '../../server/store/primitives/fs';
-import { audit } from '../../server/audit';
-import { health } from '../../server/content/health';
-import { newSession } from '../../server/auth/session';
-import { loadSeed } from '../../scripts/seed';
+import { adminFixture } from '../helpers/admin.js';
+import { KvStore } from '../../server/store/kv-store.js';
+import { FsPrimitives } from '../../server/store/primitives/fs.js';
+import { audit } from '../../server/audit.js';
+import { health } from '../../server/content/health.js';
+import { newSession } from '../../server/auth/session.js';
+import { loadSeed } from '../../scripts/seed.js';
 const roots: string[] = [];
 afterEach(async () => { vi.restoreAllMocks(); await Promise.all(roots.splice(0).map(root => rm(root, { recursive: true, force: true }))); });
 async function fixture() { const f = await adminFixture(true); roots.push(f.root); await f.login(); return f; }

@@ -3,6 +3,10 @@
   "buildCommand": "npm run build",
   "outputDirectory": "public",
   "framework": null,
+  "functions": {
+    "api/admin.ts": { "includeFiles": "server/auth/common-passwords.json" },
+    "api/render.ts": { "includeFiles": "server/auth/common-passwords.json" }
+  },
   "redirects": [
     { "source": "/index.html", "destination": "/", "permanent": true },
     { "source": "/:page.html", "destination": "/:page", "permanent": true }

@@ -1,11 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 import { spawn } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
-import { adminFixture } from '../helpers/admin';
-import { generatedPassword } from '../helpers/password';
-import { loadConfig } from '../../server/config';
-import { bootstrap } from '../../server/auth/bootstrap';
-import { hashPassword, isPasswordHash, verifyPassword } from '../../server/auth/password';
+import { adminFixture } from '../helpers/admin.js';
+import { generatedPassword } from '../helpers/password.js';
+import { loadConfig } from '../../server/config.js';
+import { bootstrap } from '../../server/auth/bootstrap.js';
+import { hashPassword, isPasswordHash, verifyPassword } from '../../server/auth/password.js';
 
 async function setupUsers() {
   const passwords = [generatedPassword(), generatedPassword()];

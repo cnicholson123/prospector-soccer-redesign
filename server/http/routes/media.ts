@@ -1,15 +1,15 @@
 import type { Hono } from 'hono';
-import { actor, type AdminEnv } from '../middleware/auth';
-import { requirePermission } from '../middleware/permission';
-import { ApiError, object, string, version } from '../middleware/errors';
-import { finalizeMedia, readBounded, readGrant, uploadGrant } from '../../media';
-import { rateLimit } from '../../auth/ratelimit';
-import { validate, ValidationError } from '../../content/validate';
-import { revision } from '../../content/revisions';
-import { audit } from '../../audit';
-import { referenceUsage } from '../../content/references';
-import { allDocs } from '../../content/publish';
-import { can } from '../../permissions';
+import { actor, type AdminEnv } from '../middleware/auth.js';
+import { requirePermission } from '../middleware/permission.js';
+import { ApiError, object, string, version } from '../middleware/errors.js';
+import { finalizeMedia, readBounded, readGrant, uploadGrant } from '../../media.js';
+import { rateLimit } from '../../auth/ratelimit.js';
+import { validate, ValidationError } from '../../content/validate.js';
+import { revision } from '../../content/revisions.js';
+import { audit } from '../../audit.js';
+import { referenceUsage } from '../../content/references.js';
+import { allDocs } from '../../content/publish.js';
+import { can } from '../../permissions.js';
 /** SDK callbacks are signed by Blob, carry no user cookie and cannot create metadata. */
 export function mediaCallbacks(app: Hono<AdminEnv>) {
   app.post('/api/admin/cron/blob-upload', async (c, next) => {

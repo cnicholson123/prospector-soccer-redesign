@@ -1,9 +1,9 @@
-import type { User } from '../../shared/types';
-import { can } from '../permissions';
-import { collections } from '../../shared/schema';
-import { allDocs, title } from './publish';
-import { references } from './references';
-import type { Store } from '../store/types';
+import type { User } from '../../shared/types.js';
+import { can } from '../permissions.js';
+import { collections } from '../../shared/schema.js';
+import { allDocs, title } from './publish.js';
+import { references } from './references.js';
+import type { Store } from '../store/types.js';
 /** Only known static browser/chrome assets are exempt; uploaded content is always checked. */
 export function isNonContentMedia(data: Record<string, unknown>): boolean {
   return data.source === 'static' && /^(?:favicon(?:[-.].*)?|apple-touch-icon(?:[-.].*)?|touch-icon(?:[-.].*)?|crest(?:[-.].*)?)$/i.test(String(data.filename ?? ''));

@@ -1,5 +1,5 @@
-import { adminPassword } from './credentials';
-import { test, expect } from './fixtures';
+import { adminPassword } from './credentials.js';
+import { test, expect } from './fixtures.js';
 // Run with installed Chrome outside the Codex sandbox, like the Phase 6 specs.
 test('security remediation: default auth, bounded input, tokens, audit and retained creation history', async ({ request }) => {
   expect((await request.get('/api/admin/future-admin-route')).status()).toBe(401);

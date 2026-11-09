@@ -1,7 +1,7 @@
-import { html, type Html } from '../html';
-import { icon } from '../icons';
-import { type SnapshotView, type DocumentView } from '../snapshot-view';
-import type { PageName } from '../../../shared/schema';
+import { html, type Html } from '../html.js';
+import { icon } from '../icons.js';
+import { type SnapshotView, type DocumentView } from '../snapshot-view.js';
+import type { PageName } from '../../../shared/schema.js';
 
 function navigation(site: DocumentView, pageName: string): Html[] {
   return site.list('nav').filter(item => item.boolean('visible', true)).map(item => html`<li><a href="${item.text('href') ? item.url('href') : item.text('page') === 'home' ? '/' : '/' + item.text('page')}"${item.text('page') === pageName ? html` aria-current="page"` : html``}>${item.text('label')}</a></li>`);

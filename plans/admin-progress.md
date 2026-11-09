@@ -365,3 +365,26 @@ Decisions / open issues
 ## 7b browser verification (Claude, 2026-11-09)
 - Ran all 22 Playwright specs in real Chrome. Fixed: autosave false 409 after another user's publish bumped the version without changing the draft (editor now rebases silently when `current.draft` equals the base draft); keyboard spec targeted the out-of-order header "Save checkpoint" button (now the footer one). Playwright already runs with `workers: 1` (specs share one server/DATA_DIR); the earlier parallel failures came from a `--workers=3` CLI override.
 - Open for Phase 8: the publish tray must handle a 409 from a concurrent edit gracefully (explain, refresh pending list, let the user retry) instead of leaving the dialog open silently.
+
+## CHANGELOG — Deployment hotfix — Node ESM packaging — 2026-11-09
+
+Shipped against the deployment hotfix acceptance criteria
+
+- Switched the root TypeScript configuration for API, server, shared modules, scripts and tests to `module` and `moduleResolution` `NodeNext`. Added `admin/tsconfig.json` with Bundler resolution, checked explicitly by the build. Converted all relative TypeScript module specifiers to `.js`, including directory `/index.js`, re-exports, dynamic imports and type-only imports. Admin imports also use explicit specifiers because the NodeNext tests import its component/state modules. Vite resolves these references to the original TypeScript sources.
+- Audited filesystem reads reachable from both function entrypoints. Their bundled asset is `server/auth/common-passwords.json`, now explicitly included for each function through `vercel.json`. Its static import already uses JSON attributes. Added the missing attribute to the auth test's JSON import. Templates are compiled modules. Seed JSON and migration SQL are read only by the corresponding CLI scripts. Static public files are served separately, and FS document/media/lock reads use runtime `DATA_DIR`.
+- Added `tsconfig.runtime.json`, `scripts/check-runtime.mjs` and `tests/runtime-smoke.ts`. `npm run check:runtime` compiles unbundled ESM with `tsc`, imports both emitted entrypoints with plain Node, and seeds an isolated temporary FS store through the compiled seed CLI. It then constructs separate function packages containing emitted JS and each function's declared assets, omitting tsc's automatic JSON copies. Each package passes Web Requests through the default `{ fetch }` exports for health 200, home `?page=index` 200 HTML and wrong-password login 401. Child processes have no TypeScript loader and run from the packaged directory. Temporary packages and generated credentials are cleaned up. `npm test` now runs this check before Vitest.
+
+Verification
+
+- Before changing the existing imports or compiler configuration, the new check failed with `ERR_MODULE_NOT_FOUND` for emitted `api/admin.js` importing extensionless `server/http/hono-app`, reproducing the deployed startup failure.
+- `npm run check:runtime` — PASS on Node 22.12.0 and 25.9.0. Removing either function's `includeFiles` declaration in turn makes the check fail on missing `common-passwords.json`. Both declarations were restored after these negative checks.
+- `npm run build` and `npm test` — PASS on Node 22.12.0 and 25.9.0. Vitest reports 468 passed and 17 hosted-service skips. All eight public golden comparisons pass.
+- TypeScript AST audit — PASS across 749 module references. No extensionless relative imports, bare `require`, `__dirname`, `__filename` or JSON imports missing attributes remain in the checked application, scripts, tests and configs.
+- `npm run check-facts` — PASS, 122 facts. `npm run test:e2e -- --list` — PASS, 22 tests in seven specs. Existing e2e imports were updated for NodeNext. Browser execution and Lighthouse — **not run (sandbox)**.
+- Real Neon/Postgres and private Blob tests — **not run (no env)**. Executed application tests use the FS driver. Public assets, content seeds, goldens and the dependency lockfile have no changes. `git diff --check` — PASS.
+
+Decisions / open issues
+
+- This is the requested packaging hotfix. The Web-standard handler contracts and existing content, auth, UI and storage behavior are preserved. No dependencies were added.
+- The packaging check models per-file compilation and declared assets locally. Vercel deployment verification remains pending. Node 22.12 emits an experimental warning for its built-in filesystem glob API, which completes successfully.
+- The existing Phase 8 publish-tray follow-up remains open. No commit, push, deployment, hosting credential acquisition, global configuration edit or edit outside the repository was performed.

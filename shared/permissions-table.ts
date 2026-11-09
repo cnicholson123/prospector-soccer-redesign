@@ -1,4 +1,4 @@
-import type { Role } from './types';
+import type { Role } from './types.js';
 export const roles: Role[] = ['Viewer', 'Contributor', 'Editor', 'Admin', 'Owner'];
 export const permissionTable = {
   'content.read': 0, 'history.read': 0,

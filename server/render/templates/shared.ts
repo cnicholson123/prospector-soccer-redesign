@@ -1,7 +1,7 @@
-import { html, type Html } from '../html';
-import { icon } from '../icons';
-import { displayDomain } from '../links';
-import type { DocumentView } from '../snapshot-view';
+import { html, type Html } from '../html.js';
+import { icon } from '../icons.js';
+import { displayDomain } from '../links.js';
+import type { DocumentView } from '../snapshot-view.js';
 
 export function delay(index: number, step: number): Html { return index ? html` style="--d: ${index * step}ms"` : html``; }
 export function eventCard(event: DocumentView): Html {

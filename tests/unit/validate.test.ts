@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { collections, type CollectionName, type Field } from '../../shared/schema';
-import { validate, validateFields } from '../../server/content/validate';
-import { createId, createListKey } from '../../server/content/ids';
+import { collections, type CollectionName, type Field } from '../../shared/schema.js';
+import { validate, validateFields } from '../../server/content/validate.js';
+import { createId, createListKey } from '../../server/content/ids.js';
 
 const examples: { field: Field; good: unknown; bad: unknown[] }[] = [
   { field: { type: 'text', required: true, maxLength: 8 }, good: 'Prospect', bad: ['', '         ', 'Longer than 8', 1, null] },

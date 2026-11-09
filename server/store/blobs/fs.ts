@@ -1,8 +1,8 @@
 import { readFile, readdir, stat, rm } from 'node:fs/promises';
 import { join } from 'node:path';
-import { atomicWrite, safePath } from '../primitives/fs';
-import { mediaPath } from './common';
-import type { MediaStorage, RunExclusive, Store } from '../types';
+import { atomicWrite, safePath } from '../primitives/fs.js';
+import { mediaPath } from './common.js';
+import type { MediaStorage, RunExclusive, Store } from '../types.js';
 export class FsBlobs implements MediaStorage {
   private root: string;
   constructor(dataDir: string, private store: Store, private exclusive: RunExclusive) { this.root = join(dataDir, 'blobs'); }

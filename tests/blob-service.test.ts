@@ -1,7 +1,7 @@
 import { it, expect } from 'vitest';
 import { randomBytes } from 'node:crypto';
-import { VercelBlobs } from '../server/store/blobs/vercel';
-import type { Store } from '../server/store/types';
+import { VercelBlobs } from '../server/store/blobs/vercel.js';
+import type { Store } from '../server/store/types.js';
 if (!process.env.BLOB_READ_WRITE_TOKEN) console.info('Vercel Blob service tests: not run (no env)');
 it.skipIf(!process.env.BLOB_READ_WRITE_TOKEN)('Vercel Blob service: private binary round trip',async()=>{
   const blobs=new VercelBlobs(process.env.BLOB_READ_WRITE_TOKEN!,{listPublishes:async()=>[]} as unknown as Store);

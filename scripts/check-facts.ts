@@ -1,9 +1,9 @@
 import { readFile } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
 import { resolve } from 'node:path';
-import { pageNames } from '../shared/schema';
-import { loadSeed, seedSnapshot } from './seed';
-import { renderPage } from '../server/render/handler';
+import { pageNames } from '../shared/schema.js';
+import { loadSeed, seedSnapshot } from './seed.js';
+import { renderPage } from '../server/render/handler.js';
 
 function text(value: string): string {
   return value.replace(/<wbr>/g, '').replace(/<[^>]+>/g, ' ').replace(/&amp;/g, '&').replace(/&#39;|&apos;/g, "'")

@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
-import type { Store } from '../store/types';
-import { ApiError } from '../http/middleware/errors';
+import type { Store } from '../store/types.js';
+import { ApiError } from '../http/middleware/errors.js';
 export async function rateLimit(store: Store, key: string, limit: number, seconds: number, now = new Date()) {
   const result = await store.rateLimitHit(key, seconds);
   if (result.count > limit) throw new ApiError(429, 'rate_limited', 'Too many requests', undefined, Math.max(1, Math.ceil((Date.parse(result.resetAt) - now.getTime()) / 1000)));

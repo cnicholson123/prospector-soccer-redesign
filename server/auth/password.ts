@@ -1,6 +1,6 @@
 import { randomBytes, scrypt, timingSafeEqual } from 'node:crypto';
 import common from './common-passwords.json' with { type: 'json' };
-import { ApiError } from '../http/middleware/errors';
+import { ApiError } from '../http/middleware/errors.js';
 // First 1,000 entries of SecLists Common-Credentials/10k-most-common.txt.
 // https://github.com/danielmiessler/SecLists (MIT); see common-passwords.LICENSE.
 const passwords = new Set(common.map(value => value.toLowerCase()));

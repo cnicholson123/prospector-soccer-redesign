@@ -1,10 +1,10 @@
-import type { CollectionName } from '../../shared/schema';
-import type { Snapshot } from '../../shared/types';
-import { effectiveSnapshot } from '../content/scheduled-view';
-import { html, raw, type Html } from './html';
-import { richtext } from './richtext';
-import { safeUrl } from './links';
-import { editable } from './editable';
+import type { CollectionName } from '../../shared/schema.js';
+import type { Snapshot } from '../../shared/types.js';
+import { effectiveSnapshot } from '../content/scheduled-view.js';
+import { html, raw, type Html } from './html.js';
+import { richtext } from './richtext.js';
+import { safeUrl } from './links.js';
+import { editable } from './editable.js';
 
 function object(value: unknown): Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};

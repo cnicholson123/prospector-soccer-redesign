@@ -1,9 +1,9 @@
 import { signal, computed } from '@preact/signals';
-import type { Doc, ValidationIssue } from '../../../shared/types';
-import { collections, type CollectionName } from '../../../shared/schema';
-import { validate } from '../../../server/content/validate';
-import { defaults, changed } from './content';
-import { api, ApiError, message, session } from '../api';
+import type { Doc, ValidationIssue } from '../../../shared/types.js';
+import { collections, type CollectionName } from '../../../shared/schema.js';
+import { validate } from '../../../server/content/validate.js';
+import { defaults, changed } from './content.js';
+import { api, ApiError, message, session } from '../api.js';
 export type EventDoc = Doc<Record<string, unknown>>;
 export class EditorState {
   doc = signal<EventDoc | null>(null);

@@ -1,14 +1,14 @@
 import { randomBytes } from 'node:crypto';
 import type { Hono } from 'hono';
-import type { User, Role } from '../../../shared/types';
-import { validateFields } from '../../content/validate';
-import { roles } from '../../../shared/permissions-table';
-import { audit, publicUser } from '../../audit';
-import { hashPassword, checkPassword } from '../../auth/password';
-import { username } from '../../store/identifiers';
-import { requirePermission } from '../middleware/permission';
-import { actor, type AdminEnv } from '../middleware/auth';
-import { ApiError, object, string } from '../middleware/errors';
+import type { User, Role } from '../../../shared/types.js';
+import { validateFields } from '../../content/validate.js';
+import { roles } from '../../../shared/permissions-table.js';
+import { audit, publicUser } from '../../audit.js';
+import { hashPassword, checkPassword } from '../../auth/password.js';
+import { username } from '../../store/identifiers.js';
+import { requirePermission } from '../middleware/permission.js';
+import { actor, type AdminEnv } from '../middleware/auth.js';
+import { ApiError, object, string } from '../middleware/errors.js';
 function email(value: unknown): string | undefined {
   if (value === undefined || value === '') return undefined;
   if (!validateFields({ email: { type: 'email' } }, { email: value }).valid) throw new ApiError(422, 'validation', 'Invalid email');

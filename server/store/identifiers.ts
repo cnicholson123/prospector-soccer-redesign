@@ -1,4 +1,4 @@
-import { ApiError } from '../http/middleware/errors';
+import { ApiError } from '../http/middleware/errors.js';
 export function keyPart(value: string): string {
   let size: number;
   try { size = Buffer.byteLength(encodeURIComponent(value).replace(/\./g, '%2E')); } catch { size = Infinity; }

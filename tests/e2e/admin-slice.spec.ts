@@ -1,7 +1,7 @@
 import type { Locator, Page } from '@playwright/test';
-import { expect, test, restoreSeed } from './fixtures';
+import { expect, test, restoreSeed } from './fixtures.js';
 import { randomBytes } from 'node:crypto';
-import { adminPassword, reminderPassword } from './credentials';
+import { adminPassword, reminderPassword } from './credentials.js';
 
 test.afterEach(async ({ context }) => restoreSeed(context));
 

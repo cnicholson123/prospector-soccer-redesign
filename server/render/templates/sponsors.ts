@@ -1,7 +1,7 @@
-import { html, type Html } from '../html';
-import { icon } from '../icons';
-import { type SnapshotView } from '../snapshot-view';
-import { sponsorCard, tierCard } from './shared';
+import { html, type Html } from '../html.js';
+import { icon } from '../icons.js';
+import { type SnapshotView } from '../snapshot-view.js';
+import { sponsorCard, tierCard } from './shared.js';
 
 export function sponsors(view: SnapshotView): Html {
   const page = view.doc("sponsorsPage", "sponsorsPage");

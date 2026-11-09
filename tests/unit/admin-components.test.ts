@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { toChildArray, type ComponentChildren, type VNode } from 'preact';
-import { session } from '../../admin/src/api';
-import { Shell } from '../../admin/src/components/Shell';
-import { DocEditor } from '../../admin/src/routes/DocEditor';
-import { editorFlush, navigationGuard } from '../../admin/src/state/autosave';
+import { session } from '../../admin/src/api.js';
+import { Shell } from '../../admin/src/components/Shell.js';
+import { DocEditor } from '../../admin/src/routes/DocEditor.js';
+import { editorFlush, navigationGuard } from '../../admin/src/state/autosave.js';
 
 // Exercise the components' contracts and effect callbacks without a browser or
 // a DOM dependency. Browser focus/layout remains covered by the Playwright specs.

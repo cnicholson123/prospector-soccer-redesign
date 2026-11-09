@@ -1,6 +1,6 @@
-import { collections, iconNames, type CollectionName, type Field } from '../../shared/schema';
-import { references } from './references';
-import type { Doc, ValidationIssue, ValidationResult } from '../../shared/types';
+import { collections, iconNames, type CollectionName, type Field } from '../../shared/schema.js';
+import { references } from './references.js';
+import type { Doc, ValidationIssue, ValidationResult } from '../../shared/types.js';
 
 const record = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value);
 const nonempty = (value: unknown): value is string => typeof value === 'string' && value.trim().length > 0;

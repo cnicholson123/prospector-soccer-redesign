@@ -1,10 +1,10 @@
 {
   "compilerOptions": {
     "target": "ES2023", "lib": ["ES2023", "DOM", "DOM.Iterable"],
-    "module": "ESNext", "moduleResolution": "Bundler", "strict": true,
+    "module": "NodeNext", "moduleResolution": "NodeNext", "strict": true,
     "noEmit": true, "skipLibCheck": true, "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true, "resolveJsonModule": true,
     "jsx": "react-jsx", "jsxImportSource": "preact", "types": ["node"]
   },
-  "include": ["admin", "api", "server", "shared", "scripts", "tests", "*.config.ts"]
+  "include": ["api", "server", "shared", "scripts", "tests", "*.config.ts"]
 }

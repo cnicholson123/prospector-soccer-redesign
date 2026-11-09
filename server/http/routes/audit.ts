@@ -1,10 +1,10 @@
 import type { Hono } from 'hono';
 import { stream } from 'hono/streaming';
-import { collectionNames, type CollectionName } from '../../../shared/schema';
-import type { AuditQuery } from '../../store/types';
-import type { AdminContext, AdminEnv } from '../middleware/auth';
-import { requirePermission } from '../middleware/permission';
-import { ApiError } from '../middleware/errors';
+import { collectionNames, type CollectionName } from '../../../shared/schema.js';
+import type { AuditQuery } from '../../store/types.js';
+import type { AdminContext, AdminEnv } from '../middleware/auth.js';
+import { requirePermission } from '../middleware/permission.js';
+import { ApiError } from '../middleware/errors.js';
 function query(c: AdminContext): AuditQuery {
   const q = c.req.query(), limit = Number(q.limit ?? 50);
   if (!Number.isInteger(limit) || limit < 1 || limit > 1000 || q.collection && !collectionNames.includes(q.collection as CollectionName) || [q.from, q.to].some(v => v && !Number.isFinite(Date.parse(v)))) throw new ApiError(422, 'validation', 'Invalid audit filter');

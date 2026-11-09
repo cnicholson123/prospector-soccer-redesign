@@ -1,14 +1,14 @@
 import type { Hono } from 'hono';
-import { collectionNames, collections, type CollectionName } from '../../../shared/schema';
-import type { Doc } from '../../../shared/types';
-import { documentId } from '../../store/identifiers';
-import { createId } from '../../content/ids';
-import { createDocument, documentTitle } from '../../content/documents';
-import { saveDraft, revision, conflict } from '../../content/revisions';
-import { audit } from '../../audit';
-import { actor, type AdminEnv, type AdminContext } from '../middleware/auth';
-import { requirePermission } from '../middleware/permission';
-import { ApiError, object, version, string } from '../middleware/errors';
+import { collectionNames, collections, type CollectionName } from '../../../shared/schema.js';
+import type { Doc } from '../../../shared/types.js';
+import { documentId } from '../../store/identifiers.js';
+import { createId } from '../../content/ids.js';
+import { createDocument, documentTitle } from '../../content/documents.js';
+import { saveDraft, revision, conflict } from '../../content/revisions.js';
+import { audit } from '../../audit.js';
+import { actor, type AdminEnv, type AdminContext } from '../middleware/auth.js';
+import { requirePermission } from '../middleware/permission.js';
+import { ApiError, object, version, string } from '../middleware/errors.js';
 export function collection(c: AdminContext): CollectionName {
   const value = c.req.param('collection') as CollectionName;
   if (!collectionNames.includes(value)) throw new ApiError(404, 'not_found', 'Collection not found');

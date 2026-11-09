@@ -1,5 +1,5 @@
-import { allDocs, title } from './publish';
-import type { Store } from '../store/types';
+import { allDocs, title } from './publish.js';
+import type { Store } from '../store/types.js';
 export async function search(store: Store, query: string) {
   const term = query.trim().toLowerCase().slice(0, 200);
   if (!term) return [];

@@ -1,16 +1,16 @@
-import { generatedPassword } from './helpers/password';
-import { hashPassword } from '../server/auth/password';
-import { postgresFixture } from './helpers/postgres';
+import { generatedPassword } from './helpers/password.js';
+import { hashPassword } from '../server/auth/password.js';
+import { postgresFixture } from './helpers/postgres.js';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
-import { FsPrimitives } from '../server/store/primitives/fs';
-import { KvStore } from '../server/store/kv-store';
-import { createStore, createMediaBlobs } from '../server/store';
-import { loadConfig } from '../server/config';
-import { createHistoryId } from '../server/content/ids';
-import { buildSnapshot } from '../server/content/snapshot';
-import type { AuditEntry, CreateDoc, Doc, DocMutation, KvPrimitives, PublishTx, Revision, Store, User } from '../server/store/types';
+import { FsPrimitives } from '../server/store/primitives/fs.js';
+import { KvStore } from '../server/store/kv-store.js';
+import { createStore, createMediaBlobs } from '../server/store/index.js';
+import { loadConfig } from '../server/config.js';
+import { createHistoryId } from '../server/content/ids.js';
+import { buildSnapshot } from '../server/content/snapshot.js';
+import type { AuditEntry, CreateDoc, Doc, DocMutation, KvPrimitives, PublishTx, Revision, Store, User } from '../server/store/types.js';
 
 const at = '2026-11-09T18:00:00.000Z';
 const doc = (id = 'evt_a', order = 0): Doc => ({ id, collection: 'events', draft: { title: id, date: '2026-11-09' }, version: 1, order, status: 'draft', createdAt: at, updatedAt: at, createdBy: 'usr_a', updatedBy: 'usr_a' });

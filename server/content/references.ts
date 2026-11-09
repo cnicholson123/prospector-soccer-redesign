@@ -1,5 +1,5 @@
-import { collections, type CollectionName, type Field } from '../../shared/schema';
-import type { Doc, ScheduledItem } from '../../shared/types';
+import { collections, type CollectionName, type Field } from '../../shared/schema.js';
+import type { Doc, ScheduledItem } from '../../shared/types.js';
 
 export interface Reference { collection: CollectionName; id: string; path: string; kind: 'reference' | 'image' | 'file' }
 /** Shared schema traversal for publish validation, snapshots and trash checks. */

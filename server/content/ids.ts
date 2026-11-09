@@ -1,5 +1,5 @@
 import { randomBytes, randomInt } from 'node:crypto';
-import { collections, type CollectionName } from '../../shared/schema';
+import { collections, type CollectionName } from '../../shared/schema.js';
 const prefixes: Partial<Record<CollectionName, string>> = {
   events: 'evt', callouts: 'call', teams: 'team', results: 'res', boardMembers: 'board',
   sponsors: 'spon', sponsorTiers: 'tier', documents: 'doc', faqs: 'faq', media: 'media',

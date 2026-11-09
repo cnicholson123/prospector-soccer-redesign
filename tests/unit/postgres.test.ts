@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { postgresFixture } from '../helpers/postgres';
-import { migrate } from '../../scripts/db-migrate';
-import { createHistoryId } from '../../server/content/ids';
-import { buildSnapshot } from '../../server/content/snapshot';
-import type { AuditEntry, Doc, Revision, PublishTx } from '../../server/store/types';
+import { postgresFixture } from '../helpers/postgres.js';
+import { migrate } from '../../scripts/db-migrate.js';
+import { createHistoryId } from '../../server/content/ids.js';
+import { buildSnapshot } from '../../server/content/snapshot.js';
+import type { AuditEntry, Doc, Revision, PublishTx } from '../../server/store/types.js';
 const at='2030-01-01T00:00:00.000Z';
 const doc:Doc={id:'evt_atomic',collection:'events',draft:{title:'Original',date:'2030-01-03'},version:1,status:'draft',order:0,createdAt:at,updatedAt:at,createdBy:'owner',updatedBy:'owner'};
 const audit=():AuditEntry=>({id:createHistoryId('aud',new Date(at)),at,actorId:'owner',actorName:'Owner',action:'test'});

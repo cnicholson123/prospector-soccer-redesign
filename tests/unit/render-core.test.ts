@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { html, raw } from '../../server/render/html';
-import { richtext } from '../../server/render/richtext';
-import { cleanUrl, safeUrl } from '../../server/render/links';
-import { icon } from '../../server/render/icons';
-import { iconNames } from '../../shared/schema';
+import { html, raw } from '../../server/render/html.js';
+import { richtext } from '../../server/render/richtext.js';
+import { cleanUrl, safeUrl } from '../../server/render/links.js';
+import { icon } from '../../server/render/icons.js';
+import { iconNames } from '../../shared/schema.js';
 
 describe('escaped HTML and constrained Markdown', () => {
   it('escapes content and attributes; only explicit renderer markup is trusted', () => {

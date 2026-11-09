@@ -1,6 +1,6 @@
 import { useState } from 'preact/hooks';
-import { api, session, setSession, message, type Session } from '../api';
-import { notify } from '../state/toasts';
+import { api, session, setSession, message, type Session } from '../api.js';
+import { notify } from '../state/toasts.js';
 export function Profile() {
   const [current, setCurrent] = useState(''), [next, setNext] = useState(''), [confirm, setConfirm] = useState(''), [error, setError] = useState(''), [busy, setBusy] = useState(false);
   async function change(event: SubmitEvent) {

@@ -1,7 +1,7 @@
-import { createStore } from '../server/store';
-import { loadConfig } from '../server/config';
-import { username } from '../server/store/identifiers';
-import { audit } from '../server/audit';
+import { createStore } from '../server/store/index.js';
+import { loadConfig } from '../server/config.js';
+import { username } from '../server/store/identifiers.js';
+import { audit } from '../server/audit.js';
 const name = username(process.argv[2]);
 const store = createStore(loadConfig());
 const user = await store.getUserByUsername(name);

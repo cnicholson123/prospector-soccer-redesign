@@ -1,14 +1,14 @@
 import { afterEach } from 'vitest';
-import { postgresFixture } from './postgres';
+import { postgresFixture } from './postgres.js';
 const postgresCleanups: (()=>Promise<void>)[] = [];
 afterEach(async () => { for (const cleanup of postgresCleanups.splice(0)) await cleanup(); });
 import { mkdir, mkdtemp } from 'node:fs/promises';
 import { resolve } from 'node:path';
-import { loadConfig, type Config } from '../../server/config';
-import { KvStore } from '../../server/store/kv-store';
-import { FsPrimitives } from '../../server/store/primitives/fs';
-import { createAdminApp } from '../../server/http/hono-app';
-import { seedStore } from '../../scripts/seed';
+import { loadConfig, type Config } from '../../server/config.js';
+import { KvStore } from '../../server/store/kv-store.js';
+import { FsPrimitives } from '../../server/store/primitives/fs.js';
+import { createAdminApp } from '../../server/http/hono-app.js';
+import { seedStore } from '../../scripts/seed.js';
 export async function adminFixture(seed = false, overrides: Partial<Config> = {}) {
   await mkdir('.cache', { recursive: true });
   const root = await mkdtemp(resolve('.cache/psc-admin-'));

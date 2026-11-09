@@ -1,7 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import { resolve } from 'node:path';
-import type { Role } from '../shared/types';
-import { isPasswordHash } from './auth/password';
+import type { Role } from '../shared/types.js';
+import { isPasswordHash } from './auth/password.js';
 export interface BootstrapUser { username: string; displayName: string; role: Role; passwordHash: string }
 
 export interface Config {

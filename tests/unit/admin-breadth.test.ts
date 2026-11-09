@@ -1,12 +1,12 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
-import { collections } from '../../shared/schema';
-import { EditorState } from '../../admin/src/state/autosave';
-import { duplicateItem, moveItem, docTitle, editorPath, previewPath } from '../../admin/src/state/content';
-import { localDateTime, pacificDateTime } from '../../admin/src/components/Form';
-import { activityText, groupActivity, relativeTime } from '../../admin/src/state/activity';
-import type { AuditEntry } from '../../shared/types';
-import { isNonContentMedia } from '../../server/content/health';
-import { diff } from '../../shared/content-diff';
+import { collections } from '../../shared/schema.js';
+import { EditorState } from '../../admin/src/state/autosave.js';
+import { duplicateItem, moveItem, docTitle, editorPath, previewPath } from '../../admin/src/state/content.js';
+import { localDateTime, pacificDateTime } from '../../admin/src/components/Form/index.js';
+import { activityText, groupActivity, relativeTime } from '../../admin/src/state/activity.js';
+import type { AuditEntry } from '../../shared/types.js';
+import { isNonContentMedia } from '../../server/content/health.js';
+import { diff } from '../../shared/content-diff.js';
 beforeEach(() => { vi.stubGlobal('localStorage', { getItem: () => null, setItem: () => {}, removeItem: () => {} }); });
 afterEach(() => vi.unstubAllGlobals());
 it('uses the right API and recovery namespace for every editable collection and singleton', async () => {

@@ -1,8 +1,8 @@
 import { randomBytes } from 'node:crypto';
 import { neonConfig } from '@neondatabase/serverless';
-import { postgresPool } from '../../server/store/postgres';
-import { PostgresStore, type PostgresOptions } from '../../server/store/postgres-store';
-import { migrate } from '../../scripts/db-migrate';
+import { postgresPool } from '../../server/store/postgres.js';
+import { PostgresStore, type PostgresOptions } from '../../server/store/postgres-store.js';
+import { migrate } from '../../scripts/db-migrate.js';
 export async function postgresFixture(options: PostgresOptions = {}) {
   if (!process.env.DATABASE_URL) throw new Error('Postgres: not run (no env)');
   // Test-only local WS proxy; production always uses Neon's TLS endpoint.

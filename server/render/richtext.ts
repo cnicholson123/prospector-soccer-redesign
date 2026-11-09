@@ -1,6 +1,6 @@
-import { escape, raw, type Html } from './html';
-import { safeUrl } from './links';
-import { isSafeUrl } from '../content/validate';
+import { escape, raw, type Html } from './html.js';
+import { safeUrl } from './links.js';
+import { isSafeUrl } from '../content/validate.js';
 
 /** A small bounded parser, with no raw-HTML or image syntax. */
 function inline(source: string, depth = 0): string {

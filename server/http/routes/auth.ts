@@ -1,13 +1,13 @@
 import type { Hono } from 'hono';
-import { audit, publicUser } from '../../audit';
-import { checkOrigin } from '../../auth/csrf';
-import { verifyPassword, passwordWeak, checkPassword, hashPassword } from '../../auth/password';
-import { failedLogin, lockKey, loginGenerationKey, usernameRateKey, rateLimit, type LockState } from '../../auth/ratelimit';
-import { newSession, cookie } from '../../auth/session';
-import { actor, type AdminEnv } from '../middleware/auth';
-import { ApiError, object, string } from '../middleware/errors';
-import { username as validUsername } from '../../store/identifiers';
-import { permissionsFor } from '../../permissions';
+import { audit, publicUser } from '../../audit.js';
+import { checkOrigin } from '../../auth/csrf.js';
+import { verifyPassword, passwordWeak, checkPassword, hashPassword } from '../../auth/password.js';
+import { failedLogin, lockKey, loginGenerationKey, usernameRateKey, rateLimit, type LockState } from '../../auth/ratelimit.js';
+import { newSession, cookie } from '../../auth/session.js';
+import { actor, type AdminEnv } from '../middleware/auth.js';
+import { ApiError, object, string } from '../middleware/errors.js';
+import { username as validUsername } from '../../store/identifiers.js';
+import { permissionsFor } from '../../permissions.js';
 export function authRoutes(app: Hono<AdminEnv>) {
   app.post('/api/admin/auth/login', async c => {
     const store = c.get('store'), now = c.get('now');

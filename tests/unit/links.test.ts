@@ -3,7 +3,7 @@ import http from 'node:http';
 import https from 'node:https';
 import { lookup } from 'node:dns/promises';
 import { afterEach, expect, it, vi } from 'vitest';
-import { checkLink, checkLinks } from '../../server/content/links';
+import { checkLink, checkLinks } from '../../server/content/links.js';
 vi.mock('node:dns/promises', () => ({ lookup: vi.fn() }));
 afterEach(() => { vi.restoreAllMocks(); vi.useRealTimers(); });
 type Reply = { status: number; location?: string; bytes?: number; length?: number; hang?: boolean };

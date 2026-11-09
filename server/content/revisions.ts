@@ -1,10 +1,10 @@
-import type { Doc, Revision } from '../../shared/types';
-import type { Store } from '../store/types';
-import { audit, type Actor } from '../audit';
-import { documentTitle } from './documents';
-import { createHistoryId } from './ids';
-import { validate, ValidationError } from './validate';
-import { ApiError } from '../http/middleware/errors';
+import type { Doc, Revision } from '../../shared/types.js';
+import type { Store } from '../store/types.js';
+import { audit, type Actor } from '../audit.js';
+import { documentTitle } from './documents.js';
+import { createHistoryId } from './ids.js';
+import { validate, ValidationError } from './validate.js';
+import { ApiError } from '../http/middleware/errors.js';
 export function revision(doc: Doc, actor: Actor, action: Revision['action'], now: Date, extras: Partial<Revision> = {}): Revision {
   return { id: createHistoryId('rev', now), collection: doc.collection, docId: doc.id, docVersion: doc.version, authorId: actor.id, authorName: actor.displayName, at: now.toISOString(), data: structuredClone(doc.draft), action, ...extras };
 }

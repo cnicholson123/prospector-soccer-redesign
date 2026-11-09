@@ -1,7 +1,7 @@
 import { put, get, del, list } from '@vercel/blob';
 import { handleUpload, type HandleUploadBody } from '@vercel/blob/client';
-import type { MediaStorage, Store } from '../types';
-import { mediaPath, retained } from './common';
+import type { MediaStorage, Store } from '../types.js';
+import { mediaPath, retained } from './common.js';
 /** Blob holds binaries only. Metadata, access decisions and history live in Store. */
 export class VercelBlobs implements MediaStorage {
   constructor(private token: string, private store: Store) {}

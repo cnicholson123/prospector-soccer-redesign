@@ -1,4 +1,4 @@
-import type { Store } from '../types';
+import type { Store } from '../types.js';
 export function mediaPath(path: string): string {
   if (!/^media\/(?:incoming\/[a-zA-Z0-9_-]+|\d{4}\/[a-zA-Z0-9_-]+)\/(?:original|web)\.(?:jpg|png|webp|gif|pdf)$/.test(path)) throw new Error('Invalid media path');
   return path;
