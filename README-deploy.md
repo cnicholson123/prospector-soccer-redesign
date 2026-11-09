@@ -1,6 +1,6 @@
 # Deploying Prospector Soccer Club
 
-Phase 6 implements Postgres metadata and private Vercel Blob binaries. It does not deploy the site. The admin editor is still the Phase 0 placeholder: the backend can be exercised locally, but this branch is not ready for club editors until the Phase 7a UI and accessibility checks pass. See [the plan](plans/admin-plan.md), especially §17 and the overriding §18 decisions, and [the progress log](plans/admin-progress.md).
+This branch is deployable as **v1**: the public site renders from the content store, and the admin (Phase 7a) supports sign-in, dashboard, the Events editor with autosave, device preview, publish and per-document history/restore. Breadth editors (pages, teams, board, sponsors, documents, media library, users UI, audit UI) arrive in later phases and deploy as updates. See [the plan](plans/admin-plan.md) (§17–§19 override earlier sections) and [the progress log](plans/admin-progress.md).
 
 ## Project and storage setup
 
