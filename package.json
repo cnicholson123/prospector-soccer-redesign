@@ -20,7 +20,8 @@
     "db:migrate": "tsx --env-file-if-exists=.env scripts/db-migrate.ts",
     "hash-password": "tsx scripts/hash-password.ts",
     "bootstrap": "tsx --env-file-if-exists=.env scripts/bootstrap.ts",
-    "unlock": "tsx --env-file-if-exists=.env scripts/unlock.ts"
+    "unlock": "tsx --env-file-if-exists=.env scripts/unlock.ts",
+    "docs:screenshots": "tsx --env-file-if-exists=.env scripts/capture-manual-screenshots.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.2.0",

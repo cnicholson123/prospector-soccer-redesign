@@ -691,3 +691,58 @@ Owner session, warm application, current 145-document seed, no due schedules, no
 The FS acceptance tests independently count primitive writes and assert zero for warm me/docs/counts/pending/dashboard and HEAD. These figures exclude cold initialization and the explicitly periodic work above. Other history, search, export and mutation routes retain their contracts; mutation query counts vary with selected documents/revisions and are not benchmarked by this table. Database telemetry is available via `server/store/metrics.ts` and the `Server-Timing` auth, ratelimit, settle, handler, db, db_count and db_writes fields. DB duration sums SQL execution time, including overlap; it is not wall-clock handler duration.
 
 Run `npm exec tsx scripts/bench-admin.ts -- http://localhost:3000` with `ADMIN_BENCH_USERNAME` and `ADMIN_BENCH_PASSWORD` in the environment, or set `ADMIN_BENCH_BASE_URL`. It performs one login, warms each endpoint, reports p50/p95 and timing headers, then revokes its own session. `ADMIN_BENCH_ITERATIONS` defaults to 20 (maximum 50). No credentials are embedded or printed. Use local/authorized preview targets; this pass did not benchmark production.
+
+
+## 23. Handoff documentation and screenshot inventory
+
+The handoff adds `HANDOFF.md`, `AGENTS.md`, a one-line `CLAUDE.md` pointer, and `docs/admin-manual.md`. `docs/` now contains documentation and screenshot output, independent of the retired static HTML build. No application behavior or public design is changed by this phase.
+
+Run `npm run docs:screenshots` against a separately running built local FS server at `http://localhost:3000`, using an Owner account supplied through `PSC_DOC_USER` / `PSC_DOC_PASSWORD`. Run `npm run docs:screenshots -- --list` to list captures without credentials or a browser. The script uses installed Chrome, opens real screens/dialogs, and does not submit content, account, publication or restore mutations. Authentication/presence and existing read-side maintenance still run. No browser or image generation is claimed in the sandbox.
+
+Every screenshot referenced by the manual is listed below. Desktop captures are 1280×800. The three phone captures are 390×800. Seeded queues can be empty, and history comparisons may have no differences. These remain truthful captures of the practice store.
+
+| Screenshot output | Viewport |
+| --- | --- |
+| `docs/images/sign-in.png` | 1280×800 |
+| `docs/images/dashboard.png` | 1280×800 |
+| `docs/images/site-settings.png` | 1280×800 |
+| `docs/images/pages.png` | 1280×800 |
+| `docs/images/page-editor.png` | 1280×800 |
+| `docs/images/inline-page-editor.png` | 1280×800 |
+| `docs/images/events-list.png` | 1280×800 |
+| `docs/images/event-editor.png` | 1280×800 |
+| `docs/images/callout-editor.png` | 1280×800 |
+| `docs/images/recreational-fees.png` | 1280×800 |
+| `docs/images/competitive-costs.png` | 1280×800 |
+| `docs/images/team-editor.png` | 1280×800 |
+| `docs/images/result-editor.png` | 1280×800 |
+| `docs/images/board-member-editor.png` | 1280×800 |
+| `docs/images/sponsor-editor.png` | 1280×800 |
+| `docs/images/sponsor-tier-editor.png` | 1280×800 |
+| `docs/images/document-editor.png` | 1280×800 |
+| `docs/images/faq-editor.png` | 1280×800 |
+| `docs/images/media-library.png` | 1280×800 |
+| `docs/images/media-details.png` | 1280×800 |
+| `docs/images/media-focal-point.png` | 1280×800 |
+| `docs/images/publish-review.png` | 1280×800 |
+| `docs/images/publish-schedule.png` | 1280×800 |
+| `docs/images/review-queue.png` | 1280×800 |
+| `docs/images/item-history.png` | 1280×800 |
+| `docs/images/item-restore.png` | 1280×800 |
+| `docs/images/site-history.png` | 1280×800 |
+| `docs/images/site-compare.png` | 1280×800 |
+| `docs/images/site-restore.png` | 1280×800 |
+| `docs/images/audit-log.png` | 1280×800 |
+| `docs/images/users.png` | 1280×800 |
+| `docs/images/add-user.png` | 1280×800 |
+| `docs/images/profile.png` | 1280×800 |
+| `docs/images/command-palette.png` | 1280×800 |
+| `docs/images/keyboard-shortcuts.png` | 1280×800 |
+| `docs/images/product-editor.png` | 1280×800 |
+| `docs/images/bundle-editor.png` | 1280×800 |
+| `docs/images/store-settings.png` | 1280×800 |
+| `docs/images/phone-dashboard.png` | 390×800 |
+| `docs/images/phone-preview.png` | 390×800 |
+| `docs/images/phone-media.png` | 390×800 |
+
+The PNG files must be captured and visually reviewed outside the sandbox before sharing an illustrated manual. Account and audit images should use practice data. The source manual and capture script are delivered independently of the PNGs.

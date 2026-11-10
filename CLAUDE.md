@@ -1,0 +1,1 @@
+See [AGENTS.md](AGENTS.md) for this repository's agent operating instructions, [HANDOFF.md](HANDOFF.md) for hosting setup, and [docs/admin-manual.md](docs/admin-manual.md) for how volunteers use the admin.

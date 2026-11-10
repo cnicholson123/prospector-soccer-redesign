@@ -744,3 +744,35 @@ Deviations and open issues
 
 - This checkout is on `main`, with no local `admin-cms` branch. Creating the requested branch failed with `admin-cms.lock: Operation not permitted` because the sandbox makes `.git` read-only. Edits remain uncommitted in the supplied working tree. No commit, push, deployment, global configuration change or file edit outside the repository was made.
 - The version-2 ticket rollout and awaiting shared content-tag registration are the implementation decisions noted above. The requested four gate items are implemented. Browser and hosted-service acceptance remain open as explicitly reported.
+
+## CHANGELOG — Handoff documentation — 2026-11-09
+
+Shipped against the independent-owner handoff request
+
+- Added `HANDOFF.md` for Phil with account-neutral Vercel/GitHub setup, Neon and private Blob, a complete environment table and secret/hash generation, empty-database migration/seed/bootstrap order, separate Preview storage, cron and region guidance. Includes fresh versus owner-supplied pg_dump data paths, Blob/history transfer gaps, domain/cookie/indexing cutover, TeamSnap, costs, security, backups, limitations and a first-week checklist. Provider plan/domain/region guidance was checked against current official documentation and linked inline.
+- Added concise root `AGENTS.md` with stack/layout, exact local/check/seed commands, NodeNext imports, schema/Store/audit contracts, admin read constraints and documented exceptions, public goldens, design tokens, dependency allow-list, secrets/seed/checkout boundaries and real-Chrome locator/synchronization gotchas. `CLAUDE.md` contains its one-line pointer. README now begins with Start here links and identifies plans as development history.
+- Added `docs/admin-manual.md` covering sign-in and mandatory temporary-password rotation, every content type and program/fee section, click-to-edit, media metadata/replacement/protection, responsive previews, publishing/scheduling/reviews, item/site history and restore, audit, account roles/administration, shortcuts, the closed-checkout catalog and troubleshooting.
+- Added `scripts/capture-manual-screenshots.ts` and `npm run docs:screenshots`. It uses installed Chrome, the fixed local origin, environment-only credentials, Owner preflight, seeded-record discovery and visible-UI waits. It captures 41 referenced screens, 38 at 1280×800 and three at 390×800, and opens confirmation dialogs without submitting mutations. It signs out its own session, avoids credential screenshots and supports a browser-free `--list`. Login/logout, presence and existing maintenance behavior are disclosed. The complete filename inventory is in admin-plan §23.
+- Narrowed the old cut-over test from requiring the entire `docs/` directory to be absent to requiring all eight retired static HTML pages to be absent. This permits the requested manual while retaining the retired-pipeline protection. All public golden assertions and fixtures remain unchanged.
+
+Verification
+
+- Node 22.12.0 `npm run build` — PASS, including the new screenshot script in strict NodeNext checks and the unchanged Preact build.
+- Node 22.12.0 `npm test` on filesystem storage — PASS, 792 tests and 49 service-dependent skips. Includes plain-Node packaging for all three functions, all eight public goldens and the existing filesystem budgets. Final repeated command results are recorded below.
+- `npm run check-facts` — PASS, 122 facts. `npm run test:e2e -- --list` — PASS, 53 tests in 13 files.
+- `npm run docs:screenshots -- --list` — PASS, all 41 paths and dimensions. Static cross-check — PASS, every manual image reference matches the script and plan inventory, with three phone captures. Local document links resolve.
+- Missing-credential preflight — PASS, exits before browser launch with instructions to set `PSC_DOC_USER` and `PSC_DOC_PASSWORD`. PNG capture, actual selector/visual verification and Playwright execution — **not run (sandbox)**. The manual explicitly identifies the pending images, prerequisites and truthful empty-queue views. No PNGs or placeholder screenshots are claimed.
+- Real Neon, private Blob, hosted purge/cron, data import and DNS/deployment — **not run (no env)**. No credentials were acquired. No new dependencies or application code changes.
+
+Decisions, deviations and open issues
+
+- Work remains uncommitted in the supplied `main` checkout. No local `admin-cms` branch exists and prior recorded attempts were blocked by read-only `.git`. No branch mutation, commit, push or deployment was performed.
+- The test-only cut-over adjustment above is required because the user explicitly reintroduces `docs/` as documentation. Historical development records remain intact, with a new screenshot inventory section added to the plan.
+- Current code has a hard-coded concept/illustrative-imagery footer that Site settings cannot remove. The docs distinguish it from the editable utility bar and separate announcement banner. The manual also notes unsupported FAQ display destinations, old Documents-list upload helper copy, media-library trash recovery limits and the existing bounded-verification/presence/cache caveats. These require no application change for this handoff.
+- The screenshots intentionally use existing practice content and open dialogs without making example edits or publishing. Fresh seeds show empty pending/review queues and possibly unchanged history comparisons. A maintainer must run and visually inspect the script outside the sandbox before distributing an illustrated manual. Account/audit screenshots need a privacy review.
+
+Final repeated verification
+
+- Node 22.12.0 `npm run build && npm test` — PASS, 792 passed and 49 explicit service-dependent skips, 45 test files passed and two skipped. The runtime smoke passed for all three plain-Node function packages. A final screenshot-only readiness adjustment is covered by the final build/typecheck below.
+- Final source, including dashboard-ready waits in the capture script — `npm run build && npm test` PASS on Node 22.12.0, 792 passed and 49 no-env skips. Screenshot manifest/manual/plan parity — PASS for 41 names. `git diff --check` — PASS. No tracked changes in `admin/`, `server/`, `shared/`, `api/`, `public/`, `vercel.json` or `package-lock.json`.
+- Read-only demo HTTP check — 200, with Redesign concept, noindex and Merch (concept) present. This confirms the demo response, not a hosted write/media/cron acceptance test.

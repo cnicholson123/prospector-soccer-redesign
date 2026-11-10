@@ -1,3 +1,12 @@
+## Start here
+
+- [HANDOFF.md](HANDOFF.md) — stand the site up from zero on your own Vercel, Neon and Blob accounts, import existing content, go live on the club domain.
+- [Volunteer and admin manual](docs/admin-manual.md) — how editors sign in, edit, preview, publish and manage accounts. Illustrated from `docs/images/`.
+- [AGENTS.md](AGENTS.md) — operating rules and commands for AI coding agents working in this repository.
+- [README-deploy.md](README-deploy.md) — deeper storage, upload-protocol and recovery detail (HANDOFF is the authoritative setup guide).
+
+The rest of this file covers architecture, local development, testing, roles and the operations runbook. `plans/` is development history, including superseded decisions and phase verification logs; current code and tests take precedence.
+
 <img src="public/assets/img/crest-sm.png" width="64" alt="">
 
 # Prospector Soccer Club

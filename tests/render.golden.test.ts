@@ -18,7 +18,9 @@ describe('published seed matches all legacy pages plus concept navigation', () =
 });
 
 it('uses the CMS build with the retired static pipeline absent', async () => {
-  for (const path of ['build.py', 'src', 'docs', 'assets', 'scripts/export-golden.ts']) {
+  // docs/ now holds the volunteer manual. Keep every retired static page absent.
+  const retiredPages = pageNames.filter(page => page !== 'shop').map(page => `docs/${page === 'home' ? 'index' : page}.html`);
+  for (const path of ['build.py', 'src', 'assets', 'scripts/export-golden.ts', ...retiredPages]) {
     await expect(access(path)).rejects.toMatchObject({ code: 'ENOENT' });
   }
   const pkg = JSON.parse(await readFile('package.json', 'utf8'));
