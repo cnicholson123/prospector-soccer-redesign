@@ -197,7 +197,7 @@ If you want the content currently on the owner's deployment instead of the seed,
 
    It contains all content, drafts, revisions, publications, snapshots, the audit log, **user accounts with password hashes**, sessions and rate-limit state. Treat it as a secret: transfer it over an encrypted channel and delete copies when done.
 
-2. **Your own Owner account, created before the dump.** Ask the owner to add you in **Users → Add user** with role Owner, sign in to their deployment with the temporary password, change it in **Profile**, and only then have them take the dump. Your account and password hash then travel inside the dump, so you can sign in to your own deployment immediately. (Bootstrap will not help here: it only creates accounts when the user table is empty.)
+2. **Your own Owner account inside the dump.** Phil already has an Owner account (username `Phil`) on the current deployment, so this is already satisfied. Before the dump is taken, sign in to the current deployment and change your password in **Profile** to one only you know (the current one was chosen by the previous owner). Your account and password hash then travel inside the dump, so you can sign in to your own deployment immediately. Anyone else who needs access later can be added from **Users → Add user**. (Bootstrap will not help after a restore: it only creates accounts when the user table is empty.)
 
 3. **The git commit** the owner's deployment was built from, so your first deployment matches the schema of the dump. Any later commit on `main` is fine as long as you run `npm run db:migrate` afterwards.
 
@@ -235,7 +235,7 @@ Strip the leading `/media/` to get each Blob pathname. Upload every file into yo
 
 ### After the import
 
-- Deploy with **your** environment (step 5) and sign in with the Owner account the owner created for you.
+- Deploy with **your** environment (step 5) and sign in with your existing `Phil` Owner account (the password you set before the dump).
 - In **Users**, deactivate the previous owner's accounts and any volunteer accounts that should not carry over. You must be an active Owner yourself first; the last active Owner cannot be removed.
 - Reset passwords for volunteers who continue, or ask them to change their own in **Profile**.
 - Secrets that must **not** be reused from the old deployment: `SESSION_SECRET`, `CRON_SECRET`, `DATABASE_URL`, `BLOB_READ_WRITE_TOKEN`, the owner's `ADMIN_BOOTSTRAP_USERS` value (it contains their hashes; set your own as in step 4, even though it will not run), and any Vercel or Neon API tokens. Generate fresh values for everything.
