@@ -17,7 +17,10 @@ export function shopImage(ctx: ShopContext, doc: DocumentView, path: string, pri
   const src = asset?.url ?? doc.image(path), small = asset?.small;
   return html`<img src="${primary ? src : small || src}"${small ? html` srcset="${small} 480w, ${src} ${asset.width}w" sizes="${primary ? '(min-width: 900px) 50vw, 100vw' : '(min-width: 1100px) 33vw, (min-width: 600px) 50vw, 100vw'}"` : html``} alt="${doc.text(path + '.alt')}" width="${asset?.width || 1200}" height="${asset?.height || 1200}" loading="${primary ? 'eager' : 'lazy'}"${primary ? html` fetchpriority="high"` : html``}${doc.imageStyle(path)}>`;
 }
-export function displayPrice(doc: DocumentView): string { return doc.value('price') ? doc.money('price') : 'Price pending'; }
+export function displayPrice(doc: DocumentView, path = 'price'): string {
+  const price = doc.value(path) as { amount: number; max?: number } | undefined;
+  return price ? money(toCents(price)) + (typeof price.max === 'number' ? `–${money(toCents({ amount: price.max }))}` : '') : 'Price pending';
+}
 export function productCard(ctx: ShopContext, product: DocumentView) {
   const state = productState(ctx, product), first = product.list('images')[0];
   return html`<article class="product-card card"><a href="/shop/p/${product.text('slug')}">${first ? shopImage(ctx, first, 'image') : html``}<div class="product-card__body"><p class="eyebrow">${product.text('tagline')}</p><h3>${product.text('name')}</h3><p class="product-card__price">${displayPrice(product)}${product.value('youthPrice') ? html` <span>· youth ${money(toCents(product.value('youthPrice') as { amount: number }))}</span>` : html``}</p>${pocNote()}<span class="pill pill--soft-gold">${state.label}</span></div></a></article>`;

@@ -552,6 +552,7 @@ body.menu-open { overflow: hidden; }
 .medal { flex: none; position: relative; width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font: 800 1.6rem/1 var(--font-display); color: #3a2a00; background: radial-gradient(circle at 35% 30%, #FFF0B3, var(--gold-500) 55%, var(--gold-600)); box-shadow: inset 0 0 0 4px rgb(255 255 255 / .35), 0 6px 16px rgb(217 158 0 / .35); }
 .medal sup { font-size: .5em; margin-left: 1px; top: -.6em; position: relative; vertical-align: baseline; }
 .medal--silver { color: #2d333b; background: radial-gradient(circle at 35% 30%, #fff, #C9D1DA 55%, #8E99A6); box-shadow: inset 0 0 0 4px rgb(255 255 255 / .45), 0 6px 16px rgb(80 90 100 / .3); }
+.medal--bronze { color: #603413; background: radial-gradient(circle at 35% 30%, #F6E9DD, #CD8A50 55%, #9a5a22); box-shadow: inset 0 0 0 4px rgb(255 255 255 / .35), 0 6px 16px rgb(154 90 34 / .3); }
 .result__team { font: 800 1.5rem/1.05 var(--font-display); text-transform: uppercase; color: var(--blue-900); margin: 0; }
 .section--navy .result__team { color: #fff; }
 .result__meta { margin: 4px 0 0; font-size: var(--fs-sm); color: var(--slate); line-height: 1.4; }

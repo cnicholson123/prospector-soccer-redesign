@@ -31,6 +31,9 @@ describe('escaped HTML and constrained Markdown', () => {
   });
   it('retains literal delimiters and supports escaped Markdown punctuation', () => {
     expect(String(richtext('\\*literal\\* and **unfinished', true))).toBe('*literal* and **unfinished');
+    expect(String(richtext('A [literal and [link](/resources)', true))).toBe('A [literal and <a href="/resources">link</a>');
+    expect(String(richtext('[unfinished] then [link](/resources)', true))).toBe('[unfinished] then <a href="/resources">link</a>');
+    expect(String(richtext('[escaped \\[bracket\\]](/resources)', true))).toBe('<a href="/resources">escaped [bracket]</a>');
   });
   it('cleans legacy links and rejects unsafe URLs again at render time', () => {
     expect(cleanUrl('index.html#events')).toBe('/#events');

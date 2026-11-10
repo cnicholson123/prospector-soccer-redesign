@@ -6,6 +6,7 @@ import { profileEmail as email, userChanges } from '../../auth/profile.js';
 import { audit, publicUser } from '../../audit.js';
 import { hashPassword } from '../../auth/password.js';
 import { username } from '../../store/identifiers.js';
+import { can } from '../../permissions.js';
 import { requirePermission } from '../middleware/permission.js';
 import { actor, type AdminEnv } from '../middleware/auth.js';
 import { ApiError, object, string } from '../middleware/errors.js';
@@ -20,7 +21,9 @@ export function userRoutes(app: Hono<AdminEnv>) {
     const input = object(await c.req.json());
     if ('password' in input) throw new ApiError(422, 'validation', 'Passwords are generated automatically');
     const name = username(input.username), password = randomBytes(18).toString('base64url');
-    const user: User = { id: `usr_${randomBytes(12).toString('base64url')}`, username: name, displayName: string(input.displayName ?? name, 'displayName', 100), email: email(input.email), role: role(input.role), passwordHash: await hashPassword(password), active: true, passwordWeak: false, mustChangePassword: true, createdAt: c.get('now').toISOString(), createdBy: c.get('user').id };
+    const targetRole = role(input.role);
+    if (!can(c.get('user'), 'users.manage', { role: targetRole })) throw new ApiError(403, 'forbidden', 'Role exceeds your permission');
+    const user: User = { id: `usr_${randomBytes(12).toString('base64url')}`, username: name, displayName: string(input.displayName ?? name, 'displayName', 100), email: email(input.email), role: targetRole, passwordHash: await hashPassword(password), active: true, passwordWeak: false, mustChangePassword: true, createdAt: c.get('now').toISOString(), createdBy: c.get('user').id };
     await c.get('store').changeUser(user, c.get('user').id, audit(actor(c), 'users.create', { meta: { userId: user.id, role: user.role } }, c.get('now')), null);
     return c.json({ user: publicUser(user), temporaryPassword: password }, 201);
   });
@@ -39,6 +42,8 @@ export function userRoutes(app: Hono<AdminEnv>) {
   app.post('/api/admin/users/:id/reset-password', async c => {
     const user = await c.get('store').getUser(c.req.param('id'));
     if (!user) throw new ApiError(404, 'not_found', 'User not found');
+    if (user.id === c.get('user').id) throw new ApiError(403, 'forbidden', 'Use your profile to change your own password');
+    if (!can(c.get('user'), 'users.manage', { role: user.role })) throw new ApiError(403, 'forbidden', 'Role exceeds your permission');
     const password = randomBytes(18).toString('base64url');
     const next = { ...user, passwordHash: await hashPassword(password), passwordChangedAt: c.get('now').toISOString(), passwordWeak: false, mustChangePassword: true, authVersion: (user.authVersion ?? 0) + 1 };
     await c.get('store').changeUser(next, c.get('user').id, audit(actor(c), 'users.reset_password', { meta: { userId: user.id } }, c.get('now')), user);

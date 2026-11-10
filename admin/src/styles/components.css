@@ -58,7 +58,7 @@
 .content-title small { color: var(--muted); }
 .row-menu { position: relative; }
 .row-menu summary { font-size: 11px; min-height: 44px; padding: 12px 6px; }
-.row-menu[open] > div { min-width: 130px; display: flex; flex-direction: column; background: white; border: 1px solid var(--border); border-radius: 8px; padding: 5px; box-shadow: var(--shadow); }
+.row-menu[open] > div { position: absolute; right: 0; top: 100%; z-index: 5; min-width: 130px; display: flex; flex-direction: column; background: white; border: 1px solid var(--border); border-radius: 8px; padding: 5px; box-shadow: var(--shadow); }
 .row-menu a { padding: 12px 10px; font-size: 12px; font-weight: 700; }
 .sponsor-monogram { display: grid; place-items: center; background: var(--cream); border: 1px solid var(--border); border-radius: 8px; width: 56px; height: 56px; flex-shrink: 0; font: 600 30px var(--font-display); }
 .sponsor-monogram img { max-width: 48px; max-height: 48px; object-fit: contain; }

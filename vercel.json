@@ -55,7 +55,7 @@
       "destination": "/admin/index.html"
     },
     {
-      "source": "/admin/:path*",
+      "source": "/admin/((?!assets(?:/|$)).*)",
       "destination": "/admin/index.html"
     },
     {

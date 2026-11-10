@@ -184,6 +184,8 @@ Under **Source**, set **Source type**:
 
 **External** opens the link in a new tab. Create or save, preview Resources, publish. To show the document on the Recreational, Competitive or Referees page as well, add it to that page's **Documents** field and publish the page. (The Documents list still shows an old line saying uploads are coming later; ignore it, uploads work.)
 
+The **policies** category does not appear on Resources. Add a policy document to a page's document list to display it; choosing that category alone does not place it on a page.
+
 ![Document source and library fields](../docs/images/document-editor.png)
 
 ### FAQs
@@ -223,7 +225,7 @@ In Media details, make your changes and choose **Save media details**. Unlike or
 
 To swap a file everywhere it is used, open Media details, save any outstanding edits, choose **Replace file** and pick a file of the same kind. The item keeps its identity and placements. The replacement is a draft until you publish it; earlier published files stay available in history.
 
-**Used by** lists every draft, published and scheduled use. **Delete media** (Editors and above) asks for confirmation and refuses while the file is in use; remove or replace those uses and publish first. Deleted items are not shown in the library again, so ask the website maintainer if something was deleted by mistake. For an image that is in use, use Replace rather than deleting and re-uploading.
+**Used by** lists every draft, published and scheduled use. **Delete media** (Editors and above) asks for confirmation and refuses while the file is in use; remove or replace those uses and publish first. To recover a deleted item, choose **Trash** in the Media filter, open its details and choose **Restore media**. The item returns to the library as a draft; publish any changes you want live. For an image that is in use, use Replace rather than deleting and re-uploading.
 
 Each person can upload about 256 MB per rolling 24 hours, counting failed and abandoned attempts. If you hit the limit, wait or ask the maintainer.
 
@@ -338,7 +340,7 @@ Everyone manages their own profile, password and sessions. Nobody can change the
 ### Reset, deactivate or change access
 
 - **Edit user** changes name, username, email or role (a role change signs them out).
-- **Reset password** issues a new one-time temporary password and signs them out everywhere. They must set a new password at next sign-in.
+- **Reset password** issues a new one-time temporary password, clears their login lock and signs them out everywhere. They must set a new password at next sign-in. Change your own password in Profile.
 - **Sign out everywhere** ends all their sessions without changing the password.
 - **Deactivate** when someone leaves: they can no longer sign in, but their name stays on past changes. **Reactivate** restores access with their old password; reset it too if in doubt.
 

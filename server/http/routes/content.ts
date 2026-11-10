@@ -125,8 +125,13 @@ export function cronRoutes(app: Hono<AdminEnv>) {
     const secret = c.get('config').cronSecret, authorization = c.req.header('authorization') ?? '';
     const expected = `Bearer ${secret}`;
     if (!secret || !safeEqual(authorization, expected)) throw new ApiError(401, 'unauthenticated', 'Invalid cron credential');
-    await collectIncoming(c.get('blobs'), c.get('now'), c.get('store'));
-    await c.get('store').deleteExpiredSessions(c.get('now').toISOString());
-    return c.json(await settleSchedules(c.get('store'), c.get('now')));
+    const store = c.get('store'), now = c.get('now'), errors: unknown[] = [];
+    let settled: Awaited<ReturnType<typeof settleSchedules>> | undefined;
+    // Every stage is attempted, with publication taking priority over housekeeping.
+    try { settled = await settleSchedules(store, now); } catch (error) { errors.push(error); }
+    try { await store.deleteExpiredSessions(now.toISOString()); } catch (error) { errors.push(error); }
+    try { await collectIncoming(c.get('blobs'), now, store); } catch (error) { errors.push(error); }
+    if (errors.length) throw new AggregateError(errors, 'Cron settlement or maintenance failed');
+    return c.json(settled!);
   });
 }

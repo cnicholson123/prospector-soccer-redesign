@@ -45,6 +45,7 @@ export class KvStore implements Store {
     const lock = this.exclusive;
     this.exclusive = operation => lock(async () => { await this.resumeMutation(); return operation(); });
   }
+  async close(): Promise<void> {}
   private async read<T>(key: string): Promise<T | null> { return await this.kv.get(key) as T | null; }
   private async all<T>(prefix: string): Promise<T[]> {
     const values = await Promise.all((await this.kv.list(prefix)).map(key => this.read<T>(key)));
@@ -487,7 +488,7 @@ export class KvStore implements Store {
       // Check name collision before any audit or user writes.
       const named = await this.getUserByUsername(user.username);
       if (named && named.id !== user.id) throw new ApiError(409, 'conflict', 'Username already exists');
-      await this.saveUser(user, entry);
+      await this.saveUser(user, entry, !!old && old.passwordHash !== user.passwordHash);
     });
   }
   sealWorkingRevisions(authorId: string, before: string, entry: AuditEntry): Promise<void> {
@@ -506,7 +507,7 @@ export class KvStore implements Store {
     return id ? this.getUser(id) : null;
   }
   putUser(user: User): Promise<void> { return this.exclusive(() => this.saveUser(user)); }
-  private async saveUser(user: User, entry?: AuditEntry): Promise<void> {
+  private async saveUser(user: User, entry?: AuditEntry, unlock = false): Promise<void> {
     await this.readyToMutate();
     username(user.username);
     const nameKey = `users-by-name/${part(user.username.toLowerCase())}.json`;
@@ -515,6 +516,11 @@ export class KvStore implements Store {
     const old = await this.getUser(user.id);
     const writes = [{ key: `users/${part(user.id)}.json`, value: user as unknown }, { key: nameKey, value: user.id as unknown }];
     const deletes = old && old.username.toLowerCase() !== user.username.toLowerCase() ? [`users-by-name/${part(old.username.toLowerCase())}.json`] : [];
+    if (unlock) {
+      const key = loginGenerationKey(user.username);
+      writes.push({ key: `meta/${part(key)}.json`, value: Number(await this.getMeta(key) ?? 0) + 1 });
+      deletes.push(`ratelimit/${part(usernameRateKey(user.username))}.json`);
+    }
     if (entry) { await this.checkAudit(entry); writes.unshift({ key: auditKey(entry), value: entry }); }
     if (old && (old.authVersion ?? 0) !== (user.authVersion ?? 0)) for (const session of await this.listSessions(user.id)) deletes.push(`sessions/${part(session.hash)}.json`);
     await this.kv.put(mutationKey, { writes, deletes } satisfies MutationJournal);

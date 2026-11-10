@@ -116,7 +116,7 @@ export const collections: Record<CollectionName, Collection> = {
   sponsors: collection('sponsors', 'Sponsor', 'Sponsors', 'name', { name: text({ required: true }), tier: refs('sponsorTiers', false, true), url, logo: image, active: { type: 'boolean', default: true } }, 'sponsors'),
   sponsorTiers: collection('sponsorTiers', 'Sponsor tier', 'Sponsor tiers', 'name', { name: text({ required: true }), program: select(['rec', 'comp']), price: { type: 'money' }, benefits: strings, featured: { type: 'boolean' }, showOnSponsorsPage: { type: 'boolean' } }, 'sponsors'),
   documents: collection('documents', 'Document', 'Documents', 'title', {
-    title: text({ required: true }), description: text(), category: select(['club', 'safety', 'coaching', 'forms', 'policies'], true), kind: select(['pdf', 'form', 'link']),
+    title: text({ required: true }), description: text(), category: { ...select(['club', 'safety', 'coaching', 'forms', 'policies'], true), help: 'Policies do not appear in Resources. Add policy documents to a page’s document list to display them.' }, kind: select(['pdf', 'form', 'link']),
     showInLibrary: { type: 'boolean', default: true },
     source: object({ mode: { ...select(['url', 'upload'], true), label: 'Source type' }, url, fileId: { type: 'file', label: 'Document file' } }, { required: true }), external: { type: 'boolean' },
   }, 'resources'),

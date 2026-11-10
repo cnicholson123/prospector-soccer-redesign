@@ -16,7 +16,9 @@ export function Preview({ version, id, collection = 'events', draft = {}, focuse
         const path = editPath(collection, draft, target.path)?.formPath;
         if (target.collection !== collection || target.id !== id || !path || (path !== focusedPath && !focusedPath.startsWith(path + '.'))) continue;
         node.dataset.previewFocus = 'true'; node.style.outline = '3px solid #F2B705'; node.style.outlineOffset = '4px';
-        node.scrollIntoView({ block: 'center', behavior: 'instant' }); break;
+        const view = iframe.current?.contentWindow;
+        if (view) view.scrollTo({ top: Math.max(0, view.scrollY + node.getBoundingClientRect().top - (view.innerHeight - node.getBoundingClientRect().height) / 2), behavior: 'instant' });
+        break;
       } catch { /* Ignore malformed annotations. */ }
     }
   }

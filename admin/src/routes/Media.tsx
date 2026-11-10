@@ -22,7 +22,7 @@ export function MediaDetails({ id, close, updated }: { id: string; close: () => 
     void api<{ usage: Usage[] }>(`/media/${id}/usage`).then(data => { if (active) { setUsage(data.usage); setUsageLoaded(true); } }).catch(e => { if (active) setError(message(e)); });
     return () => { active = false; };
   }, [id, retry]);
-  const editable = allowed('media.edit') && (session.value?.user.role !== 'Contributor' || doc?.draft.uploadedBy === session.value.user.id);
+  const editable = !doc?.trashedAt && allowed('media.edit') && (session.value?.user.role !== 'Contributor' || doc?.draft.uploadedBy === session.value.user.id);
   const dirty = !!doc && (alt !== String(doc.draft.alt ?? '') || caption !== String(doc.draft.caption ?? '') || point.x !== focal(doc).x || point.y !== focal(doc).y);
   function save(): Promise<boolean> {
     if (saving.current) return saving.current;
@@ -45,6 +45,14 @@ export function MediaDetails({ id, close, updated }: { id: string; close: () => 
     catch (e) { setError(message(e)); if (e instanceof ApiError && e.details && typeof e.details === 'object' && 'usage' in e.details) { setUsage((e.details as { usage: Usage[] }).usage); setUsageLoaded(true); } }
     finally { setBusy(false); setConfirm(false); }
   }
+  async function restore() {
+    if (!doc || busy) return; setBusy(true); setError('');
+    try {
+      const data = await api<{ doc: MediaDoc }>(`/media/${id}/untrash`, 'POST', { baseVersion: doc.version });
+      accept(data.doc); changed(); updated(); notify('Media restored to library'); close();
+    } catch (e) { setError(message(e)); }
+    finally { setBusy(false); }
+  }
   return <Dialog title="Media details" drawer close={() => dirty ? setDiscard(true) : close()} dismissible={!busy}>
     {error && <div role="alert" class="error-box">{error}<button class="text-button" disabled={busy || dirty} onClick={() => setRetry(n => n + 1)}>Reload details</button>{dirty && <p>Your changes are still here. Close and reopen to discard them and load the latest version.</p>}</div>}
     {discard && <section class="notice" role="alert"><h3>Discard unsaved details?</h3><p>Your saved media will stay as it is.</p><div class="dialog-actions"><button class="button secondary" onClick={() => setDiscard(false)}>Keep editing</button><button class="button" onClick={close}>Discard and close</button></div></section>}
@@ -59,7 +67,7 @@ export function MediaDetails({ id, close, updated }: { id: string; close: () => 
       <section class="media-usage"><h3>Used by</h3>{!usageLoaded ? <p role="status">Loading usage…</p> : usage.length ? <ul>{usage.map((item, index) => <li key={index}><a href={editorPath(item.collection, item.id)}>{item.title}</a><small>{item.path}</small></li>)}</ul> : <p>No current uses. Published history keeps its files.</p>}<small>Includes drafts, published content and scheduled content.</small></section>
       {editable && <section class="media-replace"><h3>Replace file</h3><p>Keep this library item and its placements. Publish the media change to update live pages. Earlier published files are retained.</p>{dirty && <p>Save your details before replacing the file.</p>}
         {!replacing ? <button class="button secondary" disabled={busy || dirty} onClick={() => setReplacing(true)}>Replace file</button> : <MediaUpload kind={isImage(doc) ? 'images' : 'documents'} replace={doc} busyChanged={setBusy} uploaded={next => { accept(next); setBusy(false); setReplacing(false); updated(); notify('Replacement saved as a draft'); }} />}</section>}
-      {allowed('content.manage') && <section class="media-delete"><h3>Delete media</h3><p>Files in use cannot be deleted. Published history remains available.</p>{confirm ? <div class="dialog-actions"><button class="button secondary" disabled={busy} onClick={() => setConfirm(false)}>Keep media</button><button class="button danger" disabled={busy} onClick={() => void remove()}>Confirm delete</button></div> : <button class="button secondary danger-text" disabled={busy || dirty} onClick={() => setConfirm(true)}>Delete media</button>}</section>}
+      {allowed('content.manage') && (doc.trashedAt ? <section><h3>Media in trash</h3><p>Restore this item to use it in the library again.</p><button class="button" disabled={busy} onClick={() => void restore()}>Restore media</button></section> : <section class="media-delete"><h3>Delete media</h3><p>Files in use cannot be deleted. Published history remains available.</p>{confirm ? <div class="dialog-actions"><button class="button secondary" disabled={busy} onClick={() => setConfirm(false)}>Keep media</button><button class="button danger" disabled={busy} onClick={() => void remove()}>Confirm delete</button></div> : <button class="button secondary danger-text" disabled={busy || dirty} onClick={() => setConfirm(true)}>Delete media</button>}</section>)}
       {dirty && <p role="status">Unsaved media details</p>}
     </>}
   </Dialog>;
@@ -67,7 +75,7 @@ export function MediaDetails({ id, close, updated }: { id: string; close: () => 
 export function Media({ id, refresh }: { id?: string; refresh: number }) {
   const { route } = useLocation(); const [revision, setRevision] = useState(0);
   return <><header class="page-heading"><div><span class="eyebrow">Your club library</span><h1>Media</h1><p>Images and documents, ready for every page.</p></div></header>
-    <MediaLibrary refresh={refresh + revision} choose={doc => route(`/admin/media/${doc.id}`)} />
+    <MediaLibrary allowTrash refresh={refresh + revision} choose={doc => route(`/admin/media/${doc.id}`)} />
     {id && <MediaDetails key={id} id={id} close={() => route('/admin/media')} updated={() => setRevision(n => n + 1)} />}
   </>;
 }

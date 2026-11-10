@@ -12,7 +12,7 @@ beforeEach(() => {
   vi.stubGlobal('localStorage', { getItem: (key: string) => storage.get(key) ?? null, setItem: (key: string, value: string) => storage.set(key, value), removeItem: (key: string) => storage.delete(key) });
   session.value = { user: { id: 'usr_test' } as never, csrfToken: 'csrf', permissions: ['content.edit'], passwordWeak: false };
 });
-afterEach(() => { vi.unstubAllGlobals(); session.value = null; });
+afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); session.value = null; });
 it('preserves edits typed while an earlier autosave is in flight and flushes the latest draft', async () => {
   const fetch = vi.fn().mockResolvedValueOnce(reply({ doc: original })); vi.stubGlobal('fetch', fetch);
   const state = new EditorState(original.id); await state.load();
@@ -42,7 +42,7 @@ it('offers recovery per user/document and blocks saving until the editor chooses
   state.recover(); expect(state.draft.value.title).toBe('Recovered'); expect(state.dirty.value).toBe(true); state.dispose();
 });
 it('validates schema fields and shows labelled conflict differences', async () => {
-  const state = new EditorState('new'); expect(await state.save()).toBe(false); expect(state.errors.value.some(e => e.path === 'title')).toBe(true);
+  const state = new EditorState('new'); expect(await state.save(true)).toBe(false); expect(state.errors.value.some(e => e.path === 'title')).toBe(true);
   expect(eventDiff({ showOnHome: true }, { showOnHome: false })[0]).toMatchObject({ path: 'showOnHome', before: true, after: false }); state.dispose();
 });
 it('ignores a delayed refresh that predates a local save', async () => {
@@ -107,4 +107,67 @@ it('keeps flushing when edits arrive during each of two successive saves', async
   finishes[2](reply({ doc: { ...original, version: 4, draft: { ...original.draft, title: 'Third' } } }));
   expect(await flush).toBe(true); expect(state.dirty.value).toBe(false);
   expect(state.doc.value?.draft.title).toBe('Third'); state.dispose();
+});
+
+it('never creates a document when flushing an untouched new form or an existing record still loading', async () => {
+  const fetch = vi.fn(); vi.stubGlobal('fetch', fetch);
+  const fresh = new EditorState('new', 'products'); await fresh.load();
+  expect(fresh.isNew).toBe(true); expect(fresh.dirty.value).toBe(false);
+  expect(await fresh.flush()).toBe(true); expect(fetch).not.toHaveBeenCalled();
+  let finish!: (value: Response) => void;
+  fetch.mockImplementationOnce(() => new Promise<Response>(resolve => { finish = resolve; }));
+  const existing = new EditorState('prod_existing', 'products'); const loading = existing.load();
+  expect(existing.isNew).toBe(false); expect(existing.loading.value).toBe(true);
+  expect(existing.dirty.value).toBe(false); expect(await existing.flush()).toBe(true);
+  expect(await existing.save(true)).toBe(false); expect(fetch).toHaveBeenCalledTimes(1);
+  existing.dispose(); finish(reply({ doc: { ...original, collection: 'products', id: 'prod_existing' } })); await loading;
+  expect(existing.doc.value).toBeNull(); fresh.dispose();
+});
+
+it('never creates after a failed existing-record load', async () => {
+  const fetch = vi.fn().mockResolvedValue(reply({ error: { message: 'Unavailable' } }, 503)); vi.stubGlobal('fetch', fetch);
+  const state = new EditorState(original.id);
+  await expect(state.load()).rejects.toThrow('Unavailable');
+  state.update('title', 'Local edit');
+  expect(await state.save(true)).toBe(false); expect(fetch).toHaveBeenCalledTimes(1); state.dispose();
+});
+
+it('stores the base version and warns before recovering a draft older than the current server version', async () => {
+  const fetch = vi.fn().mockResolvedValueOnce(reply({ doc: original })).mockResolvedValueOnce(reply({ doc: { ...original, version: 3 } })); vi.stubGlobal('fetch', fetch);
+  const first = new EditorState(original.id); await first.load(); first.update('title', 'Unsaved local title');
+  expect(JSON.parse(storage.get('psc_draft_usr_test_events_evt_sample')!)).toMatchObject({ format: 1, baseVersion: 1, docId: original.id });
+  first.dispose(); invalidateCache();
+  const next = new EditorState(original.id); await next.load();
+  expect(next.recoveryVersion.value).toBe(1); expect(next.recoveryWarning.value).toContain('server has changed');
+  expect(await next.flush()).toBe(false); next.recover();
+  expect(next.doc.value?.version).toBe(3); expect(next.draft.value.title).toBe('Unsaved local title'); next.dispose();
+});
+
+it('reopens an interrupted creation by its server id and saves later keystrokes with PUT', async () => {
+  const first = new EditorState('new'); await first.load(); first.update('title', 'First title');
+  let finish!: (value: Response) => void;
+  const fetch = vi.fn().mockImplementationOnce(() => new Promise<Response>(resolve => { finish = resolve; })); vi.stubGlobal('fetch', fetch);
+  const creating = first.save(true); first.update('title', 'Later title');
+  finish(reply({ doc: { ...original, draft: { ...first.draft.value, title: 'First title' } } })); expect(await creating).toBe(true);
+  expect(first.dirty.value).toBe(true); first.dispose();
+  const saved = { ...original, draft: { ...first.draft.value, title: 'First title' } };
+  fetch.mockResolvedValueOnce(reply({ doc: saved }));
+  const next = new EditorState('new'); await next.load();
+  expect(next.doc.value?.id).toBe(original.id); expect(next.recovery.value?.title).toBe('Later title'); next.recover();
+  fetch.mockResolvedValueOnce(reply({ doc: { ...saved, draft: next.draft.value, version: 2 } }));
+  expect(await next.flush()).toBe(true);
+  expect(fetch.mock.calls.map(call => call[1].method)).toEqual(['POST', 'GET', 'PUT']);
+  expect(fetch.mock.calls[2][0]).toBe(`/api/admin/docs/events/${original.id}`);
+  next.dispose();
+});
+
+it.each([413, 502])('keeps non-JSON status %s failures local and bounds automatic retries', async status => {
+  vi.useFakeTimers();
+  const fetch = vi.fn().mockImplementation(() => Promise.resolve(new Response('<html>proxy error</html>', { status }))); vi.stubGlobal('fetch', fetch);
+  const state = new EditorState(original.id); state.accept(original); state.update('title', 'Unsaved edit');
+  expect(await state.save()).toBe(false); await vi.runAllTimersAsync();
+  expect(fetch).toHaveBeenCalledTimes(status === 413 ? 1 : 4);
+  expect(state.dirty.value).toBe(true); expect(state.status.value).toBe('Request failed. Please try again.');
+  expect(JSON.parse(storage.get('psc_draft_usr_test_events_evt_sample')!).draft.title).toBe('Unsaved edit');
+  state.dispose();
 });

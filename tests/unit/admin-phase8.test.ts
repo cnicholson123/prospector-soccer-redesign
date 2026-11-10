@@ -79,6 +79,10 @@ it('keeps failed conflict refreshes visible and blocks publishing stale selectio
   await vi.waitFor(() => expect(words(render())).toContain('Network unavailable'));
   expect(words(render())).toContain(publishConflictMessage);
   expect(nodes(render()).find(n => n.type === 'button' && words(n.props.children as ComponentChildren).startsWith('Publish 0'))?.props.disabled).toBe(true);
+  (nodes(render()).find(n => n.props.id === 'publish-note')!.props.onInput as Function)({ currentTarget: { value: 'Edited note' } });
+  (nodes(render()).find(n => n.type === 'button' && n.props.children === 'Select all')!.props.onClick as Function)();
+  expect(words(render())).toContain('Network unavailable');
+  expect(nodes(render()).find(n => n.type === 'button' && words(n.props.children as ComponentChildren).startsWith('Publish 1'))?.props.disabled).toBe(true);
 });
 it('offers Contributors review requests but neither publication nor scheduling, and Viewers read-only diffs', () => {
   session.value!.permissions = ['content.read', 'content.edit'];
@@ -206,4 +210,22 @@ it('removes media from the selection when changing from publish to request revie
   (nodes(render()).find(n => n.props.id === 'publish-action')!.props.onChange as Function)({ currentTarget: { value: 'review' } });
   const checkbox = nodes(render()).find(n => n.props.type === 'checkbox')!;
   expect(checkbox.props).toMatchObject({ checked: false, disabled: true });
+});
+
+it('lets an editor correct an invalid schedule and retry without reloading pending changes', async () => {
+  const close = vi.fn();
+  const fetch = vi.fn().mockResolvedValueOnce(response({ docs: [pending()] })).mockResolvedValueOnce(response({ ok: true })); vi.stubGlobal('fetch', fetch);
+  const render = () => { hooks.cursor = 0; return PublishTray({ close, published: vi.fn(), initialMode: 'schedule' }); };
+  render(); hooks.effects[0](); await vi.waitFor(() => expect(hooks.values[0]).toHaveLength(1));
+  const at = () => nodes(render()).find(node => node.props.id === 'publish-at')!;
+  (at().props.onInput as Function)({ currentTarget: { value: '2000-01-01T12:00' } });
+  const submit = () => nodes(render()).find(node => node.type === 'button' && words(node.props.children as ComponentChildren) === 'Schedule 1 change')!;
+  (submit().props.onClick as Function)();
+  await vi.waitFor(() => expect(words(render())).toContain('Choose a future date'));
+  expect(submit().props.disabled).toBe(true);
+  (at().props.onInput as Function)({ currentTarget: { value: '2099-01-01T12:00' } });
+  expect(submit().props.disabled).toBe(false);
+  (submit().props.onClick as Function)();
+  await vi.waitFor(() => expect(close).toHaveBeenCalledOnce());
+  expect(fetch).toHaveBeenCalledTimes(2); expect(fetch.mock.calls[1][0]).toBe('/api/admin/schedule');
 });

@@ -27,7 +27,13 @@ function inline(source: string, depth = 0): string {
       }
     }
     if (rest[0] === '[') {
-      const labelEnd = source.indexOf('](', position + 1);
+      // An unmatched opening bracket must not consume a later link's label.
+      let labelEnd = position + 1;
+      for (; labelEnd < source.length; labelEnd++) {
+        if (source[labelEnd] === '\\') { labelEnd++; continue; }
+        if (source[labelEnd] === '[' || source[labelEnd] === ']') break;
+      }
+      if (source.slice(labelEnd, labelEnd + 2) !== '](') labelEnd = -1;
       if (labelEnd !== -1) {
         let cursor = labelEnd + 2;
         let balance = 1;

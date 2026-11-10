@@ -122,7 +122,7 @@ export function validate(collection: CollectionName, data: unknown, options: Val
       if (record(item) && !nonempty(item.page) && !nonempty(item.href)) add(`nav[${i}].href`, 'Choose a page or enter a URL');
     });
     if (collection === 'callouts' && typeof data.startsAt === 'string' && typeof data.endsAt === 'string' && Date.parse(data.startsAt) >= Date.parse(data.endsAt)) add('endsAt', 'Must be after startsAt');
-    if (collection === 'events' && typeof data.time === 'string' && typeof data.endTime === 'string' && data.endTime <= data.time) add('endTime', 'Must be after time');
+    if (collection === 'events' && nonempty(data.time) && nonempty(data.endTime) && data.endTime <= data.time) add('endTime', 'Must be after time');
   }
   if (options.mode === 'publish') {
     for (const issue of validateCatalog(collection, data, options)) add(issue.path, issue.message);

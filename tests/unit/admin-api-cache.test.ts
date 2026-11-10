@@ -92,3 +92,30 @@ it.each([200, 409])('keeps deduplication within a mutation epoch after status %s
   expect(peek('/docs/events')).toEqual({ docs: ['current'] });
   expect(fetch).toHaveBeenCalledTimes(3);
 });
+
+it.each([413, 502])('preserves HTTP status %s for a non-JSON proxy error', async status => {
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('<html>Server error</html>', { status })));
+  const { api, ApiError } = await import('../../admin/src/api.js');
+  const error = await api('/docs/events', 'POST', {}).catch(error => error);
+  expect(error).toBeInstanceOf(ApiError);
+  if (!(error instanceof ApiError)) throw error;
+  expect(error.status).toBe(status);
+  expect(error.message).toBe('Request failed. Please try again.');
+});
+
+it('clears an expired session on non-JSON logout 401 and invalidates private cache', async () => {
+  const fetch = vi.fn().mockResolvedValueOnce(response({ docs: ['private'] })).mockResolvedValueOnce(new Response('Session expired', { status: 401 })); vi.stubGlobal('fetch', fetch);
+  const { api, setSession, session, peek } = await import('../../admin/src/api.js');
+  setSession({ user: { id: 'u' } as never, csrfToken: 'csrf', permissions: [], passwordWeak: false });
+  await api('/docs/events');
+  await expect(api('/auth/logout', 'POST')).rejects.toMatchObject({ status: 401 });
+  expect(session.value).toBeNull(); expect(peek('/docs/events')).toBeUndefined();
+});
+
+it('keeps the current session when password verification returns 401', async () => {
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response({ error: { message: 'Current password is incorrect' } }, 401)));
+  const { api, setSession, session } = await import('../../admin/src/api.js');
+  setSession({ user: { id: 'u' } as never, csrfToken: 'csrf', permissions: [], passwordWeak: false });
+  await expect(api('/auth/password', 'POST', {})).rejects.toThrow('Current password is incorrect');
+  expect(session.value?.user.id).toBe('u');
+});

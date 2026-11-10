@@ -8,7 +8,6 @@ import { createShopApp } from '../server/shop/http/app.js';
 import { adminApp } from '../server/http/hono-app.js';
 import { staticFile } from '../server/http/static.js';
 import { createRenderHandler } from '../server/render/handler.js';
-import { join } from 'node:path';
 import type { ViteDevServer } from 'vite';
 
 const config = loadConfig();
@@ -43,9 +42,9 @@ const server = createServer(async (req, res) => {
     else if (url.pathname.startsWith('/api/shop/')) response = await shopApp.fetch(request);
     else if (method !== 'GET' && method !== 'HEAD') response = new Response('Method not allowed', { status: 405 });
     else if (url.pathname === '/admin' || url.pathname.startsWith('/admin/')) {
-      response = built ? await staticFile('public', url.pathname.slice(1)) ?? await staticFile('public/admin', 'index.html') : Response.redirect('http://localhost:5173' + url.pathname + url.search, 307);
+      response = built ? await staticFile('public', url.pathname.slice(1)) ?? (url.pathname.startsWith('/admin/assets/') ? null : await staticFile('public/admin', 'index.html')) : Response.redirect('http://localhost:5173' + url.pathname + url.search, 307);
     } else if (url.pathname.startsWith('/media/') || url.pathname.startsWith('/blobs/media/')) response = await serveMedia(request, store, createMediaBlobs(config, store));
-    else if (url.pathname.startsWith('/blobs/')) response = await staticFile(join(config.dataDir, 'blobs'), decodeURIComponent(url.pathname.slice(7)));
+    else if (url.pathname.startsWith('/blobs/')) response = new Response('Not found', { status: 404 });
     else if (url.pathname.startsWith('/assets/')) response = await staticFile('public', decodeURIComponent(url.pathname.slice(1)));
     else response = await renderPublic(request);
     response ??= new Response('Not found', { status: 404 });

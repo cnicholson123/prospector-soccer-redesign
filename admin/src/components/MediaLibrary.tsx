@@ -2,12 +2,12 @@ import { useEffect, useState } from 'preact/hooks';
 import { api, allowed, message } from '../api.js';
 import { filterMedia, isImage, mediaUrl, position, type MediaDoc, type MediaKind } from '../state/media.js';
 import { MediaUpload } from './MediaUpload.js';
-export function MediaLibrary({ choose, kind: fixedKind, refresh = 0 }: { choose: (doc: MediaDoc) => void; kind?: MediaKind; refresh?: number }) {
+export function MediaLibrary({ choose, kind: fixedKind, refresh = 0, allowTrash = false }: { choose: (doc: MediaDoc) => void; kind?: MediaKind; refresh?: number; allowTrash?: boolean }) {
   const [docs, setDocs] = useState<MediaDoc[]>([]), [kind, setKind] = useState<MediaKind>(fixedKind ?? 'all'), [query, setQuery] = useState('');
   const [filter, setFilter] = useState('all'), [error, setError] = useState(''), [loading, setLoading] = useState(true), [revision, setRevision] = useState(0);
   useEffect(() => {
     let active = true; setLoading(true); setError('');
-    api<{ docs: MediaDoc[] }>(`/media${filter === 'unused' ? '?unused=1' : filter === 'missing' ? '?missingAlt=1' : ''}`).then(data => { if (active) setDocs(data.docs); }).catch(error => { if (active) setError(message(error)); }).finally(() => { if (active) setLoading(false); });
+    api<{ docs: MediaDoc[] }>(`/media${filter === 'unused' ? '?unused=1' : filter === 'missing' ? '?missingAlt=1' : filter === 'trash' && allowTrash ? '?trash=1' : ''}`).then(data => { if (active) setDocs(data.docs); }).catch(error => { if (active) setError(message(error)); }).finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, [filter, revision, refresh]);
   const matches = filterMedia(docs, fixedKind ?? kind, query);
@@ -15,7 +15,7 @@ export function MediaLibrary({ choose, kind: fixedKind, refresh = 0 }: { choose:
     {allowed('media.upload') && <MediaUpload kind={fixedKind} uploaded={() => setRevision(n => n + 1)} />}
     <div class="media-filters"><label>Search media<input type="search" value={query} placeholder="Filename, alt text or caption" onInput={event => setQuery(event.currentTarget.value)} /></label>
       {!fixedKind && <label>Media type<select aria-label="Media type" value={kind} onChange={event => setKind(event.currentTarget.value as MediaKind)}><option value="all">All files</option><option value="images">Images</option><option value="documents">Documents</option></select></label>}
-      <label>Show<select aria-label="Media filter" value={filter} onChange={event => setFilter(event.currentTarget.value)}><option value="all">All media</option><option value="unused">Unused</option><option value="missing">Missing alt text</option></select></label>
+      <label>Show<select aria-label="Media filter" value={filter} onChange={event => setFilter(event.currentTarget.value)}><option value="all">All media</option><option value="unused">Unused</option><option value="missing">Missing alt text</option>{allowTrash && allowed('content.manage') && <option value="trash">Trash</option>}</select></label>
     </div>
     {error && <div class="error-box" role="alert">{error} <button class="text-button" onClick={() => setRevision(n => n + 1)}>Try again</button></div>}
     {loading ? <p role="status">Loading media…</p> : <><p class="muted" role="status">{matches.length} {matches.length === 1 ? 'file' : 'files'}</p><div class="media-grid">{matches.map(doc => <button type="button" class="media-card" key={doc.id} onClick={() => choose(doc)} aria-label={`${fixedKind ? 'Select' : 'Details for'} ${doc.draft.filename}`}>

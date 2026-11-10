@@ -17,11 +17,11 @@ export function authRoutes(app: Hono<AdminEnv>) {
       const repeat = await store.rateLimitHit(`login-audit-${context.ip}`, 900);
       if (repeat.count === 1) await store.recordAudit(audit(context, 'auth.login_failed', { meta: { reason } }, now));
     };
+    checkOrigin(c.req.raw, c.get('config'));
     try { await rateLimit(store, `login-ip-${context.ip}`, 10, 900, now); }
     catch (error) { await failure('rate_limited'); throw error; }
     let username: string, password: string;
     try {
-      checkOrigin(c.req.raw, c.get('config'));
       const input = object(await c.req.json());
       username = validUsername(input.username);
       context.displayName = username;

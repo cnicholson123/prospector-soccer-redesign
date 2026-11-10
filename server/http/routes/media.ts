@@ -86,7 +86,8 @@ export function mediaRoutes(app: Hono<AdminEnv>) {
     return c.json({ doc: updated });
   });
   app.get('/api/admin/media', requirePermission('content.read'), async c => {
-    const docs = await c.get('store').listDocs('media');
+    const trash = c.req.query('trash') === '1';
+    const docs = (await c.get('store').listDocs('media', { includeTrashed: trash })).filter(doc => !trash || !!doc.trashedAt);
     const capture = c.req.query('unused') === '1' ? await c.get('store').capturePublication() : undefined;
     return c.json({ docs:docs.filter(doc => (c.req.query('missingAlt')!=='1' || String((doc.draft as {mime?:string}).mime).startsWith('image/') && !String((doc.draft as {alt?:string}).alt ?? '').trim()) && (c.req.query('unused')!=='1' || !referenceUsage(capture!.docs,'media',doc.id,capture!.snapshot?.scheduled).length)) });
   });
@@ -119,5 +120,15 @@ export function mediaRoutes(app: Hono<AdminEnv>) {
     const updated=await store.mutateDoc({collection:'media',id:doc.id,expectedVersion:version(input.baseVersion),patch:{status:'trashed',trashedAt:c.get('now').toISOString(),trashedBy:c.get('user').id},audit:audit(actor(c),'media.trash',{collection:'media',docId:doc.id},c.get('now'))});
     if (updated==='conflict') throw new ApiError(409,'conflict','Someone else saved this. Reload and compare',{current:await store.getDoc('media',doc.id)});
     return c.json({doc:updated});
+  });
+  app.post('/api/admin/media/:id/untrash', requirePermission('content.manage'), async c => {
+    const store = c.get('store'), doc = await store.getDoc('media', c.req.param('id'));
+    if (!doc) throw new ApiError(404, 'not_found', 'Media not found');
+    const input = object(await c.req.json());
+    const updated = await store.mutateDoc({ collection: 'media', id: doc.id, expectedVersion: version(input.baseVersion),
+      patch: { status: doc.published === undefined ? 'draft' : 'changed', trashedAt: undefined, trashedBy: undefined, updatedBy: c.get('user').id, updatedAt: c.get('now').toISOString() },
+      audit: audit(actor(c), 'media.untrash', { collection: 'media', docId: doc.id }, c.get('now')) });
+    if (updated === 'conflict') throw new ApiError(409, 'conflict', 'Someone else saved this. Reload and compare', { current: await store.getDoc('media', doc.id) });
+    return c.json({ doc: updated });
   });
 }

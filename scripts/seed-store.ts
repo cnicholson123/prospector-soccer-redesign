@@ -112,6 +112,9 @@ export async function seedAdditive(store: Store, seeds: Doc[], marker: string, s
 
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
   if (process.argv.length > 2) throw new Error('seed:store accepts no arguments; existing documents cannot be forced or reset');
-  const result = await seedStoreShowcase(createStore());
-  console.log(`Store showcase: ${result.created} created, ${result.published} published, ${result.preserved} preserved; site version ${result.siteVersion}`);
+  const store = createStore();
+  try {
+    const result = await seedStoreShowcase(store);
+    console.log(`Store showcase: ${result.created} created, ${result.published} published, ${result.preserved} preserved; site version ${result.siteVersion}`);
+  } finally { await store.close(); }
 }

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'preact/hooks';
 import type { ComponentChildren } from 'preact';
 import { useLocation } from 'preact-iso';
-import { api, allowed, message, session, setSession, publicOrigin } from '../api.js';
+import { api, ApiError, allowed, message, session, setSession, publicOrigin } from '../api.js';
 import { navigationGuard } from '../state/autosave.js';
 import { Dialog } from './ConfirmDialog.js';
 import { Icon } from './Icon.js';
@@ -13,7 +13,10 @@ export function Shell({ children, publish, refresh, palette, help, restricted = 
   async function logout() {
     if (navigationGuard.value && !await navigationGuard.value()) { notify('Save or resolve your draft before signing out'); return; }
     setBusy(true);
-    try { await api('/auth/logout', 'POST'); setSession(null); sessionStorage.removeItem('psc_password_banner'); route('/admin/login', true); }
+    try {
+      try { await api('/auth/logout', 'POST'); } catch (error) { if (!(error instanceof ApiError) || error.status !== 401) throw error; }
+      setSession(null); sessionStorage.removeItem('psc_password_banner'); route('/admin/login', true);
+    }
     catch (error) { notify(message(error)); } finally { setBusy(false); }
   }
   const [menu, setMenu] = useState(false), [counts, setCounts] = useState<Record<string, number>>({});

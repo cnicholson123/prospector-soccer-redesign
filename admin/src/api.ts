@@ -10,11 +10,16 @@ async function request<T>(path: string, method = 'GET', body?: unknown): Promise
     method, credentials: 'same-origin', headers: { 'Content-Type': 'application/json', ...(session.value ? { 'X-CSRF-Token': session.value.csrfToken } : {}) },
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
   });
-  const data = await response.json();
+  // Hosting/proxy errors can contain HTML or no body at all. Preserve their
+  // HTTP status so validation failures are never mistaken for offline retries.
+  const data: unknown = await response.json().catch(() => undefined);
   if (!response.ok) {
-    if (response.status === 401 && !path.startsWith('/auth/')) setSession(null);
-    throw new ApiError(response.status, data.error?.message ?? 'Request failed. Please try again.', data.error?.details, Number(response.headers.get('Retry-After')) || undefined);
+    if (response.status === 401 && (!path.startsWith('/auth/') || path === '/auth/logout' || path === '/auth/me')) setSession(null);
+    const error = data && typeof data === 'object' && 'error' in data ? data.error : undefined;
+    const detail = error && typeof error === 'object' ? error as { message?: unknown; details?: unknown } : undefined;
+    throw new ApiError(response.status, typeof detail?.message === 'string' ? detail.message : 'Request failed. Please try again.', detail?.details, Number(response.headers.get('Retry-After')) || undefined);
   }
+  if (data === undefined) throw new ApiError(response.status, 'The server returned an unreadable response. Please try again.');
   return data as T;
 }
 export function setSession(value: Session | null) {

@@ -18,6 +18,12 @@ it.each(['','p/crest-hoodie','b/coach-kit','c/apparel','cart','checkout','orders
 it('renders the landing content, responsive image variants, categories and bundle savings',()=>{
  const {body}=render('');for(const text of ['Wear the','Ten pieces','Imagine your club gear','Apparel','New Family Pack','Saves $9','Saves $8','Saves $10','srcset=','480w'])expect(body).toContain(text);
 });
+it('formats fractional product and youth prices consistently on cards and detail pages',()=>{
+ f.product.price={amount:45.5};f.product.youthPrice={amount:35.5};
+ for(const path of ['', 'p/crest-hoodie']){
+  const {body}=render(path);expect(body).toContain('$45.50');expect(body).toContain('youth $35.50');
+ }
+});
 it('renders grouped radios, stable variant IDs, quantities, size guide and bundle links',()=>{
  const {body}=render('p/crest-hoodie');for(const text of ['Youth sizes','Adult sizes','type="radio"','prod_hoodie.00000001','inputmode="numeric"','aria-describedby=','Size guide','Part of the Coach Kit','JavaScript','rel="preload"'])expect(body).toContain(text);
  expect(body).toContain('Youth XS');expect(body).toContain('Adult 3XL');

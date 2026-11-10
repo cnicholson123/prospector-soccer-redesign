@@ -91,6 +91,12 @@ describe('complete schema and migration-shaped documents', () => {
     expect(validate('site', { nav: [{ _key: 'abcdefgh', label: 'About' }] }).valid).toBe(false);
     expect(validate('events', { title: 'Event', date: '2026-11-09', time: '18:30', endTime: '17:00' }).valid).toBe(false);
   });
+  it('allows clearing optional event times while enforcing a nonempty end time', () => {
+    const event = { title: 'Event', date: '2026-11-09', time: '18:30' };
+    for (const endTime of ['', undefined, '19:00']) expect(validate('events', { ...event, endTime }).valid).toBe(true);
+    expect(validate('events', { ...event, time: '', endTime: '' }).valid).toBe(true);
+    for (const endTime of ['18:30', '17:00', '24:00', 'bad']) expect(validate('events', { ...event, endTime }).valid).toBe(false);
+  });
   it('generates safe, stable-format IDs and list keys', () => {
     expect(createId('home')).toBe('home');
     const ids = Array.from({ length: 500 }, () => createId('events'));

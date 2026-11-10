@@ -11,6 +11,9 @@ export async function seedStaticMedia(store: Store) {
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
   if (process.argv.length > 2) throw new Error('seed:media accepts no arguments; existing records cannot be forced or reset');
-  const result = await seedStaticMedia(createStore());
-  console.log(`Static media: ${result.created} created, ${result.published} published, ${result.preserved} preserved; site version ${result.siteVersion}`);
+  const store = createStore();
+  try {
+    const result = await seedStaticMedia(store);
+    console.log(`Static media: ${result.created} created, ${result.published} published, ${result.preserved} preserved; site version ${result.siteVersion}`);
+  } finally { await store.close(); }
 }

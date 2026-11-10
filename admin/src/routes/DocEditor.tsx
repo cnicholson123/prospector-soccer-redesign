@@ -29,6 +29,7 @@ export function DocEditor({ id, collection = 'events', publish, refresh }: { id:
   const fields = definition.fields;
   useEffect(() => {
     let active = true;
+    setReady(false); setError('');
     state.load().then(() => { if (active) setReady(true); }).catch(error => { if (active) setError(message(error)); });
     const flush = async () => !editable || await state.flush();
     const unregister = registerEditorFlush(flush);
@@ -44,7 +45,6 @@ export function DocEditor({ id, collection = 'events', publish, refresh }: { id:
     api<{ publishes: { siteVersion: number }[] }>('/publishes?limit=1').then(result => { if (active) setSiteVersion(result.publishes[0]?.siteVersion ?? 0); }).catch(() => {});
     return () => { active = false; };
   }, [refresh]);
-  useEffect(() => { if (id === 'new' && state.doc.value) route(editorPath(collection, state.doc.value.id), true); }, [state.doc.value?.id]);
   useEffect(() => {
     if (!ready || !location.hash) return;
     const target = document.getElementById(decodeURIComponent(location.hash.slice(1)));
@@ -62,6 +62,7 @@ export function DocEditor({ id, collection = 'events', publish, refresh }: { id:
   useEffect(() => {
     if (!ready || id === 'new') return;
     const poll = async () => {
+      if (document.hidden) return;
       try {
         const result = await state.refresh();
         if (result === 'updated') setOther('Latest saved version loaded.');
@@ -98,10 +99,11 @@ export function DocEditor({ id, collection = 'events', publish, refresh }: { id:
   async function checkpoint() {
     // Blur may already be saving. Keep the action operable and let EditorState
     // queue it; disabling on blur can discard the click before it arrives.
-    if (await state.save(true)) {
-      notify(id === 'new' ? `${label} created` : 'Checkpoint saved');
-      if (id === 'new' && state.doc.value) route(editorPath(collection, state.doc.value.id), true);
-    }
+    if (!await state.save(true)) return;
+    // Keep this state mounted until keystrokes made during creation are saved.
+    if (id === 'new' && !await state.flush()) return;
+    notify(id === 'new' ? `${label} created` : 'Checkpoint saved');
+    if (id === 'new' && state.doc.value) route(editorPath(collection, state.doc.value.id), true);
   }
   function restored(doc: EventDoc) { state.accept(doc); notify('Revision restored to draft'); }
   const doc = state.doc.value;
@@ -112,7 +114,7 @@ export function DocEditor({ id, collection = 'events', publish, refresh }: { id:
     {doc?.reviewNote && <section class="notice" aria-label={doc.reviewRequestedBy ? "Review request" : "Review returned"}><strong>{doc.reviewRequestedBy ? "Review request" : "Returned for changes"}</strong><p>{doc.reviewNote}</p></section>}
     {doc && <div class="editor-page-tools">{editable && <button class="text-button" onClick={async () => { if (await state.flush()) setInline(true); }}>Edit on page</button>}{siteVersion !== null && <a class="text-link" href={live.href} target="_blank" rel="noreferrer">View live</a>}</div>}
     {error && <p role="alert" class="error-box">{error}</p>}{other && <p class="notice">{other}</p>}
-    {state.recovery.value && <section class="notice recovery"><strong>We found an unsaved draft on this device.</strong><p>Recover it to continue where you left off, or use the saved version.</p><button class="button secondary" onClick={() => state.recover()}>Recover draft</button><button class="text-button" onClick={() => state.clearRecovery()}>Use saved version</button></section>}
+    {state.recovery.value && <section class="notice recovery"><strong>We found an unsaved draft on this device.</strong><p>Recover it to continue where you left off, or use the saved version.</p>{state.recoveryWarning.value && <p>{state.recoveryWarning.value}</p>}<button class="button secondary" onClick={() => state.recover()}>Recover draft</button><button class="text-button" onClick={() => state.clearRecovery()}>Use saved version</button></section>}
     {inline && doc ? <InlineEditor state={state} close={() => setInline(false)} /> : !ready ? <p role="status">Loading {label.toLowerCase()}…</p> : <><nav class="editor-tabs" aria-label="Editor panels"><button aria-pressed={panel === 'form'} onClick={() => setPanel('form')}>{label} details</button><button aria-pressed={panel === 'preview'} disabled={!doc} onClick={() => setPanel('preview')}><Icon name="eye" size={16} /> Preview</button><button aria-pressed={panel === 'history'} disabled={!doc} onClick={() => setPanel('history')}><Icon name="history" size={16} /> History</button></nav>
       <div class={`editor-layout panel-${panel}`}><section class="card editor-form" onFocusCapture={event => { const field = (event.target as Element).closest<HTMLElement>('[data-field-path]'); if (field) setFocusedPath(field.dataset.fieldPath ?? ''); }}><div class="section-heading"><div><h2>{label} details</h2><p class="muted">{editable ? 'Changes save automatically. Publish to share them.' : 'Your role can view this content.'}</p></div></div>{collection === 'storeSettings' && <CheckoutStatus />}{['products', 'bundles'].includes(collection) && <CatalogTools collection={collection} value={state.draft.value} update={(name, value) => state.update(name, value)} disabled={!editable} />}<Form sections={singleton} fields={fields} value={state.draft.value} change={(name, value) => state.update(name, value)} errors={state.errors.value} disabled={!editable || !!state.recovery.value || !!doc?.trashedAt} blur={() => { if (id !== 'new' && state.dirty.value) void state.save(); }} />
         {state.errors.value.length > 0 && <p class="error-box" role="alert">Please check the highlighted fields before saving.</p>}

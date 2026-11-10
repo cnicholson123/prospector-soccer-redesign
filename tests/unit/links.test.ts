@@ -3,9 +3,33 @@ import http from 'node:http';
 import https from 'node:https';
 import { lookup } from 'node:dns/promises';
 import { afterEach, expect, it, vi } from 'vitest';
-import { checkLink, checkLinks } from '../../server/content/links.js';
+import { checkLink, checkLinks, pinnedLookup, publicAddress } from '../../server/content/links.js';
 vi.mock('node:dns/promises', () => ({ lookup: vi.fn() }));
 afterEach(() => { vi.restoreAllMocks(); vi.useRealTimers(); });
+it('blocks the special-use IPv4 /24 ranges without blocking adjacent public networks', () => {
+  for (const address of ['192.0.0.1', '192.0.0.255', '192.0.2.1', '192.168.1.1']) expect(publicAddress(address)).toBe(false);
+  for (const address of ['192.0.1.1', '192.0.3.1', '192.1.1.1', '192.2.1.1']) expect(publicAddress(address)).toBe(true);
+});
+it.each([false, true])('connects a real Node socket using a pinned lookup (autoSelectFamily=%s)', async autoSelectFamily => {
+  const server = http.createServer((_req, res) => { res.writeHead(204); res.end(); });
+  const agent = new http.Agent({ autoSelectFamily });
+  await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
+  try {
+    const address = server.address();
+    if (!address || typeof address === 'string') throw new Error('Expected TCP listener');
+    const lookups: (boolean | undefined)[] = [];
+    const lookupPinned = pinnedLookup({ address: '127.0.0.1', family: 4 });
+    const status = await new Promise<number | undefined>((resolve, reject) => {
+      const req = http.request(`http://pinned.example:${address.port}/`, {
+        method: 'HEAD', agent,
+        lookup: (host, options, callback) => { lookups.push(options.all); lookupPinned(host, options, callback); },
+      }, res => { res.resume(); res.on('end', () => resolve(res.statusCode)); });
+      req.on('error', reject); req.end();
+    });
+    expect(status).toBe(204);
+    expect(lookups).toEqual([autoSelectFamily || undefined]);
+  } finally { agent.destroy(); await new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve())); }
+});
 type Reply = { status: number; location?: string; bytes?: number; length?: number; hang?: boolean };
 function transport(replies: Reply[]) {
   const methods: string[] = [];

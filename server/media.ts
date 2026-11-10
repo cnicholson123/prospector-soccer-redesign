@@ -164,7 +164,7 @@ export async function serveMedia(request: Request, store: Store, blobs: MediaSto
   if (!['GET', 'HEAD'].includes(request.method)) return new Response('Method not allowed', { status: 405, headers: { Allow: 'GET, HEAD' } });
   const path = new URL(request.url).pathname.slice(7);
   if (!/^media\/\d{4}\/media_[a-f0-9]{32}\/(?:original\.(?:jpg|png|webp|gif|pdf)|web\.webp)$/.test(path)) return new Response('Not found', { status: 404 });
-  const url = blobs.url(path), id = path.split('/')[2];
+  const url = blobs.url(path);
   const stored = await store.getSnapshot();
   const snapshot = stored ? effectiveSnapshot(stored, now) : null;
   const published = Object.entries(snapshot?.media ?? {}).some(([mediaId, media]) => !snapshot?.docs.media?.some(doc => doc.id === mediaId) && media.url === url) || (snapshot?.docs.media ?? []).some(doc => Object.values((doc.data as { variants?: Record<string,string> }).variants ?? {}).includes(url));
@@ -172,18 +172,21 @@ export async function serveMedia(request: Request, store: Store, blobs: MediaSto
     const session = await readSession(store, request, now);
     if (!session || session.user.mustChangePassword || !can(session.user,'content.read')) return new Response('Not found', { status: 404, headers: { 'Cache-Control':'no-store' } });
   }
-  let doc = await store.getDoc('media', id);
-  const data = doc?.draft as { variants?: Record<string,string>; mime?: string } | undefined;
-  if (!published && !Object.values(data?.variants ?? {}).includes(url)) {
-    const docs = await store.listDocs('media');
-    doc = docs.find(item => Object.values((item.draft as { variants?: Record<string,string> }).variants ?? {}).includes(url)) ?? doc;
+  let doc: Doc | undefined;
+  if (!published) {
+    // Binary IDs belong to immutable copies, not metadata documents. Match the URL
+    // only for private requests; the published snapshot is sufficient publicly.
+    const docs = await store.listDocs('media', { includeTrashed: true });
+    doc = docs.find(item => Object.values((item.draft as { variants?: Record<string,string> }).variants ?? {}).includes(url));
     if (!doc && !await retained(store, url)) return new Response('Not found', { status: 404 });
   }
   const blob = await blobs.read(path);
-  if (!blob || !extensions[blob.contentType]) return new Response('Not found', { status: 404 });
+  if (!blob) return new Response('Not found', { status: 404 });
+  if (!extensions[blob.contentType]) { await blob.stream.cancel(); return new Response('Not found', { status: 404 }); }
   const publicData = snapshot?.docs.media?.find(item => Object.values((item.data as { variants?: Record<string, string> }).variants ?? {}).includes(url))?.data as { filename?: string } | undefined;
   const filename = (published ? publicData?.filename : (doc?.draft as { filename?: string } | undefined)?.filename) ?? path.split('/').at(-1)!;
   const safeFilename = filename.replace(/[^a-zA-Z0-9._ -]/g, '_').replace(/^\.+/, '').trim() || 'download.pdf';
   if (published) await tagContent();
+  if (request.method === 'HEAD') await blob.stream.cancel();
   return new Response(request.method==='HEAD' ? null : blob.stream, { headers: { 'Content-Type':blob.contentType, 'Content-Length':String(blob.size), 'Content-Disposition':blob.contentType === 'application/pdf' ? `inline; filename="${safeFilename}"` : 'inline', 'X-Content-Type-Options':'nosniff', 'Content-Security-Policy':"sandbox; default-src 'none'", 'Cache-Control':published?'public, max-age=0, s-maxage=300, stale-while-revalidate=60':'private, no-store' } });
 }

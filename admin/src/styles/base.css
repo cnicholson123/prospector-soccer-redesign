@@ -19,6 +19,8 @@ svg { flex-shrink: 0; vertical-align: middle; }
 .button:hover { background: var(--navy); border-color: var(--navy); }
 .button.secondary { background: white; border-color: #c9d2e0; color: var(--navy); }
 .button.secondary:hover { background: #edf2fa; }
+.button.danger { background: var(--red); border-color: var(--red); color: white; }
+.button.danger:hover { background: #81212a; border-color: #81212a; }
 .icon-button { display: inline-grid; place-items: center; width: 44px; height: 44px; padding: 0; background: transparent; border: 0; border-radius: 8px; }
 .icon-button:hover, .text-button:hover { background: #0b2a5b09; }
 .text-button { background: none; border: 0; padding: 8px 10px; color: var(--blue); font-weight: 700; font-size: 12px; border-radius: 6px; }

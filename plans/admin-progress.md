@@ -776,3 +776,97 @@ Final repeated verification
 - Node 22.12.0 `npm run build && npm test` — PASS, 792 passed and 49 explicit service-dependent skips, 45 test files passed and two skipped. The runtime smoke passed for all three plain-Node function packages. A final screenshot-only readiness adjustment is covered by the final build/typecheck below.
 - Final source, including dashboard-ready waits in the capture script — `npm run build && npm test` PASS on Node 22.12.0, 792 passed and 49 no-env skips. Screenshot manifest/manual/plan parity — PASS for 41 names. `git diff --check` — PASS. No tracked changes in `admin/`, `server/`, `shared/`, `api/`, `public/`, `vercel.json` or `package-lock.json`.
 - Read-only demo HTTP check — 200, with Redesign concept, noindex and Merch (concept) present. This confirms the demo response, not a hosted write/media/cron acceptance test.
+
+## CHANGELOG — Ten reviewed quick wins — 2026-11-10
+
+Implemented on the supplied `main` checkout with three parallel implementation agents and parent integration. Changes remain uncommitted; no push, deployment, hosted data command or dependency upgrade.
+
+- Link health checks return the Node single-address or `all: true` DNS callback shape while preserving pinned addresses and redirect validation. IPv4 exclusions use the intended 192.0.0.0/24 and 192.0.2.0/24 ranges. Real localhost sockets exercise both address-selection modes without weakening the production private-address guard.
+- Editors distinguish a new form, loading record and actual dirty draft. Untouched forms/loading navigation cannot create ghost documents; creation flushes later keystrokes before replacing the route. Versioned local recovery records retain base versions and completed creation IDs, and warn before recovering content based on an older server version. Non-JSON API errors retain HTTP status; automatic transient retries stop after three retries. Expired-session signout succeeds while a wrong current password keeps the session.
+- Empty optional event end times validate correctly; nonempty times must still follow the start time.
+- Postgres handles idle pool errors without logging connection details. Failed rollback discards its client while preserving the original mutation error. Store lifecycle cleanup closes pools from bootstrap, seed, additive seed and unlock CLIs.
+- Logout seals only the author's unsealed revisions using one SQL UPDATE. Sealing takes the writer advisory lock, and a stale coalescing decision retries once with an appended revision and the original document CAS after verifying the sealed revision. Failed transactions cannot leave duplicate audits or changes.
+- Login rejects an invalid Origin before charging the IP budget. Account creation/reset checks role permission before hashing. Administrative password reset atomically unlocks the username and advances its login generation while revoking sessions. Self-reset is rejected in both route and Store authorization and omitted in Users; self session revocation remains available.
+- Published media reads use the snapshot without a doomed binary-ID document lookup; HEAD streams are cancelled. Retention deduplicates publication revision reads and checks unpublished history too. Media has audited, versioned restore, a trash-only listing, and a Trash filter/Restore media action in the library. Cron attempts scheduled publishing first and independently attempts session/upload maintenance, reporting any failure for retry.
+- The local server has no raw `/blobs/` static fallback, including encoded quarantine/finalized paths. Missing admin chunks return 404 locally, and the Vercel admin SPA rewrite excludes assets. Existing `?page=` and `?media=` entrypoint contracts stay intact.
+- Publish input corrections clear recoverable errors; failed pending-list refreshes remain blocked until reload succeeds. Preview focus scrolls its iframe, hidden documents skip editor polling, List inserts a separate bullet block, danger buttons have styles, and row menus overlay their rows.
+- Added Node 22 GitHub Actions CI for build, runtime/full filesystem tests and facts. Added shop screen-reader-only styling, bronze medal styling, awaited shop cache tags, bounded link-label scanning, and consistent fractional shop prices without changing club fee formatting. Added policy-category help and updated the volunteer manual for policy visibility, media restoration and account resets.
+
+Verification
+
+- Node 22.12.0 `npm run build` — PASS, Vite plus both strict TypeScript projects.
+- `npm test` without hosted credentials — PASS: 829 passed, 49 service-dependent no-env skips (49 files passed, two skipped). Includes all three plain-Node runtime function packages, eight public HTML goldens and filesystem read/write budgets.
+- `npm run check-facts` — PASS: 122 facts.
+- Disposable local PostgreSQL 17.11 via Neon WebSocket test proxy, `POSTGRES_HTTP_TESTS=1` targeted auth/content/new store-auth/media-maintenance suites — PASS: 140 tests. This exercises the sealing race, CAS conflict, password-reset unlock, media retention/restore and independent cron stages against SQL metadata with filesystem binaries.
+- Installed Google Chrome `npm run test:e2e` — PASS: all 53 tests in 13 files, one worker, 3.4 minutes. Includes media trash/restore UI, encoded raw-blob rejection and missing admin asset 404 checks, mobile/desktop editing, scheduling, publishing, role controls, keyboard flows, public responsive layouts and disabled checkout.
+- Disposable local PostgreSQL 17.11 `npm test -- --maxWorkers=1` via the Neon WebSocket test proxy — PASS: 896 passed, one private-Blob no-env skip (50 files passed, one skipped), 190.67 seconds. Includes Store/SQL contracts, immutability/rollback coverage, the local Neon HTTP serializer fixture, warm read/write performance budgets, all public goldens and all three runtime packages. Both task-specific Docker containers were stopped and removed after verification.
+- Golden fixtures, schema DDL, package manifest and lockfile unchanged. `git diff --check` — PASS.
+
+Deviations and open issues
+
+- The media Trash/Restore UI and policy help make the reviewed fixes available to volunteers. Fractional money formatting is limited to shop templates; existing whole-dollar club formatting and all eight goldens are preserved. No schema migration is required. Checkout stays disabled.
+- Real Neon cloud, private Blob, hosted Vercel rewrite/cache/purge/cron behavior and actual GitHub workflow execution remain **not run (no env / not deployed)**. Local Postgres and mocked Blob adapter tests do not establish hosted-service acceptance.
+
+Changed-file inventory
+
+- `.github/workflows/ci.yml`
+- `admin/src/api.ts`
+- `admin/src/components/Form/index.tsx`
+- `admin/src/components/InlineEditor.tsx`
+- `admin/src/components/MediaLibrary.tsx`
+- `admin/src/components/Preview.tsx`
+- `admin/src/components/PublishTray.tsx`
+- `admin/src/components/Shell.tsx`
+- `admin/src/routes/DocEditor.tsx`
+- `admin/src/routes/Media.tsx`
+- `admin/src/routes/Users.tsx`
+- `admin/src/state/autosave.ts`
+- `admin/src/styles/base.css`
+- `admin/src/styles/components.css`
+- `docs/admin-manual.md`
+- `plans/admin-progress.md`
+- `public/assets/css/shop.css`
+- `public/assets/css/styles.css`
+- `scripts/bootstrap.ts`
+- `scripts/dev.ts`
+- `scripts/seed-media.ts`
+- `scripts/seed-store.ts`
+- `scripts/seed.ts`
+- `scripts/unlock.ts`
+- `server/content/links.ts`
+- `server/content/revisions.ts`
+- `server/content/validate.ts`
+- `server/http/routes/auth.ts`
+- `server/http/routes/content.ts`
+- `server/http/routes/media.ts`
+- `server/http/routes/users.ts`
+- `server/media.ts`
+- `server/render/cdn.ts`
+- `server/render/handler.ts`
+- `server/render/richtext.ts`
+- `server/render/shop/product.ts`
+- `server/render/shop/shared.ts`
+- `server/store/blobs/common.ts`
+- `server/store/kv-store.ts`
+- `server/store/postgres-store.ts`
+- `server/store/postgres.ts`
+- `server/store/types.ts`
+- `server/store/user-changes.ts`
+- `shared/schema.ts`
+- `tests/e2e/admin-media.spec.ts`
+- `tests/e2e/media-storage.spec.ts`
+- `tests/shop/render.test.ts`
+- `tests/unit/admin-api-cache.test.ts`
+- `tests/unit/admin-autosave.test.ts`
+- `tests/unit/admin-components.test.ts`
+- `tests/unit/admin-phase11-ui.test.ts`
+- `tests/unit/admin-phase8.test.ts`
+- `tests/unit/links.test.ts`
+- `tests/unit/media-maintenance.test.ts`
+- `tests/unit/postgres-lifecycle.test.ts`
+- `tests/unit/render-core.test.ts`
+- `tests/unit/shop-cache-tags.test.ts`
+- `tests/unit/store-auth-quickwins.test.ts`
+- `tests/unit/validate.test.ts`
+- `tests/unit/vercel-blobs.test.ts`
+- `vercel.json`

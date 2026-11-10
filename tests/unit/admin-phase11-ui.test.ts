@@ -47,6 +47,8 @@ it('hides out-of-ceiling account actions, protects the last Owner and discards t
   let tree = render();
   const ownerRow = nodes(tree).find(n => n.type === 'li' && words(n).includes('Phil'))!;
   expect(nodes(ownerRow).some(n => n.type === 'button' && n.props.children === 'Deactivate')).toBe(false);
+  expect(nodes(ownerRow).some(n => n.type === 'button' && n.props.children === 'Reset password')).toBe(false);
+  expect(nodes(ownerRow).some(n => n.type === 'button' && n.props.children === 'Sign out everywhere')).toBe(true);
   session.value!.user = admin;
   tree = render();
   expect(words(nodes(tree).find(n => n.type === 'li' && words(n).includes('Phil')))).toContain('Only an Owner');

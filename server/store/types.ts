@@ -27,6 +27,8 @@ export interface MediaCleanup { id: string; at: string; urls: string[]; kind: 'm
 export interface UploadFinalization { grantIds: string[]; fingerprint: string }
 export interface UploadReceipt { fingerprint: string; doc: Doc }
 export interface Store {
+  /** Release adapter resources after a CLI command; FS has no open handles. */
+  close(): Promise<void>;
   getUploadResult(upload: UploadFinalization): Promise<Doc | null>;
   isUploadConsumed(grantId: string): Promise<boolean>;
   listMediaCleanups(before: string, limit: number): Promise<MediaCleanup[]>;

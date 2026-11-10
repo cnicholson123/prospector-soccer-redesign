@@ -1,18 +1,25 @@
 import { lookup } from 'node:dns/promises';
-import { isIP } from 'node:net';
+import { isIP, type LookupFunction } from 'node:net';
 import http from 'node:http';
 import https from 'node:https';
 export function publicAddress(address: string): boolean {
   const family = isIP(address);
   if (family === 4) {
     const [a, b, c] = address.split('.').map(Number);
-    return !(a === 0 || a === 10 || a === 127 || a >= 224 || a === 169 && b === 254 || a === 172 && b >= 16 && b <= 31 || a === 192 && (b === 168 || b === 0 || b === 2) || a === 100 && b >= 64 && b <= 127 || a === 198 && (b === 18 || b === 19 || b === 51 && c === 100) || a === 203 && b === 0 && c === 113);
+    return !(a === 0 || a === 10 || a === 127 || a >= 224 || a === 169 && b === 254 || a === 172 && b >= 16 && b <= 31 || a === 192 && (b === 168 || b === 0 && c === 0 || b === 0 && c === 2) || a === 100 && b >= 64 && b <= 127 || a === 198 && (b === 18 || b === 19 || b === 51 && c === 100) || a === 203 && b === 0 && c === 113);
   }
   if (family !== 6 || address.includes('%')) return false;
   // Restrict IPv6 to global unicast (2000::/3), excluding special-use,
   // documentation, 6to4 and Teredo prefixes. Mapped IPv4 is never dialed.
   const first = parseInt(address.split(':')[0], 16);
   return first >= 0x2000 && first <= 0x3fff && !/^2001:(?:0:|db8:|2:|10:|20:)/i.test(address) && !/^2002:/i.test(address);
+}
+/** Answer Node's single-address and autoSelectFamily lookups with the same pinned IP. */
+export function pinnedLookup(pinned: { address: string; family: number }): LookupFunction {
+  return (_name, options, callback) => {
+    if (options.all) callback(null, [pinned]);
+    else callback(null, pinned.address, pinned.family);
+  };
 }
 async function request(url: URL, method: 'HEAD' | 'GET', signal: AbortSignal) {
   if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password) throw new Error('Only credential-free HTTP(S) links are allowed');
@@ -22,7 +29,7 @@ async function request(url: URL, method: 'HEAD' | 'GET', signal: AbortSignal) {
   signal.throwIfAborted();
   const pinned = addresses[0];
   return new Promise<{ status: number; location?: string }>((resolve, reject) => {
-    const req = (url.protocol === 'https:' ? https : http).request(url, { method, signal, headers: { 'User-Agent': 'ProspectorLinkChecker/1.0' }, lookup: (_name, _opts, callback) => callback(null, pinned.address, pinned.family) }, res => {
+    const req = (url.protocol === 'https:' ? https : http).request(url, { method, signal, headers: { 'User-Agent': 'ProspectorLinkChecker/1.0' }, lookup: pinnedLookup(pinned) }, res => {
       let bytes = 0;
       if (Number(res.headers['content-length'] ?? 0) > 1024 * 1024) { reject(new Error('Response exceeds 1 MB')); res.destroy(); return; }
       res.on('data', (chunk: Buffer) => { bytes += chunk.length; if (bytes > 1024 * 1024) { reject(new Error('Response exceeds 1 MB')); res.destroy(); } });

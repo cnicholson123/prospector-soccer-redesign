@@ -16,7 +16,7 @@ function RichText({ id, label, value, change, disabled, describedBy, invalid, in
   }
   return <div class="richtext-control"><div class="format-toolbar" role="group" aria-label={`${label} formatting`}>
     <button type="button" disabled={disabled} onClick={() => format('**')} aria-label="Bold"><strong>B</strong></button><button type="button" disabled={disabled} onClick={() => format('*')} aria-label="Italic"><em>I</em></button>
-    <button type="button" disabled={disabled} onClick={() => format('[', '](https://example.com)')}>Link</button>{!inline && <button type="button" disabled={disabled} onClick={() => format('\n- ', '')}>List</button>}
+    <button type="button" disabled={disabled} onClick={() => format('[', '](https://example.com)')}>Link</button>{!inline && <button type="button" disabled={disabled} onClick={() => format('\n\n- ', '')}>List</button>}
   </div><textarea ref={ref} id={id} rows={inline ? 2 : 5} value={value} disabled={disabled} maxLength={20000} aria-describedby={describedBy} aria-invalid={invalid} onInput={event => change(event.currentTarget.value)} />
     <details class="richtext-preview"><summary>Preview {label.toLowerCase()}</summary><div dangerouslySetInnerHTML={{ __html: richtext(value, inline).toString() }} /></details></div>;
 }

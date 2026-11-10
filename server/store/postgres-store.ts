@@ -32,6 +32,7 @@ export class PostgresStore implements Store {
   private transaction = new AsyncLocalStorage<PoolClient>();
   private now: () => Date;
   constructor(readonly pool: Pool, private options: PostgresOptions = {}) { this.now = options.now ?? (() => new Date()); }
+  async close(): Promise<void> { if (!this.pool.ended) await this.pool.end(); }
   private async rows<T>(sql: string, values: unknown[] = []): Promise<T[]> {
     return measureQuery(sql, async () => {
       const client = this.transaction.getStore();
@@ -67,13 +68,17 @@ export class PostgresStore implements Store {
   private async exclusive<T>(operation: () => Promise<T>, global = true): Promise<T> {
     if (this.transaction.getStore()) return operation();
     const client = await this.pool.connect();
+    let releaseError: Error | undefined;
     try {
       await measureQuery('BEGIN', () => client.query('BEGIN'));
       if (global) await measureQuery('SELECT pg_advisory_xact_lock(734215906, hashtext(current_schema()))', () => client.query('SELECT pg_advisory_xact_lock(734215906, hashtext(current_schema()))'));
       const result = await this.transaction.run(client, operation);
       await measureQuery('COMMIT', () => client.query('COMMIT')); return result;
-    } catch (error) { await measureQuery('ROLLBACK', () => client.query('ROLLBACK')); throw error; }
-    finally { client.release(); }
+    } catch (error) {
+      try { await measureQuery('ROLLBACK', () => client.query('ROLLBACK')); }
+      catch (rollbackError) { releaseError = rollbackError instanceof Error ? rollbackError : new Error('Rollback failed'); }
+      throw error;
+    } finally { client.release(releaseError); }
   }
   private allDocs() { return this.listAllDocs(); }
   listAllDocs() { return this.all<Doc>('docs'); }
@@ -372,10 +377,13 @@ export class PostgresStore implements Store {
       if (options.hash && !sessions.length) return false;
       await this.checkAudit(entry);
       await this.write('audit', entry.id, entry);
-      if (options.seal) for (const rev of await this.all<Revision>('revisions')) if (!rev.sealedAt && rev.authorId === userId) await this.write('revisions', rev.id, { ...rev, sealedAt: entry.at });
+      if (options.seal) {
+        const changed = await this.rows("UPDATE revisions SET body=jsonb_set(body,'{sealedAt}',to_jsonb($2::text)) WHERE sealed_at IS NULL AND author_id=$1 RETURNING id", [userId, entry.at]);
+        if (changed.length) this.options.afterWrite?.('revisions');
+      }
       for (const session of sessions) await this.remove('sessions', session.hash);
       return true;
-    }, false);
+    }, !!options.seal);
   }
   loginFailure(key: string, now: string): Promise<{ failures: number; locks: number; until?: string }> {
     return this.exclusive(async () => {
@@ -433,6 +441,11 @@ export class PostgresStore implements Store {
       if (named && named.id !== user.id) throw new ApiError(409, 'conflict', 'Username already exists');
       await this.write('audit', entry.id, entry);
       await this.saveUser(user);
+      if (old && old.passwordHash !== user.passwordHash) {
+        const key = loginGenerationKey(user.username);
+        await this.rows("INSERT INTO meta(id,body) VALUES($1,'1'::jsonb) ON CONFLICT(id) DO UPDATE SET body=to_jsonb((meta.body::text)::bigint + 1)", [key]);
+        await this.remove('rate_limits', usernameRateKey(user.username));
+      }
     });
   }
   sealWorkingRevisions(authorId: string, before: string, entry: AuditEntry): Promise<void> {
@@ -441,7 +454,7 @@ export class PostgresStore implements Store {
       const rows = await this.rows(`UPDATE revisions SET body=jsonb_set(body,'{sealedAt}',to_jsonb($3::text)) WHERE sealed_at IS NULL AND ($1='*' OR author_id=$1) AND at<=$2 RETURNING id`, [authorId, before, entry.at]);
       if (rows.length) this.options.afterWrite?.('revisions');
       if (rows.length || authorId !== '*') await this.write('audit', entry.id, entry);
-    }, false);
+    });
   }
   listUsers() { return this.all<User>('users'); }
   getUser(id: string) { return this.read<User>('users', id); }

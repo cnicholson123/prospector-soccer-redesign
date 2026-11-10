@@ -1,4 +1,5 @@
 import { randomBytes } from 'node:crypto';
+import { readFile } from 'node:fs/promises';
 import type { Page } from '@playwright/test';
 import { recordPageError, test, expect, restoreSeed } from './fixtures.js';
 import { adminPassword } from './credentials.js';
@@ -124,7 +125,7 @@ test('multi-file drop, replacement and unused deletion keep the media drawer ope
   const drawer = page.getByRole('dialog', { name: 'Media details' });
   await drawer.getByRole('button', { name: 'Replace file', exact: true }).click();
   const replaced = page.waitForResponse(r => r.url().endsWith(`/media/${original.id}/replace`) && r.request().method() === 'POST');
-  await drawer.getByLabel('Replacement file', { exact: true }).setInputFiles('public/assets/img/crest-sm.png');
+  await drawer.getByLabel('Replacement file', { exact: true }).setInputFiles({ name: `replacement-${suffix}.png`, mimeType: 'image/png', buffer: await readFile('public/assets/img/crest-sm.png') });
   expect((await replaced).ok()).toBe(true);
   await expect(page.getByRole('status').filter({ hasText: 'Replacement saved as a draft' })).toBeVisible();
   await expect(drawer.getByRole('button', { name: 'Close dialog' })).toBeEnabled();
@@ -135,4 +136,12 @@ test('multi-file drop, replacement and unused deletion keep the media drawer ope
   await drawer.getByRole('button', { name: 'Confirm delete', exact: true }).click(); expect((await deleted).ok()).toBe(true);
   await expect(drawer).toHaveCount(0);
   await expect(page.getByRole('button', { name: `Details for second-${suffix}.png`, exact: true })).toBeVisible();
+  await page.getByRole('combobox', { name: 'Media filter', exact: true }).selectOption('trash');
+  await page.getByRole('button', { name: `Details for replacement-${suffix}.png`, exact: true }).click();
+  await expect(drawer.getByRole('button', { name: 'Replace file', exact: true })).toHaveCount(0);
+  const restored = page.waitForResponse(r => r.url().endsWith(`/media/${original.id}/untrash`) && r.request().method() === 'POST');
+  await drawer.getByRole('button', { name: 'Restore media', exact: true }).click();
+  expect((await restored).ok()).toBe(true); await expect(drawer).toHaveCount(0);
+  await page.getByRole('combobox', { name: 'Media filter', exact: true }).selectOption('all');
+  await expect(page.getByRole('button', { name: `Details for replacement-${suffix}.png`, exact: true })).toBeVisible();
 });

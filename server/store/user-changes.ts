@@ -7,6 +7,7 @@ import { ApiError } from '../http/middleware/errors.js';
 export function authorizeUserChange(actor: User | null, old: User | null, next: User) {
   if (!actor?.active) throw new ApiError(403, 'forbidden', 'Role exceeds your permission');
   const self = old?.id === actor.id;
+  if (self && old.passwordHash !== next.passwordHash) throw new ApiError(403, 'forbidden', 'Use your profile to change your own password');
   if (self && old.role !== next.role) throw new ApiError(403, 'forbidden', 'You cannot change your own role');
   if (self && !next.active) throw new ApiError(403, 'forbidden', 'You cannot deactivate your own account');
   if (self && !can(actor, 'users.manage')) {

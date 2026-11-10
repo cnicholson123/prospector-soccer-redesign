@@ -75,6 +75,9 @@ export async function seedStore(store: Store, force = false): Promise<{ changed:
   return { changed: true, count: seeds.length };
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
-  const result = await seedStore(createStore(), process.argv.includes('--force'));
-  console.log(`${result.changed ? 'Seeded' : 'Seed unchanged'}: ${result.count} documents`);
+  const store = createStore();
+  try {
+    const result = await seedStore(store, process.argv.includes('--force'));
+    console.log(`${result.changed ? 'Seeded' : 'Seed unchanged'}: ${result.count} documents`);
+  } finally { await store.close(); }
 }

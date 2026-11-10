@@ -3,7 +3,7 @@ const sdk=vi.hoisted(()=>({put:vi.fn(),get:vi.fn(),del:vi.fn(),list:vi.fn(),hand
 vi.mock('@vercel/blob',()=>sdk);vi.mock('@vercel/blob/client',()=>sdk);
 import { VercelBlobs } from '../../server/store/blobs/vercel.js';
 import type { Store } from '../../server/store/types.js';
-const store={listPublishes:async()=>[], listAllDocs:async()=>[], getSnapshot:async()=>null} as unknown as Store;
+const store={listPublishes:async()=>[], listAllDocs:async()=>[], getSnapshot:async()=>null, queryRevisions:async()=>({items:[]})} as unknown as Store;
 afterEach(()=>vi.resetAllMocks());
 describe('Vercel private binary adapter',()=>{
   it('uses private, immutable uploads and returns an application delivery URL',async()=>{
