@@ -10,6 +10,8 @@ Where to look next:
 - [AGENTS.md](AGENTS.md): operating rules for AI coding agents (and a good orientation for you).
 - [README.md](README.md): architecture, testing, operations runbook (backup, restore, unlock, secret rotation).
 - [README-deploy.md](README-deploy.md): deeper storage, upload-protocol and recovery detail. It was written during development and still refers to the previous owner's accounts in places; this file is the authoritative setup guide.
+- [docs/replit-migration.md](docs/replit-migration.md): what changes if you host on Replit instead of Vercel. Not yet tried on Replit.
+- [exports/production-2026-11-13/](exports/production-2026-11-13/README.md): a content-only export of the hosted demo's database (no accounts or secrets) with load instructions.
 - `plans/`: development history, including superseded decisions. Current code and tests win over anything in there.
 
 ## What you are receiving

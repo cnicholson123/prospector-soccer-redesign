@@ -40,7 +40,7 @@ The file was dumped by PostgreSQL 18.7. Three lines that older tools reject (`\r
 
 Not tested. Two things to know before you start:
 
-- The database adapter uses Neon's serverless driver (`@neondatabase/serverless`), not a generic PostgreSQL client. It needs a Neon-compatible connection string.
+- The database adapter uses Neon's serverless driver (`@neondatabase/serverless`), not a generic PostgreSQL client. It needs a Neon connection string.
 - Media uploads use a private Vercel Blob store (`BLOB_READ_WRITE_TOKEN`). The shipped images work without it; uploading new media does not.
 
-See "Other Node hosts" in [HANDOFF.md](../../HANDOFF.md#running-it).
+[docs/replit-migration.md](../../docs/replit-migration.md) is the full guide for Replit. See also "Other Node hosts" in [HANDOFF.md](../../HANDOFF.md#running-it).
